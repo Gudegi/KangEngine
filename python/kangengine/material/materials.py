@@ -24,7 +24,7 @@ NativePBRMaterial = set_public_module(_ke.PBRMaterial, __package__)
 
 
 class Material(NativeWrapper):
-    """Base wrapper for renderer materials."""
+    """Material parameters and texture references."""
 
     def __init__(self, native: Any | None = None):
         if native is None:
@@ -33,6 +33,20 @@ class Material(NativeWrapper):
                 "construct VertexColorMaterial, PhongMaterial, or PBRMaterial instead."
             )
         super().__init__(native)
+
+    @property
+    def texture_paths(self) -> dict[str, str]:
+        """Texture file paths loaded when attaching a visual.
+
+        Assign a complete dictionary, for example
+        ``{"base_color_texture": "textures/wood.png"}``.
+        Relative paths use the descriptor's ``asset_dir``.
+        """
+        return self._native.texture_paths
+
+    @texture_paths.setter
+    def texture_paths(self, value: dict[str, str]) -> None:
+        self._native.texture_paths = value
 
 
 class VertexColorMaterial(Material):

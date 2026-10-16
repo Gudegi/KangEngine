@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Self
@@ -12,6 +12,7 @@ import numpy as np
 import torch
 
 from .._core import _ke
+from ..asset.rigid_asset import _as_rigid_desc
 from ..rigid import rigid_shape_specs
 from ..state import KangWorldState, SimObjectState
 from ..utils.env_utils import (
@@ -20,6 +21,7 @@ from ..utils.env_utils import (
     select_env_value,
     select_optional_env_value,
 )
+from .rigid_query import RigidQueryMixin
 
 _TORCH = None
 
@@ -148,6 +150,7 @@ class SimArticulation:
     name: str
     articulation: object
     world: KangSimWorld | None = None
+    source_data: object | None = None
 
     @property
     def key(self):
@@ -354,7 +357,7 @@ class SimArticulation:
 
 
 @dataclass(slots=True)
-class SimRigid:
+class SimRigid(RigidQueryMixin):
     """Simulation-facing view for one registered rigid object."""
 
     env_id: int
@@ -363,6 +366,7 @@ class SimRigid:
     rigid: object
     world: KangSimWorld | None = None
     source_data: object | None = None
+    _mesh_queries: dict = field(default_factory=dict, init=False, repr=False)
 
     @property
     def key(self):
@@ -459,16 +463,9 @@ class SimRigid:
         immediate: bool = False,
     ) -> Self:
         """World pose/velocities: vectors ``(..., 3)``, XYZW quaternion ``(..., 4)``."""
-        self._require_world().set_root_state(
-            self._selected_env_ids(env_ids),
-            self.obj_id,
-            pos,
-            quat_xyzw,
-            linear_velocity,
-            angular_velocity,
-            immediate=immediate,
+        return self._set_rigid_root_state(
+            env_ids, pos, quat_xyzw, linear_velocity, angular_velocity, immediate
         )
-        return self
 
     def set_body_force(
         self,
@@ -749,13 +746,14 @@ class SimArticulationBatch:
 
 
 @dataclass(slots=True)
-class SimRigidBatch:
+class SimRigidBatch(RigidQueryMixin):
     """Batched simulation-facing view for one logical rigid object."""
 
     world: KangSimWorld
     obj_id: int
     env_ids: tuple[int, ...]
     name: str = ""
+    _mesh_queries: dict = field(default_factory=dict, init=False, repr=False)
 
     @property
     def key(self):
@@ -838,16 +836,9 @@ class SimRigidBatch:
         immediate: bool = False,
     ) -> Self:
         """Shapes: position/velocity ``(N, 3)``, rotation ``(N, 4)``."""
-        self.world.set_root_state(
-            self._selected_env_ids(env_ids),
-            self.obj_id,
-            pos,
-            quat_xyzw,
-            linear_velocity,
-            angular_velocity,
-            immediate=immediate,
+        return self._set_rigid_root_state(
+            env_ids, pos, quat_xyzw, linear_velocity, angular_velocity, immediate
         )
-        return self
 
     def set_body_force(
         self,
@@ -1178,7 +1169,13 @@ class KangSimWorld:
         finally:
             if restore_collision_group is not None:
                 config.collision_group = restore_collision_group
-        record = SimArticulation(key[0], key[1], str(name), articulation, self)
+        source_data = (
+            data.source_data if isinstance(data, _ke.physics.ArticulationTemplate)
+            else data
+        )
+        record = SimArticulation(
+            key[0], key[1], str(name), articulation, self, source_data
+        )
         self.articulations[key] = record
         self.state.add_articulation(
             articulation, key[0], key[1], name, physics=self.physics
@@ -1237,6 +1234,7 @@ class KangSimWorld:
         kinematic: bool = False,
     ) -> SimRigid:
         self._require_gpu_runtime_uninitialized("add_rigid")
+        data = _as_rigid_desc(data)
         key = (int(env_id), int(obj_id))
         if key in self.articulations or key in self.rigids or key in self.static_rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
@@ -1254,9 +1252,9 @@ class KangSimWorld:
             int(collision_group),
             float(contact_offset),
             float(rest_offset),
+            kinematic=kinematic,
         )
-        if kinematic:
-            rigid.set_kinematic(True)
+
         shape_specs = rigid_shape_specs(data)
         body_names = [spec.name for spec in shape_specs]
         local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
@@ -1295,6 +1293,7 @@ class KangSimWorld:
         rest_offset: float = 0.0,
     ) -> SimRigid:
         self._require_gpu_runtime_uninitialized("add_static_rigid")
+        data = _as_rigid_desc(data)
         key = (int(env_id), int(obj_id))
         if key in self.articulations or key in self.rigids or key in self.static_rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")

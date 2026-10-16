@@ -15,12 +15,17 @@ import numpy as np
 
 from ..._core import _ke
 from ... import render as render_api
-from ...rigid import expand_rigid_body_state, rigid_shape_specs
 from ...utils.math import quat_xyzw_to_wxyz
-from ..articulation import ArticulationVisualAsset
+from ..articulation_visual import ArticulationVisualAsset
+from ..rigid_visual import RigidVisual
+from ..utils import (
+    apply_visual_alpha,
+    normalize_color_array as _normalize_color_array,
+    visual_color,
+    visual_material,
+)
 from .batch import VisualBatch
 from .utils import (
-    apply_prim_color as _apply_prim_color,
     batch_colors as _batch_colors,
     debug_instancing as _debug_instancing,
     mesh_asset_base_path as _mesh_asset_base_path,
@@ -64,118 +69,224 @@ def _physical_visual_mapping(visual, articulation):
     )
 
 
-class RigidCPUExternalBackend(_VisualLifetime):
-    """CPU rigid root poses -> native SimVisualBatch -> ExternalBuffer."""
+class _RigidExternalBackend(_VisualLifetime):
+    """Shared rigid part controls and environment-to-renderable ownership."""
 
-    def __init__(
-        self,
-        app,
-        world,
-        obj_id,
-        env_ids,
-        body_prims,
-        body_handles,
-        local_pos,
-        local_quat_xyzw,
-    ):
-        from ... import physics
-
+    def __init__(self, app, world, obj_id, env_ids, path, groups):
         self._released = False
         self.app = app
         self.world = world
         self.obj_id = int(obj_id)
-        self.env_ids = tuple(int(env_id) for env_id in env_ids)
-        self.body_prims = tuple(body_prims)
-        self.body_handles = tuple(int(handle) for handle in body_handles)
-        self.num_bodies = 1
+        self.env_ids = tuple(env_ids)
+        self.path = path
         self.num_envs = len(self.env_ids)
-        self._version = 0
-
-        self._model = physics.SimModel()
-        local_pos = np.asarray(local_pos, dtype=np.float32).reshape(-1, 3)
-        local_quat_xyzw = np.asarray(local_quat_xyzw, dtype=np.float32).reshape(-1, 4)
-        if len(self.body_handles) != len(local_pos) or len(local_pos) != len(local_quat_xyzw):
-            raise ValueError("rigid visual shape arrays must have matching lengths")
-        for shape_id, handle in enumerate(self.body_handles):
-            self._model.add_shape(
-                0,
-                handle,
-                tuple(float(v) for v in local_pos[shape_id]),
-                tuple(float(v) for v in local_quat_xyzw[shape_id]),
-                f"rigid_shape_{shape_id}",
-            )
-        self._model.add_object_boundary(0, 1, f"rigid_{self.obj_id}")
-        self._state = physics.SimState()
-        self._state.resize(self.num_envs, 1)
-        self._batch = physics.SimVisualBatch()
-        self._batch.set_model(self._model)
+        self.num_bodies = 1
+        self._groups = groups
+        self._handle_env_ids = {
+            handle: tuple(self.env_ids[row] for row in rows)
+            for rows, visual in groups
+            for handle in visual.body_handles
+        }
 
     @property
     def prims(self):
-        return self.body_prims
+        return tuple(prim for _, visual in self._groups for prim in visual.body_prims)
 
     @property
     def body_handles(self):
-        return self._body_handles
+        return tuple(self._handle_env_ids)
 
-    @body_handles.setter
-    def body_handles(self, value):
-        self._body_handles = tuple(int(handle) for handle in value)
-
-    def __len__(self) -> int:
+    def __len__(self):
         self._require_valid()
         return self.num_envs
 
-    def sync(self):
+    def set_visible(self, visible):
         self._require_valid()
-        for row, env_id in enumerate(self.env_ids):
-            rigid = self.world.rigid(env_id, self.obj_id)
-            self._state.set_body_transform(
-                row,
-                0,
-                rigid.get_root_position(),
-                rigid.get_root_quat_xyzw(),
-            )
-        self._batch.prepare_from_state(self._state)
-        self._version += 1
-        renderer = self.app.get_renderer()
-        for shape_id, handle in enumerate(self.body_handles):
-            desc = self._batch.external_transform_desc(
-                shape_id,
-                self._version,
-                f"rigid_cpu_external_{self.obj_id}_{shape_id}",
-            )
-            renderer.set_renderable_external_buffer(handle, desc)
-        return self
-
-    def set_visible(self, visible: bool):
-        self._require_valid()
-        for prim in self.body_prims:
-            prim.set_visible(bool(visible))
+        for _, visual in self._groups:
+            for view in visual.views:
+                view.set_visible(visible)
         return self
 
     def set_color(self, color):
         self._require_valid()
         colors = _batch_colors(color, self.env_ids)
-        for handle in self.body_handles:
-            self.app.set_renderable_colors(handle, colors)
+        render_system = self.app.get_scene_render_system()
+        for rows, visual in self._groups:
+            group_colors = colors[list(rows)]
+            for part_id, view in enumerate(visual.views):
+                render_system.set_instance_colors(
+                    view.component, group_colors * visual.base_colors[part_id]
+                )
         return self
 
-    def body_id_from_render_handle(self, handle) -> int | None:
+    def body_id_from_render_handle(self, handle):
         self._require_valid()
-        return 0 if int(handle) in self.body_handles else None
+        return 0 if int(handle) in self._handle_env_ids else None
+
+    def env_ids_from_render_handle(self, handle):
+        self._require_valid()
+        return self._handle_env_ids[int(handle)]
 
     def release(self):
         if not self.is_valid:
             return self
-        self._batch = None
-        self._state = None
-        self._model = None
-        self.body_prims = ()
-        self.body_handles = ()
+        for _, visual in self._groups:
+            visual.remove()
+        self.app.scene.remove_prim(self.path)
+        self._groups.clear()
+        self._handle_env_ids.clear()
         self.app = None
         self.world = None
         self._mark_released()
+        return self
+
+
+class RigidCPUExternalBackend(_RigidExternalBackend):
+    """CPU actor poses -> native SimVisualBatch -> per-part ExternalBuffer."""
+
+    def __init__(self, app, world, obj_id, env_ids, path, groups):
+        from ... import physics
+
+        super().__init__(app, world, obj_id, env_ids, path, groups)
+        self._version = 0
+        self._batches = []
+        self._group_actors = []
+        for rows, visual in groups:
+            model = physics.SimModel()
+            for part_id, handle in enumerate(visual.body_handles):
+                model.add_shape(
+                    0,
+                    handle,
+                    visual.local_pos[part_id].tolist(),
+                    visual.local_quat_xyzw[part_id].tolist(),
+                    f"rigid_shape_{part_id}",
+                    local_scale=visual.local_scale[part_id].tolist(),
+                )
+            model.add_object_boundary(0, 1, f"rigid_{self.obj_id}")
+            state = physics.SimState()
+            state.resize(len(rows), 1)
+            batch = physics.SimVisualBatch()
+            batch.set_model(model)
+            self._batches.append((model, state, batch))
+            self._group_actors.append(
+                tuple(world.rigid(self.env_ids[row], self.obj_id) for row in rows)
+            )
+
+    def sync(self):
+        self._require_valid()
+        self._version += 1
+        renderer = self.app.get_renderer()
+        for group_id, ((_, visual), actors, (_, state, batch)) in enumerate(
+            zip(self._groups, self._group_actors, self._batches)
+        ):
+            for row, actor in enumerate(actors):
+                state.set_body_transform(
+                    row, 0, actor.get_root_position(), actor.get_root_quat_xyzw()
+                )
+            batch.prepare_from_state(state)
+            for part_id, handle in enumerate(visual.body_handles):
+                desc = batch.external_transform_desc(
+                    part_id,
+                    self._version,
+                    f"rigid_cpu_external_{self.obj_id}_{group_id}_{part_id}",
+                )
+                renderer.set_renderable_external_buffer(handle, desc)
+        return self
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        super().release()
+        self._batches.clear()
+        self._group_actors.clear()
+        return self
+
+
+class RigidGPUExternalBackend(_RigidExternalBackend):
+    """CUDA actor poses -> local part transforms -> mapped OpenGL buffers."""
+
+    def __init__(self, app, world, obj_id, env_ids, path, groups):
+        import torch
+
+        from ...utils import to_gpu_array_view
+        from ...utils.batched_rotations import quat_xyzw_to_matrix
+
+        super().__init__(app, world, obj_id, env_ids, path, groups)
+        state = world.gpu_system.rigid_data()
+        self.device_id = int(state.device_id)
+        device = torch.device("cuda", self.device_id)
+        self._row_tensors = []
+        self._rows = []
+        self._local_transforms = []
+
+        # Source grouping and local transforms are immutable for this visual batch.
+        for group_id, (rows, visual) in enumerate(groups):
+            indices = torch.tensor(
+                [world.rigid_gpu_row(self.env_ids[row], self.obj_id) for row in rows],
+                dtype=torch.int32,
+                device=device,
+            )
+            self._row_tensors.append(indices)
+            self._rows.append(to_gpu_array_view(
+                indices, dtype=torch.int32,
+                name=f"rigid_visual_{self.obj_id}_{group_id}_rows",
+            ))
+
+            transforms = np.repeat(
+                np.eye(4, dtype=np.float32)[None], len(visual.body_handles), axis=0
+            )
+            transforms[:, :3, :3] = (
+                quat_xyzw_to_matrix(torch.from_numpy(visual.local_quat_xyzw)).numpy()
+                * visual.local_scale[:, None]
+            )
+            transforms[:, :3, 3] = visual.local_pos
+            self._local_transforms.append(
+                transforms.transpose(0, 2, 1).reshape(-1, 16).tolist()
+            )
+
+        self._rows_ready = torch.cuda.Event()
+        self._rows_ready.record(torch.cuda.current_stream(device))
+        for rows in self._rows:
+            rows.ready_event_handle = int(self._rows_ready.cuda_event)
+
+    def sync(self):
+        import torch
+
+        self._require_valid()
+        gpu_system = self.world.gpu_system
+        gpu_system.fetch_rigid_data()
+        state = gpu_system.rigid_data()
+        stream = torch.cuda.current_stream(self.device_id)
+        renderer = self.app.get_renderer()
+        try:
+            for (_, visual), indices, rows, local in zip(
+                self._groups, self._row_tensors, self._rows, self._local_transforms
+            ):
+                indices.record_stream(stream)
+                handles = visual.body_handles
+                mapped = renderer.map_renderable_cuda_transform_buffers(
+                    handles, len(indices), self.device_id, stream.cuda_stream
+                )
+                try:
+                    _ke.rigid_state_to_mapped_mat4_cuda(state, rows, local, mapped)
+                finally:
+                    renderer.unmap_renderable_cuda_transform_buffers(
+                        handles, self.device_id, stream.cuda_stream
+                    )
+        finally:
+            # The next physics fetch must wait until these borrowed poses are consumed.
+            producer = torch.cuda.ExternalStream(state.stream_handle, device=self.device_id)
+            producer.wait_stream(stream)
+        return self
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        super().release()
+        self._rows.clear()
+        self._row_tensors.clear()
+        self._local_transforms.clear()
+        self._rows_ready = None
         return self
 
 
@@ -193,6 +304,8 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         collision_prims=(),
         *,
         render_body_ids=None,
+        base_colors=None,
+        owned_paths=(),
     ):
         from ... import physics
 
@@ -212,6 +325,11 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
             raise ValueError("render body IDs must match renderable handles")
         self.num_envs = len(self.env_ids)
         self._version = 0
+        self._base_colors = (
+            np.ones((len(self.body_handles), 4), dtype=np.float32)
+            if base_colors is None else np.asarray(base_colors, dtype=np.float32)
+        )
+        self._owned_paths = owned_paths
 
         self._model = physics.SimModel()
         for body_id, handle in zip(self._render_body_ids, self.body_handles):
@@ -275,8 +393,8 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
     def set_color(self, color):
         self._require_valid()
         colors = _batch_colors(color, self.env_ids)
-        for handle in self.body_handles:
-            self.app.set_renderable_colors(handle, colors)
+        for handle, base in zip(self.body_handles, self._base_colors):
+            self.app.set_renderable_colors(handle, colors * base)
         return self
 
     def body_id_from_render_handle(self, handle) -> int | None:
@@ -290,6 +408,9 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
     def release(self):
         if not self.is_valid:
             return self
+        for path in self._owned_paths:
+            if path is not None:
+                self.app.scene.remove_prim(path)
         self._batch = None
         self._state = None
         self._model = None
@@ -317,6 +438,8 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         collision_prims=(),
         *,
         render_body_ids=None,
+        base_colors=None,
+        owned_paths=(),
     ):
         import torch
 
@@ -337,6 +460,11 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         if len(self._render_body_ids) != len(self.body_handles):
             raise ValueError("render body IDs must match renderable handles")
         self.num_envs = len(self.env_ids)
+        self._base_colors = (
+            np.ones((len(self.body_handles), 4), dtype=np.float32)
+            if base_colors is None else np.asarray(base_colors, dtype=np.float32)
+        )
+        self._owned_paths = owned_paths
         self._rows = world.articulation_gpu_index_view(self.env_ids, self.obj_id)
         link_view = world.gpu_system.articulation_link_data()
         device = torch.device(f"cuda:{int(link_view.device_id)}")
@@ -415,8 +543,8 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
     def set_color(self, color):
         self._require_valid()
         colors = _batch_colors(color, self.env_ids)
-        for handle in self.body_handles:
-            self.app.set_renderable_colors(handle, colors)
+        for handle, base in zip(self.body_handles, self._base_colors):
+            self.app.set_renderable_colors(handle, colors * base)
         return self
 
     def body_id_from_render_handle(self, handle) -> int | None:
@@ -430,6 +558,9 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
     def release(self):
         if not self.is_valid:
             return self
+        for path in self._owned_paths:
+            if path is not None:
+                self.app.scene.remove_prim(path)
         self._rows = None
         self._link_indices = None
         self._link_indices_tensor = None
@@ -441,156 +572,6 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self.world = None
         self._mark_released()
         return self
-
-
-class RigidGPUExternalBackend(_VisualLifetime):
-    """CUDA rigid root poses consumed as one renderer instance buffer."""
-
-    def __init__(self, app, world, obj_id, env_ids, prim, handle):
-        import torch
-
-        self._released = False
-        self.app = app
-        self.world = world
-        self.obj_id = int(obj_id)
-        self.env_ids = tuple(int(env_id) for env_id in env_ids)
-        self.body_prims = (prim,)
-        self.body_handles = (int(handle),)
-        self.num_bodies = 1
-        self.num_envs = len(self.env_ids)
-        self._rows = world.rigid_gpu_index_view(self.env_ids, self.obj_id)
-        rigid_view = world.gpu_system.rigid_data()
-        device = torch.device(f"cuda:{int(rigid_view.device_id)}")
-        self.device_id = int(rigid_view.device_id)
-        self.stream_handle = int(torch.cuda.current_stream(device).cuda_stream)
-
-    @property
-    def prims(self):
-        return self.body_prims
-
-    def __len__(self) -> int:
-        self._require_valid()
-        return self.num_envs
-
-    def sync(self):
-        self._require_valid()
-        gpu_system = self.world.gpu_system
-        gpu_system.fetch_rigid_data()
-        renderer = self.app.get_renderer()
-        mapped = renderer.map_renderable_cuda_transform_buffers(
-            self.body_handles,
-            self.num_envs,
-            self.device_id,
-            self.stream_handle,
-        )
-        try:
-            _ke.indexed_rigid_state_to_mat4_cuda(
-                gpu_system.rigid_data(), self._rows, mapped[0]
-            )
-        finally:
-            renderer.unmap_renderable_cuda_transform_buffers(
-                self.body_handles,
-                self.device_id,
-                self.stream_handle,
-            )
-        return self
-
-    def set_visible(self, visible: bool):
-        self._require_valid()
-        self.body_prims[0].set_visible(bool(visible))
-        return self
-
-    def set_color(self, color):
-        self._require_valid()
-        self.app.set_renderable_colors(
-            self.body_handles[0], _batch_colors(color, self.env_ids)
-        )
-        return self
-
-    def body_id_from_render_handle(self, handle) -> int | None:
-        self._require_valid()
-        return 0 if int(handle) == self.body_handles[0] else None
-
-    def release(self):
-        if not self.is_valid:
-            return self
-        self._rows = None
-        self.body_prims = ()
-        self.body_handles = ()
-        self.app = None
-        self.world = None
-        self._mark_released()
-        return self
-
-
-class RigidVisual:
-    """Viewer-side visualizer for one compound rigid actor."""
-
-    def __init__(
-        self,
-        app,
-        scene,
-        rigid,
-        data,
-        prim_base_path: str,
-        material=None,
-        add_shapes: bool = True,
-        color=None,
-    ):
-        self.app = app
-        self.scene = scene
-        self.rigid = rigid
-        self.specs = rigid_shape_specs(data)
-        self.local_pos = np.stack([spec.local_pos for spec in self.specs], axis=0)
-        self.local_quat_xyzw = np.stack([spec.local_quat_xyzw for spec in self.specs], axis=0)
-        self.body_prims = []
-        self.body_handles = []
-        for idx, spec in enumerate(self.specs):
-            prim = self._define_shape_prim(prim_base_path, idx, spec)
-            _apply_prim_color([prim], color)
-            if add_shapes and material is not None:
-                self.body_handles.append(app._add_renderable(material, prim))
-            self.body_prims.append(prim)
-
-    def sync(self):
-        root_pos = np.asarray(self.rigid.get_root_position(), dtype=np.float32)
-        root_quat_xyzw = np.asarray(self.rigid.get_root_quat_xyzw(), dtype=np.float32)
-        body_pos, body_quat_xyzw = expand_rigid_body_state(
-            root_pos, root_quat_xyzw, self.local_pos, self.local_quat_xyzw
-        )
-        for prim, pos, rot in zip(self.body_prims, body_pos, body_quat_xyzw):
-            prim.set_world_translation(
-                _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
-            )
-            prim.set_world_quat_wxyz(
-                _ke.Quat.from_xyzw(rot)
-            )
-
-    def _define_shape_prim(self, base_path, idx, spec):
-        path = f"{base_path}/{_safe_prim_name(spec.name)}_{idx}"
-        prim = self.scene.define_prim(path, _ke.scene.PrimType.MESH)
-        geom_type = spec.geom_type
-        size = spec.size
-        if geom_type == "Sphere":
-            mesh = _ke.geometry.create_sphere_data(float(size[0]), 24, 12)
-        elif geom_type == "Box":
-            mesh = _ke.geometry.create_box_data(
-                float(size[0] * 2.0), float(size[1] * 2.0), float(size[2] * 2.0)
-            )
-        elif geom_type == "Cylinder":
-            mesh = _ke.geometry.create_cylinder_data(
-                float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
-            )
-        elif geom_type == "Capsule":
-            mesh = _ke.geometry.create_capsule_data(
-                float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
-            )
-        elif geom_type == "ConvexMesh" and spec.mesh_data is not None:
-            mesh = spec.mesh_data
-        else:
-            raise ValueError(f"unsupported rigid visual geometry type: {geom_type}")
-        prim.set_mesh_data(mesh)
-        return prim
 
 
 class SimWorldVisualizer:
@@ -652,7 +633,13 @@ class SimWorldVisualizer:
         self.gpu_visual_batches.clear()
         self.cpu_visual_batches.clear()
         self.visual_batches.clear()
+        for record in self.visual_articulation_scene_graphs.values():
+            for path in record.owned_paths:
+                if path is not None:
+                    self.app.scene.remove_prim(path)
         self.visual_articulation_scene_graphs.clear()
+        for record in self.visual_rigid_scene_graphs.values():
+            record.rigid_visual.remove()
         self.visual_rigid_scene_graphs.clear()
         self._articulation_visual_assets.clear()
         self._released = True
@@ -663,7 +650,7 @@ class SimWorldVisualizer:
     def add(
         self,
         sim_handle: SimRigid | SimArticulation | SimRigidBatch | SimArticulationBatch,
-        mjcf_path: str,
+        mjcf_path: str | None = None,
         *,
         path: str | None = None,
         **kwargs,
@@ -673,7 +660,8 @@ class SimWorldVisualizer:
         ``sim_handle`` may be a single ``SimRigid`` / ``SimArticulation`` or a
         ``SimRigidBatch`` / ``SimArticulationBatch``. Single objects are treated
         as a one-env visual batch. Use ``add_scene_graph`` when an inspectable
-        per-environment SceneGraph visual is required.
+        per-environment SceneGraph visual is required. Handles use their registered
+        descriptor's appearance unless an explicit path overrides the source.
         """
         self._require_valid()
         obj_id = int(sim_handle.obj_id)
@@ -701,10 +689,10 @@ class SimWorldVisualizer:
                 else self._add_cpu_external_articulation
             )
         elif all((eid, obj_id) in self.world.rigids for eid in env_ids):
-            add_batch = self._add_gpu_rigid if use_gpu else self._add_cpu_external_rigid
+            add_batch = self._add_rigid
         elif all((eid, obj_id) in self.world.static_rigids for eid in env_ids):
             # Static actors have no PhysX GPU state row.
-            add_batch = self._add_cpu_external_rigid
+            add_batch = self._add_rigid
         else:
             raise KeyError(
                 f"simulation handle obj_id={obj_id} does not match registered objects"
@@ -721,7 +709,7 @@ class SimWorldVisualizer:
     def add_scene_graph(
         self,
         sim_handle: SimRigid | SimArticulation | SimRigidBatch | SimArticulationBatch,
-        mjcf_path: str,
+        mjcf_path: str | None = None,
         *,
         path: str | None = None,
         env_id: int | None = None,
@@ -776,7 +764,7 @@ class SimWorldVisualizer:
         self,
         env_id: int,
         obj_id: int,
-        asset_path: str,
+        asset_path: str | None = None,
         *,
         path: str = "/robot",
         scale: float = 1.0,
@@ -803,8 +791,9 @@ class SimWorldVisualizer:
             )
 
         articulation = self.world.articulation(key[0], key[1])
-        asset, mesh_asset_base_path = self._articulation_visual_asset(
-            asset_path, scale, order
+        asset, mesh_asset_base_path, data = self._articulation_visual_asset(
+            asset_path, scale, order,
+            data=self.world.articulations[key].source_data,
         )
         articulation_visual = asset.instantiate(
             self.scene,
@@ -818,15 +807,11 @@ class SimWorldVisualizer:
             articulation_visual, articulation
         )
         render_prims = list(articulation_visual.render_prims())
-        _apply_prim_color(render_prims, color)
-        material = self._resolve_visual_material(material)
-        body_handles = []
-        handle_body_ids = {}
-        if add_shapes and material is not None:
-            for prim, body_id in zip(render_prims, render_body_ids):
-                handle = self.app._add_renderable(material, prim)
-                body_handles.append(handle)
-                handle_body_ids[int(handle)] = int(body_id)
+        body_handles, base_colors = self._register_articulation_parts(
+            articulation_visual, data, material=material, color=color,
+            add_shapes=add_shapes,
+        )
+        handle_body_ids = dict(zip(body_handles, render_body_ids))
         self.physics_bridge.add(articulation, articulation_visual)
         if _debug_registration:
             _debug_instancing(
@@ -849,9 +834,9 @@ class SimWorldVisualizer:
                 )
             )
             shape_material = (
-                material
+                visual_material(self.app, None, override=material)
                 if collision_material is None
-                else self._resolve_visual_material(collision_material)
+                else collision_material
             )
             if add_shapes and shape_material is not None:
                 for prim in collision_prims:
@@ -866,6 +851,8 @@ class SimWorldVisualizer:
             collision_prims,
             body_handles,
             handle_body_ids,
+            base_colors=base_colors,
+            owned_paths=(path, collision_path),
         )
         self.visual_articulation_scene_graphs[key] = record
         return record
@@ -873,7 +860,7 @@ class SimWorldVisualizer:
     def _add_gpu_articulation(
         self,
         sim_view,
-        mjcf_path: str,
+        mjcf_path: str | None,
         prim_base_path: str = "/gpu_robot",
         scale: float = 1.0,
         order: str = "DFS",
@@ -885,43 +872,36 @@ class SimWorldVisualizer:
     ) -> VisualBatch:
         """Create renderables for visual meshes backed by CUDA instance transforms."""
         self._require_valid()
-        material = self._resolve_visual_material(material)
-        if material is None:
-            raise ValueError("_add_gpu_articulation requires a material")
         if not hasattr(_ke, "articulation_link_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
-        if obj_id in self.gpu_visual_batches:
+        if obj_id in self.gpu_visual_batches and self.gpu_visual_batches[obj_id].is_valid:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
         if any((env_id, obj_id) not in self.world.articulations for env_id in env_ids):
             raise KeyError(f"articulation obj={obj_id} is not registered in every env")
 
-        asset, mesh_asset_base_path = self._articulation_visual_asset(
-            mjcf_path, scale, order
+        asset, mesh_asset_base_path, data = self._articulation_visual_asset(
+            mjcf_path, scale, order,
+            data=self.world.articulations[(env_ids[0], obj_id)].source_data,
         )
         articulation_visual = asset.instantiate(
-            self.scene, prim_base_path, mesh_asset_base_path
+            self.scene, prim_base_path, mesh_asset_base_path, True
         )
         body_prims, render_body_ids = _physical_visual_mapping(
             articulation_visual, sim_view.articulation
         )
-        # Meshless links still have body frames, but no renderer/CUDA buffer.
-        render_prims = list(articulation_visual.render_prims())
-        body_handles = [
-            self.app._add_renderable(
-                material, prim, render_api.TransformSource.EXTERNAL_BUFFER
-            )
-            for prim in render_prims
-        ]
+        body_handles, base_colors = self._register_articulation_parts(
+            articulation_visual, data, material=material, external=True,
+        )
         collision_prims = self._add_articulation_collision_visuals(
             sim_view.articulation,
             collision_base_path,
             (
                 material
                 if collision_material is None
-                else self._resolve_visual_material(collision_material)
+                else collision_material
             ),
             show_collision,
         )
@@ -934,10 +914,12 @@ class SimWorldVisualizer:
             body_handles,
             collision_prims,
             render_body_ids=render_body_ids,
+            base_colors=base_colors,
+            owned_paths=(prim_base_path, collision_base_path),
         )
         batch = VisualBatch(obj_id, env_ids, backend=backend)
-        batch.set_color(color)
         batch.sync()
+        batch.set_color(color)
         self.gpu_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
@@ -945,7 +927,7 @@ class SimWorldVisualizer:
     def _add_cpu_external_articulation(
         self,
         sim_view,
-        mjcf_path: str,
+        mjcf_path: str | None,
         prim_base_path: str = "/cpu_external_robot",
         scale: float = 1.0,
         order: str = "DFS",
@@ -957,45 +939,38 @@ class SimWorldVisualizer:
     ) -> VisualBatch:
         """Create renderables for visual meshes backed by CPU ExternalBuffer."""
         self._require_valid()
-        material = self._resolve_visual_material(material)
-        if material is None:
-            raise ValueError("_add_cpu_external_articulation requires a material")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
-        if obj_id in self.visual_batches:
+        if obj_id in self.visual_batches and self.visual_batches[obj_id].is_valid:
             raise ValueError(f"visual batch already registered for obj={obj_id}")
-        if obj_id in self.cpu_visual_batches:
+        if obj_id in self.cpu_visual_batches and self.cpu_visual_batches[obj_id].is_valid:
             raise ValueError(f"CPU visual batch already registered for obj={obj_id}")
-        if obj_id in self.gpu_visual_batches:
+        if obj_id in self.gpu_visual_batches and self.gpu_visual_batches[obj_id].is_valid:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
         if any((env_id, obj_id) not in self.world.articulations for env_id in env_ids):
             raise KeyError(f"articulation obj={obj_id} is not registered in every env")
 
-        asset, mesh_asset_base_path = self._articulation_visual_asset(
-            mjcf_path, scale, order
+        asset, mesh_asset_base_path, data = self._articulation_visual_asset(
+            mjcf_path, scale, order,
+            data=self.world.articulations[(env_ids[0], obj_id)].source_data,
         )
         articulation_visual = asset.instantiate(
-            self.scene, prim_base_path, mesh_asset_base_path
+            self.scene, prim_base_path, mesh_asset_base_path, True
         )
         body_prims, render_body_ids = _physical_visual_mapping(
             articulation_visual, sim_view.articulation
         )
-        # Keep all body frames, but register only meshes with the renderer.
-        render_prims = list(articulation_visual.render_prims())
-        body_handles = [
-            self.app._add_renderable(
-                material, prim, render_api.TransformSource.EXTERNAL_BUFFER
-            )
-            for prim in render_prims
-        ]
+        body_handles, base_colors = self._register_articulation_parts(
+            articulation_visual, data, material=material, external=True,
+        )
         collision_prims = self._add_articulation_collision_visuals(
             sim_view.articulation,
             collision_base_path,
             (
                 material
                 if collision_material is None
-                else self._resolve_visual_material(collision_material)
+                else collision_material
             ),
             show_collision,
         )
@@ -1008,127 +983,92 @@ class SimWorldVisualizer:
             body_handles,
             collision_prims,
             render_body_ids=render_body_ids,
+            base_colors=base_colors,
+            owned_paths=(prim_base_path, collision_base_path),
         )
         batch = VisualBatch(obj_id, env_ids, backend=backend)
-        batch.set_color(color)
         batch.sync()
+        batch.set_color(color)
         self.cpu_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
-    def _add_gpu_rigid(
+    def _add_rigid(
         self,
         sim_view,
-        mjcf_path: str,
-        prim_base_path: str = "/gpu_rigid",
+        mjcf_path: str | None = None,
+        prim_base_path: str = "/rigid",
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
         color=None,
     ) -> VisualBatch:
-        """Create a single-shape rigid batch backed by CUDA transforms."""
+        """Group actor appearances while preserving each environment's instance row."""
         self._require_valid()
-        material = self._resolve_visual_material(material)
-        if material is None:
-            raise ValueError("_add_gpu_rigid requires a material")
-        if not hasattr(_ke, "indexed_rigid_state_to_mat4_cuda"):
-            raise RuntimeError("KangEngine was built without CUDA transform kernels")
-
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
-        if obj_id in self.gpu_visual_batches:
-            raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
-        data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
-        rigid_visual = RigidVisual(
-            self.app,
-            self.scene,
-            sim_view.rigid,
-            data,
-            prim_base_path,
-            add_shapes=False,
-            color=color,
+        use_gpu = (
+            self.world.sim_device.type == "cuda"
+            and (env_ids[0], obj_id) in self.world.rigids
         )
-        if len(rigid_visual.body_prims) != 1:
-            raise NotImplementedError(
-                "GPU rigid visual batches currently require one MJCF shape"
-            )
-        prim = rigid_visual.body_prims[0]
-        handle = self.app._add_renderable(
-            material, prim, render_api.TransformSource.EXTERNAL_BUFFER
-        )
-        backend = RigidGPUExternalBackend(
-            self.app, self.world, obj_id, env_ids, prim, handle
-        )
-        batch = VisualBatch(obj_id, env_ids, backend=backend)
-        batch.set_color(color)
-        batch.sync()
-        self.gpu_visual_batches[obj_id] = batch
-        self.visual_batches[obj_id] = batch
-        return batch
-
-    def _add_cpu_external_rigid(
-        self,
-        sim_view,
-        mjcf_path: str,
-        prim_base_path: str = "/cpu_external_rigid",
-        scale: float = 1.0,
-        order: str = "DFS",
-        material=None,
-        color=None,
-    ) -> VisualBatch:
-        """Create a rigid shape batch backed by CPU ExternalBuffer."""
-        self._require_valid()
-        material = self._resolve_visual_material(material)
-        if material is None:
-            raise ValueError("_add_cpu_external_rigid requires a material")
-
-        obj_id = int(sim_view.obj_id)
-        env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
-        if obj_id in self.visual_batches:
+        previous = self.visual_batches.get(obj_id)
+        if previous is not None and previous.is_valid:
             raise ValueError(f"visual batch already registered for obj={obj_id}")
-        if obj_id in self.cpu_visual_batches:
-            raise ValueError(f"CPU visual batch already registered for obj={obj_id}")
-        if obj_id in self.gpu_visual_batches:
-            raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
-        data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
-        rigid_visual = RigidVisual(
-            self.app,
-            self.scene,
-            sim_view.rigid,
-            data,
-            prim_base_path,
-            add_shapes=False,
-            color=color,
+        if self.app.scene.get_prim_at_path(prim_base_path) is not None:
+            raise ValueError(f"scene path already exists: {prim_base_path}")
+
+        # An explicit MJCF overrides appearance; otherwise use the registered source.
+        from ...asset.rigid_asset import _as_rigid_desc
+
+        override = (
+            _as_rigid_desc(self.world.load_mjcf(mjcf_path, scale=scale, order=order))
+            if mjcf_path is not None else None
         )
-        body_prims = list(rigid_visual.body_prims)
-        body_handles = [
-            self.app._add_renderable(
-                material, prim, render_api.TransformSource.EXTERNAL_BUFFER
+        sources = {}
+        for row, env_id in enumerate(env_ids):
+            key = (env_id, obj_id)
+            record = self.world.rigids.get(key) or self.world.static_rigids[key]
+            data = record.source_data if override is None else override
+            source_key = id(data)
+            if source_key not in sources:
+                sources[source_key] = ([], data)
+            sources[source_key][0].append(row)
+
+        self.app.scene.define_prim(prim_base_path, _ke.scene.PrimType.XFORM)
+        groups = []
+        try:
+            for group_id, (rows, data) in enumerate(sources.values()):
+                visual = RigidVisual(
+                    self.app, f"{prim_base_path}/asset_{group_id}", data,
+                    material=material,
+                    transform_source=render_api.TransformSource.EXTERNAL_BUFFER,
+                )
+                groups.append((tuple(rows), visual))
+            backend_type = RigidGPUExternalBackend if use_gpu else RigidCPUExternalBackend
+            backend = backend_type(
+                self.app, self.world, obj_id, env_ids, prim_base_path, groups
             )
-            for prim in body_prims
-        ]
-        backend = RigidCPUExternalBackend(
-            self.app,
-            self.world,
-            obj_id,
-            env_ids,
-            body_prims,
-            body_handles,
-            rigid_visual.local_pos,
-            rigid_visual.local_quat_xyzw,
-        )
-        batch = VisualBatch(obj_id, env_ids, backend=backend)
-        batch.set_color(color)
-        batch.sync()
-        self.cpu_visual_batches[obj_id] = batch
+            batch = VisualBatch(obj_id, env_ids, backend=backend)
+            batch.sync()
+            batch.set_color(color)
+        except Exception:
+            self.app.scene.remove_prim(prim_base_path)
+            raise
+
         self.visual_batches[obj_id] = batch
+        target = (
+            self.gpu_visual_batches
+            if use_gpu
+            else self.cpu_visual_batches
+        )
+        target[obj_id] = batch
         return batch
 
     def add_rigid_scene_graph(
         self,
         env_id: int,
         obj_id: int,
-        mjcf_path: str,
+        mjcf_path: str | None = None,
         *,
         path: str = "/rigid",
         scale: float = 1.0,
@@ -1154,14 +1094,18 @@ class SimWorldVisualizer:
                 f"visual already registered for env={key[0]}, obj={key[1]}"
             )
 
-        rigid = self.world.rigid(key[0], key[1])
-        data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
+        source = self.world.rigids.get(key) or self.world.static_rigids[key]
+        rigid = source.rigid
+        from ...asset.rigid_asset import _as_rigid_desc
+
+        data = (
+            _as_rigid_desc(self.world.load_mjcf(mjcf_path, scale=scale, order=order))
+            if mjcf_path is not None else source.source_data
+        )
         rigid_visual = RigidVisual(
             self.app,
-            self.scene,
-            rigid,
-            data,
             path,
+            data,
             material=self._resolve_visual_material(material),
             add_shapes=add_shapes,
             color=color,
@@ -1208,7 +1152,7 @@ class SimWorldVisualizer:
                 f"visual already registered for env={key[0]}, obj={key[1]}"
             )
 
-        asset, mesh_asset_base_path = self._articulation_visual_asset(
+        asset, mesh_asset_base_path, data = self._articulation_visual_asset(
             mjcf_path, scale, order
         )
         articulation_visual = asset.instantiate(
@@ -1222,15 +1166,11 @@ class SimWorldVisualizer:
         render_body_ids = [
             int(i) for i in articulation_visual.render_prim_body_indices()
         ]
-        _apply_prim_color(render_prims, color)
-        material = self._resolve_visual_material(material)
-        body_handles = []
-        handle_body_ids = {}
-        if add_shapes and material is not None:
-            for prim, body_id in zip(render_prims, render_body_ids):
-                handle = self.app._add_renderable(material, prim)
-                body_handles.append(handle)
-                handle_body_ids[int(handle)] = int(body_id)
+        body_handles, base_colors = self._register_articulation_parts(
+            articulation_visual, data, material=material, color=color,
+            add_shapes=add_shapes,
+        )
+        handle_body_ids = dict(zip(body_handles, render_body_ids))
         _debug_instancing(
             kind="visual-scenegraph",
             env_id=key[0],
@@ -1249,6 +1189,8 @@ class SimWorldVisualizer:
             [],
             body_handles,
             handle_body_ids,
+            base_colors=base_colors,
+            owned_paths=(path,),
         )
         self.visual_articulation_scene_graphs[key] = record
         return record
@@ -1258,9 +1200,11 @@ class SimWorldVisualizer:
         self.physics_bridge.sync()
         self._sync_rigids()
         for batch in self.cpu_visual_batches.values():
-            batch.sync()
+            if batch.is_valid:
+                batch.sync()
         for batch in self.gpu_visual_batches.values():
-            batch.sync()
+            if batch.is_valid:
+                batch.sync()
         self._sync_frame_axes()
 
     def set_frames_visible(
@@ -1342,6 +1286,8 @@ class SimWorldVisualizer:
             return None
 
         for batch in self.visual_batches.values():
+            if not batch.is_valid:
+                continue
             hit = batch.pick_body(selection)
             if hit is not None:
                 return hit
@@ -1357,7 +1303,10 @@ class SimWorldVisualizer:
 
     def _sync_rigids(self):
         for record in self.visual_rigid_scene_graphs.values():
-            record.rigid_visual.sync()
+            record.rigid_visual.apply_pose(
+                position=record.rigid.get_root_position(),
+                quat_xyzw=record.rigid.get_root_quat_xyzw(),
+            )
 
     def set_body_transforms_scene_graph(
         self, env_id: int, obj_id: int, body_pos=None, body_quat_xyzw=None
@@ -1416,7 +1365,8 @@ class SimWorldVisualizer:
     def set_collision_visible(self, visible: bool):
         self.physics_bridge.set_collision_visible(bool(visible))
         for batch in self.visual_batches.values():
-            batch.set_collision_visible(bool(visible))
+            if batch.is_valid:
+                batch.set_collision_visible(bool(visible))
 
     def body_id_from_render_handle_scene_graph(
         self, env_id: int, obj_id: int, handle
@@ -1433,39 +1383,82 @@ class SimWorldVisualizer:
             return
         record.set_color(color)
 
+    def _register_articulation_parts(
+        self, visual, data, *, material=None, color=None, external=False,
+        add_shapes=True,
+    ):
+        handles, base_colors = [], []
+        geoms = list(data.visual_geoms)
+        tint = _normalize_color_array(color)
+        transform_source = (
+            render_api.TransformSource.EXTERNAL_BUFFER if external
+            else render_api.TransformSource.SCENE_GRAPH
+        )
+
+        # Preserve every authored part's UVs and material while sharing body poses.
+        for prim, visual_index in zip(
+            visual.render_prims(), visual.render_prim_visual_indices()
+        ):
+            geom = geoms[visual_index] if visual_index >= 0 else None
+            base = visual_color(geom) if geom is not None else np.ones(4, dtype=np.float32)
+            base_colors.append(base)
+            display = base if tint is None else tint * base
+            mesh = prim.resolve_mesh_data()
+            if not add_shapes:
+                component = prim.get_mesh_component() or prim.add_mesh_component()
+                component.mesh_data = mesh
+                component.resource_handle = self.app._register_mesh_resource(mesh)
+                prim.set_display_color_alpha(_ke.Vec4(*display))
+                continue
+
+            part_material = visual_material(
+                self.app, geom, asset_dir=data.asset_dir,
+                override=material,
+            )
+            view = self.app.scene.add_mesh(
+                prim.get_path(), mesh, material=part_material,
+                color=_ke.Vec4(*display), transform_source=transform_source,
+            )
+            apply_visual_alpha(view, part_material, base)
+            handles.append(int(self.app.get_scene_render_system()._handle(view.component)))
+        return handles, base_colors
+
     def _articulation_visual_asset(
         self,
-        asset_path: str,
+        asset_path: str | None,
         scale: float,
         order: str,
+        *,
+        data=None,
     ):
         scale = float(scale)
-        suffix = Path(asset_path).suffix.lower()
-        key = (str(asset_path), scale, str(order))
+        key = (("data", id(data)) if asset_path is None
+               else (str(asset_path), scale, str(order)))
         record = self._articulation_visual_assets.get(key)
         if record is not None:
             return record
 
-        if suffix == ".xml":
-            data = self.world.load_mjcf(asset_path, scale=scale, order=order)
-        elif suffix == ".urdf":
-            data = self.world.load_urdf(asset_path, scale=scale, order=order)
-        elif suffix in (".usd", ".usda", ".usdc"):
-            if scale != 1.0:
-                raise ValueError("USD articulation visuals require scale=1")
-            data = self.world.load_usd(asset_path, order=order)
+        if asset_path is not None:
+            suffix = Path(asset_path).suffix.lower()
+            if suffix == ".xml":
+                data = self.world.load_mjcf(asset_path, scale=scale, order=order)
+            elif suffix == ".urdf":
+                data = self.world.load_urdf(asset_path, scale=scale, order=order)
+            elif suffix in (".usd", ".usda", ".usdc"):
+                if scale != 1.0:
+                    raise ValueError("USD articulation visuals require scale=1")
+                data = self.world.load_usd(asset_path, order=order)
+            else:
+                raise ValueError(f"unsupported articulation asset extension: {asset_path}")
+            mesh_asset_base_path = _mesh_asset_base_path(asset_path, scale, order)
         else:
-            raise ValueError(
-                f"unsupported articulation asset extension: {asset_path}"
-            )
+            mesh_asset_base_path = f"/.Resources/Meshes/Articulations/source_{id(data)}"
+
         asset = ArticulationVisualAsset.from_data(
-            data=data,
-            scale=1.0,
-            asset_path=asset_path,
+            data=data, scale=1.0, asset_path=asset_path or "",
         )
-        mesh_asset_base_path = _mesh_asset_base_path(asset_path, scale, order)
-        asset.define_mesh_assets(self.scene, mesh_asset_base_path)
-        record = (asset, mesh_asset_base_path)
+        asset.define_mesh_assets(self.scene, mesh_asset_base_path, True)
+        record = (asset, mesh_asset_base_path, data)
         self._articulation_visual_assets[key] = record
         return record
 
@@ -1483,6 +1476,7 @@ class SimWorldVisualizer:
     ):
         if collision_base_path is None:
             return ()
+        material = visual_material(self.app, None, override=material)
         collision_prims = tuple(
             self.physics_bridge.add_collision_visuals(
                 articulation,

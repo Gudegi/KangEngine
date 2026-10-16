@@ -59,6 +59,7 @@ class VertexColorStyle(Enum):
 
 class NativeMaterial:
     """Native renderer material base used for advanced interop."""
+    texture_paths: dict[str, str]
 
 class NativeVertexColorMaterial(NativeMaterial):
     """Native vertex-color material used for advanced interop."""
@@ -76,6 +77,12 @@ class Material:
     def native(self) -> NativeMaterial:
         """Return the wrapped native material."""
         ...
+    @property
+    def texture_paths(self) -> dict[str, str]:
+        """Deferred visual-asset texture paths by slot; assign the complete dictionary."""
+        ...
+    @texture_paths.setter
+    def texture_paths(self, value: dict[str, str]) -> None: ...
 
 class VertexColorMaterial(Material):
     """Material using vertex/display colors and an optional built-in style."""

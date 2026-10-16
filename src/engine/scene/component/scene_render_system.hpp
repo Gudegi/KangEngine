@@ -75,6 +75,9 @@ class SceneRenderSystem {
                      const RenderComponent& second) const;
     size_t registrationCount() const { return _registrations.size(); }
 
+    // Internal renderer bridges use this after registration; absent -> InvalidHandle.
+    RenderableHandle handle(const RenderComponent& component) const;
+
   private:
     friend class ::KE::App;
     friend class DebugDraw;
@@ -103,7 +106,6 @@ class SceneRenderSystem {
     finishRegistration(const std::shared_ptr<RenderComponent>& component,
                        RenderableHandle handle,
                        const SkinnedMeshData* skinnedMesh = nullptr);
-    RenderableHandle handle(const RenderComponent& component) const;
     void clear();
 
     Renderer* _renderer = nullptr;

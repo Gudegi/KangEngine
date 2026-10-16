@@ -1,4 +1,4 @@
-"""Articulated rigid-link visual asset wrappers."""
+"""Native articulated rigid-link visual asset wrappers."""
 
 from __future__ import annotations
 

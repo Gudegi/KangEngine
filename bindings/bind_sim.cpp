@@ -177,6 +177,13 @@ void bind_sim(py::module& m) {
           &launchIndexedRigidStateToMat4CUDA, py::arg("rigid_state"),
           py::arg("rigid_rows"), py::arg("transforms"),
           "Gather selected rigid state rows into CUDA Mat4 transforms.");
+    m.def("rigid_state_to_mapped_mat4_cuda",
+          &launchRigidStateToMappedMat4CUDA, py::arg("rigid_state"),
+          py::arg("rigid_rows"), py::arg("local_transforms"),
+          py::arg("mapped_transforms"),
+          "Compose selected rigid poses with host column-major [P, 16] local "
+          "matrices directly into mapped graphics buffers. Inputs produced on "
+          "another CUDA stream require ready events.");
     m.def("articulation_link_state_to_mat4_cuda",
           &launchArticulationLinkStateToMat4CUDA,
           py::arg("articulation_link_state"), py::arg("articulation_rows"),
@@ -204,15 +211,17 @@ void bind_sim(py::module& m) {
             "add_shape",
             [](KE::SimModel& self, int bodyId, KE::RenderableHandle renderable,
                py::sequence localPos, py::sequence localRot,
-               const std::string& name) {
+               const std::string& name, py::sequence localScale) {
                 return self.addShape(bodyId, renderable,
                                      vec3FromSequence(localPos),
-                                     quatFromXYZWSequence(localRot), name);
+                                     quatFromXYZWSequence(localRot), name,
+                                     vec3FromSequence(localScale, "local_scale"));
             },
             py::arg("body_id"), py::arg("renderable_handle"),
             py::arg("local_pos") = py::make_tuple(0.0f, 0.0f, 0.0f),
             py::arg("local_quat_xyzw") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
-            py::arg("name") = "",
+            py::arg("name") = "", py::kw_only(),
+            py::arg("local_scale") = py::make_tuple(1.0f, 1.0f, 1.0f),
             "Add one shape-to-renderable mapping for native visual batches. "
             "Regular scene objects should be authored through app.scene "
             "instead.")

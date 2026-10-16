@@ -8,29 +8,7 @@ import re
 
 import numpy as np
 
-from ..._core import _ke
-
-
-def normalize_color(color):
-    arr = normalize_color_array(color)
-    if arr is None:
-        return None
-    return _ke.Vec4(float(arr[0]), float(arr[1]), float(arr[2]), float(arr[3]))
-
-
-def normalize_color_array(color):
-    if color is None:
-        return None
-    arr = np.asarray(color, dtype=np.float32).reshape(-1)
-    if arr.size == 0:
-        return None
-    if arr.size == 1:
-        arr = np.repeat(arr, 3)
-    if arr.size == 3:
-        arr = np.concatenate([arr, np.ones(1, dtype=np.float32)])
-    if arr.size < 4:
-        raise ValueError(f"color must have 1, 3, or 4 values; got {arr.size}")
-    return np.clip(arr[:4], 0.0, 1.0).astype(np.float32, copy=False)
+from ..utils import normalize_color, normalize_color_array
 
 
 def batch_colors(color, env_ids):

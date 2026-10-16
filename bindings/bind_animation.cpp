@@ -1583,6 +1583,10 @@ void bind_animation(py::module& m) {
              &ArticulationVisualBridge::renderPrimBodyIndices,
              py::return_value_policy::reference_internal,
              "Return body index for each render prim.")
+        .def("render_prim_visual_indices",
+             &ArticulationVisualBridge::renderPrimVisualIndices,
+             py::return_value_policy::reference_internal,
+             "Return descriptor visual indices, or -1 for collision fallback.")
         .def("num_bodies", &ArticulationVisualBridge::numBodies,
              "Return the number of bridged bodies.");
 

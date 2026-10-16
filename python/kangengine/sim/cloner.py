@@ -137,7 +137,17 @@ class GridCloner:
         kinematic: bool = False,
         static: bool = False,
     ):
+        """Create rigid instances from one source or sources in selected-env order.
+
+        A sequence must contain one source per selected environment. Sources
+        keep their identity so shared meshes reuse the world's cooking cache.
+        Sources sharing obj_id must expose the same number of body state slots.
+        """
         selected = tuple(env_id_list(env_ids, self.num_envs))
+        sources = data if isinstance(data, Sequence) else (data,) * len(selected)
+        if len(sources) != len(selected):
+            raise ValueError("rigid sources must match the selected environment count")
+
         root_pos = self._world_positions(selected, initial_root_pos)
         root_quat_xyzw = self._expand_value(
             initial_root_quat_xyzw,
@@ -145,6 +155,7 @@ class GridCloner:
             width=4,
             name="initial_root_quat_xyzw",
         )
+
         for row, env_id in enumerate(selected):
             kwargs = dict(
                 env_id=env_id,
@@ -156,14 +167,15 @@ class GridCloner:
                 rest_offset=rest_offset,
             )
             if static:
-                self.world.add_static_rigid(data, **kwargs)
+                self.world.add_static_rigid(sources[row], **kwargs)
             else:
                 self.world.add_rigid(
-                    data,
+                    sources[row],
                     density=density,
                     kinematic=kinematic,
                     **kwargs,
                 )
+
         rigid = self.world.get_rigid_batch(
             env_ids=selected,
             obj_id=obj_id,

@@ -9,6 +9,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <memory>
 
 namespace py = pybind11;
 using namespace KE;
@@ -126,7 +127,11 @@ void bind_material(py::module& m) {
     py::class_<ColorLibrary>(m, "ColorLibrary")
         .def_static("get", &ColorLibrary::get, py::arg("type"));
 
-    py::class_<Material>(m, "Material", "Base class for renderer materials.");
+    py::class_<Material, std::shared_ptr<Material>>(
+        m, "Material", "Base class for renderer materials.")
+        .def_readwrite("texture_paths", &Material::texturePaths,
+                       "Source texture paths keyed by texture slot. Reading "
+                       "returns a copy; assign a dictionary to update paths.");
 
     py::enum_<VertexColorStyle>(m, "VertexColorStyle")
         .value("UNTEXTURED", VertexColorStyle::Untextured)
@@ -134,7 +139,7 @@ void bind_material(py::module& m) {
         .value("CHECKERBOARD", VertexColorStyle::Checkerboard)
         .value("DEBUG_CHECKER", VertexColorStyle::DebugChecker);
 
-    py::class_<VertexColorMaterial, Material>(
+    py::class_<VertexColorMaterial, Material, std::shared_ptr<VertexColorMaterial>>(
         m, "VertexColorMaterial",
         "Vertex/display-color material with a built-in rendering style.")
         .def(py::init<VertexColorStyle>(),
@@ -142,7 +147,7 @@ void bind_material(py::module& m) {
         .def("set_style", &VertexColorMaterial::setStyle, py::arg("style"))
         .def_property_readonly("style", &VertexColorMaterial::vertexColorStyle);
 
-    py::class_<PhongMaterial, Material>(
+    py::class_<PhongMaterial, Material, std::shared_ptr<PhongMaterial>>(
         m, "PhongMaterial",
         "Classic Blinn-Phong material with diffuse/specular factors and "
         "optional textures.")
@@ -189,7 +194,7 @@ void bind_material(py::module& m) {
         .def_readwrite("normal_map", &PhongMaterial::normalMap,
                        "Optional tangent-space normal map.");
 
-    py::class_<PBRMaterial, Material>(
+    py::class_<PBRMaterial, Material, std::shared_ptr<PBRMaterial>>(
         m, "PBRMaterial",
         "Physically based material using metallic-roughness parameters.")
         .def(py::init<>(), "Create a PBR material with default factors.")

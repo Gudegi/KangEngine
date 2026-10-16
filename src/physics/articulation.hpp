@@ -79,6 +79,7 @@ class ArticulationTemplate {
     };
 
   private:
+    std::shared_ptr<const Asset::ArticulationDesc> _sourceData;
     std::shared_ptr<const Animation::SkeletonTree> _tree;
     Asset::JointDescMap _joints;
     Asset::CollisionGeomDescMap _colGeoms;
@@ -107,6 +108,7 @@ class ArticulationTemplate {
     static std::shared_ptr<ArticulationTemplate>
     create(const Asset::ArticulationDesc& data,
            const ArticulationConfig& cfg = {});
+    const Asset::ArticulationDesc& sourceData() const { return *_sourceData; }
     const auto& sourceFrames() const { return _sourceFrames; }
     const auto& fixedFrames() const { return _fixedFrames; }
     const auto& bodySourceIndices() const { return _bodySourceIndices; }

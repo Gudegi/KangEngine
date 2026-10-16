@@ -67,15 +67,21 @@ class VisualBatch:
         self._require_valid()
         if selection is None or not getattr(selection, "hit", False):
             return None
-        body_id = self.body_id_from_render_handle(getattr(selection, "handle", -1))
+        handle = getattr(selection, "handle", -1)
+        body_id = self.body_id_from_render_handle(handle)
         if body_id is None:
             return None
         instance_index = int(getattr(selection, "instance_index", -1))
+        env_ids = (
+            self._backend.env_ids_from_render_handle(handle)
+            if hasattr(self._backend, "env_ids_from_render_handle")
+            else self.env_ids
+        )
         env_id = None
-        if 0 <= instance_index < len(self.env_ids):
-            env_id = self.env_ids[instance_index]
-        elif len(self.env_ids) == 1:
-            env_id = self.env_ids[0]
+        if 0 <= instance_index < len(env_ids):
+            env_id = env_ids[instance_index]
+        elif len(env_ids) == 1:
+            env_id = env_ids[0]
         return VisualBodyPick(env_id, self.obj_id, int(body_id), self)
 
     def set_visible(self, visible: bool):
@@ -103,6 +109,7 @@ class VisualBatch:
             raise RuntimeError("VisualBatch has been released")
 
     def release(self):
+        """Release visual resources; rigid visuals also remove their scene prims."""
         if self._released:
             return self
         if hasattr(self._backend, "release"):

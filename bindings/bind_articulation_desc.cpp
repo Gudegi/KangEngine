@@ -5,17 +5,60 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
+#include <pybind11/numpy.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <array>
+#include <algorithm>
 #include <cmath>
 
 #include "animation/skeleton_math.hpp"
 #include "asset/articulation_desc.hpp"
+#include "asset/rigid_desc.hpp"
+#include "engine/graphics/material/material.hpp"
 
 namespace py = pybind11;
 using namespace KE;
 using namespace KE::Asset;
+
+namespace {
+
+template <std::size_t N>
+std::array<float, N> floatValues(py::handle value, const char* name) {
+    using Array = py::array_t<float, py::array::c_style | py::array::forcecast>;
+    auto array = Array::ensure(value);
+    if (!array || array.size() != N)
+        throw py::value_error(std::string(name) + " has the wrong component count");
+    std::array<float, N> result;
+    std::copy_n(array.data(), N, result.begin());
+    for (float item : result)
+        if (!std::isfinite(item))
+            throw py::value_error(std::string(name) + " must be finite");
+    return result;
+}
+
+Eigen::Vector3f vector3(py::handle value, const char* name) {
+    const auto data = floatValues<3>(value, name);
+    return Eigen::Vector3f(data[0], data[1], data[2]);
+}
+
+Eigen::Quaternionf quaternion(py::handle value) {
+    const auto data = floatValues<4>(value, "quat_xyzw");
+    Eigen::Quaternionf result(data[3], data[0], data[1], data[2]);
+    if (std::abs(result.squaredNorm() - 1.f) > 1e-3f)
+        throw py::value_error("quat_xyzw must be a unit quaternion");
+    return result;
+}
+
+std::shared_ptr<Material> materialSource(py::handle value) {
+    if (value.is_none()) return {};
+
+    py::object native = py::reinterpret_borrow<py::object>(value);
+    if (py::hasattr(native, "native")) native = native.attr("native");
+    return native.cast<std::shared_ptr<Material>>();
+}
+
+} // namespace
 
 void bind_articulation_desc(py::module& m) {
     py::module asset = m.attr("asset").cast<py::module>();
@@ -126,8 +169,10 @@ void bind_articulation_desc(py::module& m) {
 
     py::class_<InertialDesc>(asset, "InertialDesc",
                              "Imported body-local inertial properties.")
-        .def(py::init([](float mass, Eigen::Vector3f diagonal,
-                         Eigen::Vector3f com) {
+        .def(py::init([](float mass, py::object diagonalValue,
+                         py::object comValue, py::object rotation) {
+                 const auto diagonal = vector3(diagonalValue, "diag_inertia");
+                 const auto com = vector3(comValue, "com");
                  if (!std::isfinite(mass) || mass <= 0 ||
                      !diagonal.allFinite() || (diagonal.array() <= 0).any() ||
                      !com.allFinite() ||
@@ -138,10 +183,12 @@ void bind_articulation_desc(py::module& m) {
                  i.mass = mass;
                  i.diagInertia = diagonal;
                  i.com = com;
+                 i.quat = quaternion(rotation);
                  return i;
              }),
              py::arg("mass"), py::kw_only(), py::arg("diag_inertia"),
-             py::arg("com"))
+             py::arg("com"),
+             py::arg("quat_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f})
         .def_readonly("mass", &InertialDesc::mass, "Body mass.")
         .def_property_readonly(
             "com",
@@ -160,34 +207,74 @@ void bind_articulation_desc(py::module& m) {
 
     py::class_<VisualGeomDesc>(
         asset, "VisualGeomDesc",
-        "Visual mesh description imported from a character asset.")
-        .def_readonly("body_name", &VisualGeomDesc::bodyName,
-                      "Owning body name.")
-        .def_readonly("mesh_file", &VisualGeomDesc::meshFile, "Mesh file path.")
-        .def_readonly("body_index", &VisualGeomDesc::bodyIndex,
-                      "Owning body index.")
-        .def_property_readonly(
-            "pos",
-            [](const VisualGeomDesc& m) { return Animation::toGlm(m.pos); },
-            "Local mesh position.")
-        .def_property_readonly(
-            "quat",
-            [](const VisualGeomDesc& m) {
-                return glm::quat(m.quat.w(), m.quat.x(), m.quat.y(),
-                                 m.quat.z());
+        "Shared mesh appearance and its body-local pose.")
+        .def(py::init([](std::shared_ptr<Scene::MeshData> mesh,
+                         std::string meshFile, py::object position,
+                         py::object rotation, py::object scale, py::object rgba,
+                         int bodyIndex, std::string bodyName,
+                         py::object material) {
+            if (bodyIndex < 0)
+                throw py::value_error("body_index must be non-negative");
+            VisualGeomDesc d;
+            d.meshData = std::move(mesh);
+            d.meshFile = std::move(meshFile);
+            d.pos = vector3(position, "position");
+            d.quat = quaternion(rotation);
+            d.scale = vector3(scale, "scale");
+            const auto color = floatValues<4>(rgba, "rgba");
+            d.rgba = Eigen::Vector4f(color[0], color[1], color[2], color[3]);
+            d.bodyIndex = bodyIndex;
+            d.bodyName = std::move(bodyName);
+            d.material = materialSource(material);
+            return d;
+        }), py::kw_only(), py::arg("mesh_data") = nullptr,
+            py::arg("mesh_file") = "",
+            py::arg("position") = std::array<float, 3>{0.f, 0.f, 0.f},
+            py::arg("quat_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("scale") = std::array<float, 3>{1.f, 1.f, 1.f},
+            py::arg("rgba") = std::array<float, 4>{1.f, 1.f, 1.f, 1.f},
+            py::arg("body_index") = 0, py::arg("body_name") = "",
+            py::arg("material") = py::none())
+        .def_readwrite("body_name", &VisualGeomDesc::bodyName)
+        .def_readwrite("mesh_file", &VisualGeomDesc::meshFile)
+        .def_readwrite("body_index", &VisualGeomDesc::bodyIndex)
+        .def_property("material",
+            [](const VisualGeomDesc& d) { return d.material; },
+            [](VisualGeomDesc& d, py::object value) {
+                d.material = materialSource(value);
+            }, "Shared renderer material; accepts a public wrapper or native material.")
+        .def_property("mesh_data",
+            [](const VisualGeomDesc& d) {
+                return std::const_pointer_cast<Scene::MeshData>(d.meshData);
             },
-            "Local mesh orientation.")
-        .def_property_readonly(
-            "rgba",
-            [](const VisualGeomDesc& m) {
-                return glm::vec4(m.rgba.x(), m.rgba.y(), m.rgba.z(),
-                                 m.rgba.w());
+            [](VisualGeomDesc& d, std::shared_ptr<Scene::MeshData> mesh) {
+                d.meshData = std::move(mesh);
+            }, "Shared source mesh; treat it as immutable after creating instances.")
+        .def_property("pos",
+            [](const VisualGeomDesc& d) { return Animation::toGlm(d.pos); },
+            [](VisualGeomDesc& d, py::object value) {
+                d.pos = vector3(value, "pos");
+            }, "Body-local translation in metres.")
+        .def_property_readonly("quat",
+            [](const VisualGeomDesc& d) { return Animation::toGlm(d.quat); })
+        .def_property("quat_xyzw",
+            [](const VisualGeomDesc& d) {
+                return std::array<float, 4>{d.quat.x(), d.quat.y(), d.quat.z(), d.quat.w()};
             },
-            "Mesh display color.")
-        .def_property_readonly(
-            "scale",
-            [](const VisualGeomDesc& m) { return Animation::toGlm(m.scale); },
-            "Scale applied to mesh-local vertices before the visual pose.");
+            [](VisualGeomDesc& d, py::object value) { d.quat = quaternion(value); })
+        .def_property("rgba",
+            [](const VisualGeomDesc& d) {
+                return glm::vec4(d.rgba.x(), d.rgba.y(), d.rgba.z(), d.rgba.w());
+            },
+            [](VisualGeomDesc& d, py::object value) {
+                const auto color = floatValues<4>(value, "rgba");
+                d.rgba = Eigen::Vector4f(color[0], color[1], color[2], color[3]);
+            })
+        .def_property("scale",
+            [](const VisualGeomDesc& d) { return Animation::toGlm(d.scale); },
+            [](VisualGeomDesc& d, py::object value) {
+                d.scale = vector3(value, "scale");
+            }, "Scale applied before the body-local visual pose.");
 
     py::enum_<CollisionGeomDesc::Type>(
         asset, "CollisionGeomDescType",
@@ -196,22 +283,23 @@ void bind_articulation_desc(py::module& m) {
         .value("CYLINDER", CollisionGeomDesc::Type::Cylinder)
         .value("SPHERE", CollisionGeomDesc::Type::Sphere)
         .value("BOX", CollisionGeomDesc::Type::Box)
-        .value("CONVEX_MESH", CollisionGeomDesc::Type::ConvexMesh);
+        .value("CONVEX_MESH", CollisionGeomDesc::Type::ConvexMesh)
+        .value("TRIANGLE_MESH", CollisionGeomDesc::Type::TriangleMesh);
 
     py::class_<CollisionGeomDesc>(
         asset, "CollisionGeomDesc",
         "Imported body-local collision geometry description.")
-        .def(py::init([](CollisionGeomDesc::Type type, Eigen::Vector3f size,
-                         Eigen::Vector3f position,
-                         std::array<float, 4> rotation) {
+        .def(py::init([](CollisionGeomDesc::Type type, py::object dimensions,
+                         py::object position, py::object rotation) {
                  if (type != CollisionGeomDesc::Type::Box &&
                      type != CollisionGeomDesc::Type::Sphere)
                      throw py::value_error(
                          "Authored shapes currently support BOX and SPHERE");
-                 Eigen::Quaternionf q(rotation[3], rotation[0], rotation[1],
-                                      rotation[2]);
+                 const auto size = vector3(dimensions, "size");
+                 const auto p = vector3(position, "position");
+                 const auto q = quaternion(rotation);
                  if (!size.allFinite() || size[0] <= 0 ||
-                     !position.allFinite() || !q.coeffs().allFinite() ||
+                     !p.allFinite() || !q.coeffs().allFinite() ||
                      std::abs(q.squaredNorm() - 1.f) > 1e-3f ||
                      (type == CollisionGeomDesc::Type::Box &&
                       (size.array() <= 0).any()))
@@ -219,7 +307,7 @@ void bind_articulation_desc(py::module& m) {
                          "Invalid shape dimensions or local pose");
                  CollisionGeomDesc g;
                  g.type = type;
-                 g.pos = position;
+                 g.pos = p;
                  g.quat = q.normalized();
                  for (int i = 0; i < 3; ++i)
                      g.size[i] = size[i];
@@ -227,20 +315,44 @@ void bind_articulation_desc(py::module& m) {
              }),
              py::kw_only(), py::arg("type"), py::arg("size"),
              py::arg("position"), py::arg("quat_xyzw"))
+        .def(py::init([](CollisionGeomDesc::Type type,
+                         std::shared_ptr<Scene::MeshData> mesh,
+                         py::object position, py::object rotation) {
+                 if (type != CollisionGeomDesc::Type::ConvexMesh &&
+                     type != CollisionGeomDesc::Type::TriangleMesh)
+                     throw py::value_error(
+                         "Mesh shapes require CONVEX_MESH or TRIANGLE_MESH");
+                 const auto q = quaternion(rotation);
+                 const auto p = vector3(position, "position");
+                 if (!mesh || !p.allFinite() ||
+                     !q.coeffs().allFinite() ||
+                     std::abs(q.squaredNorm() - 1.f) > 1e-3f)
+                     throw py::value_error("Invalid collision mesh or local pose");
+
+                 CollisionGeomDesc g;
+                 g.type = type;
+                 g.meshData = std::move(mesh);
+                 g.pos = p;
+                 g.quat = q.normalized();
+                 return g;
+             }),
+             py::kw_only(), py::arg("type"), py::arg("mesh"),
+             py::arg("position") = std::array<float, 3>{0.f, 0.f, 0.f},
+             py::arg("quat_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+             "Share immutable body-local mesh geometry; triangle meshes require "
+             "static or kinematic bodies.")
         .def_readonly("type", &CollisionGeomDesc::type,
                       "Collision geometry type.")
         .def_readonly("name", &CollisionGeomDesc::name,
                       "Imported MJCF geom name, if present.")
         .def_readonly("mesh_file", &CollisionGeomDesc::meshFile,
-                      "Source mesh file for convex mesh collision geoms.")
+                      "Source mesh file for collision geoms.")
         .def_property_readonly(
             "mesh_data",
             [](const CollisionGeomDesc& g) {
-                return g.meshData
-                           ? std::make_shared<Scene::MeshData>(*g.meshData)
-                           : std::shared_ptr<Scene::MeshData>{};
+                return std::const_pointer_cast<Scene::MeshData>(g.meshData);
             },
-            "Imported mesh payload used for convex cooking.")
+            "Shared source mesh; treat it as immutable after creating instances.")
         .def_property_readonly(
             "pos",
             [](const CollisionGeomDesc& g) { return Animation::toGlm(g.pos); },
@@ -282,7 +394,8 @@ void bind_articulation_desc(py::module& m) {
         "joint, and site payloads.")
         .def(py::init([](std::shared_ptr<Animation::SkeletonTree> tree,
                          JointDescMap joints, CollisionGeomDescMap shapes,
-                         InertialDescMap inertials) {
+                         InertialDescMap inertials,
+                         std::vector<VisualGeomDesc> visuals, std::string assetDir) {
                  if (!tree || tree->numJoints() == 0)
                      throw py::value_error(
                          "Articulation description requires a nonempty tree");
@@ -316,6 +429,9 @@ void bind_articulation_desc(py::module& m) {
                      if (item.first < 0 || item.first >= n)
                          throw py::value_error(
                              "Inertial body index out of range");
+                 for (const auto& visual : visuals)
+                     if (visual.bodyIndex < 0 || visual.bodyIndex >= n)
+                         throw py::value_error("Visual body index out of range");
                  ArticulationDesc d;
                  d.skeletonTree = std::make_shared<Animation::SkeletonTree>(
                      tree->nodeNames(), tree->parentIndices(),
@@ -325,17 +441,21 @@ void bind_articulation_desc(py::module& m) {
                  d.joints = std::move(joints);
                  d.collisionGeoms = std::move(shapes);
                  d.inertials = std::move(inertials);
+                 d.visualGeoms = std::move(visuals);
+                 d.assetDir = std::move(assetDir);
                  return d;
              }),
              py::arg("skeleton_tree"), py::kw_only(), py::arg("joints"),
-             py::arg("collision_geoms"), py::arg("inertials"))
+             py::arg("collision_geoms"), py::arg("inertials"),
+             py::arg("visual_geoms") = std::vector<VisualGeomDesc>{},
+             py::arg("asset_dir") = "")
         .def_readonly("skeleton_tree", &ArticulationDesc::skeletonTree,
                       "Imported skeleton hierarchy.")
         .def_readonly("traversal_order", &ArticulationDesc::traversalOrder,
                       "Body traversal order used by the imported model.")
-        .def_readonly("visual_geoms", &ArticulationDesc::visualGeoms,
+        .def_readwrite("visual_geoms", &ArticulationDesc::visualGeoms,
                       "Visual mesh descriptions.")
-        .def_readonly("asset_dir", &ArticulationDesc::assetDir,
+        .def_readwrite("asset_dir", &ArticulationDesc::assetDir,
                       "Directory used to resolve mesh files.")
         .def_readonly("sites", &ArticulationDesc::sites,
                       "Imported site markers.")
@@ -377,4 +497,58 @@ void bind_articulation_desc(py::module& m) {
                 return result;
             },
             "Inertial descriptions keyed by body index.");
+
+    py::class_<RigidDesc>(asset, "RigidDesc",
+        "One rigid body with independent visual geometry, colliders, and inertia.")
+        .def(py::init([](std::string name, std::vector<VisualGeomDesc> visuals,
+                         std::vector<CollisionGeomDesc> collisions,
+                         std::optional<InertialDesc> inertial, std::string assetDir) {
+            for (const auto& visual : visuals)
+                if (visual.bodyIndex != 0)
+                    throw py::value_error("Rigid visual body_index must be zero");
+            RigidDesc d;
+            d.name = std::move(name);
+            d.visualGeoms = std::move(visuals);
+            d.collisionGeoms = std::move(collisions);
+            d.inertial = std::move(inertial);
+            d.assetDir = std::move(assetDir);
+            return d;
+        }), py::kw_only(), py::arg("name") = "rigid",
+            py::arg("visual_geoms") = std::vector<VisualGeomDesc>{},
+            py::arg("collision_geoms") = std::vector<CollisionGeomDesc>{},
+            py::arg("inertial") = py::none(), py::arg("asset_dir") = "")
+        .def_static("from_articulation", [](const ArticulationDesc& data) {
+            if (!data.skeletonTree || data.skeletonTree->numJoints() != 1)
+                throw py::value_error(
+                    "RigidDesc conversion requires one body without joints");
+            for (const auto& entry : data.joints)
+                if (!entry.second.empty())
+                    throw py::value_error(
+                        "RigidDesc conversion requires one body without joints");
+            for (const auto& entry : data.collisionGeoms)
+                if (entry.first != 0)
+                    throw py::value_error("Rigid collision body index must be zero");
+            for (const auto& visual : data.visualGeoms)
+                if (visual.bodyIndex != 0)
+                    throw py::value_error("Rigid visual body index must be zero");
+            for (const auto& entry : data.inertials)
+                if (entry.first != 0)
+                    throw py::value_error("Rigid inertial body index must be zero");
+
+            RigidDesc d;
+            d.name = data.skeletonTree->nodeName(0);
+            d.assetDir = data.assetDir;
+            d.visualGeoms = data.visualGeoms;
+            if (auto it = data.collisionGeoms.find(0); it != data.collisionGeoms.end())
+                d.collisionGeoms = it->second;
+            if (auto it = data.inertials.find(0); it != data.inertials.end())
+                d.inertial = it->second;
+            return d;
+        }, py::arg("data"),
+            "Convert a single-body import while sharing mesh and material sources.")
+        .def_readwrite("name", &RigidDesc::name)
+        .def_readwrite("asset_dir", &RigidDesc::assetDir)
+        .def_readwrite("visual_geoms", &RigidDesc::visualGeoms)
+        .def_readwrite("collision_geoms", &RigidDesc::collisionGeoms)
+        .def_readwrite("inertial", &RigidDesc::inertial);
 }

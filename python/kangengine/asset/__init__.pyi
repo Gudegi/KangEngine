@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import numpy.typing as npt
 from types import ModuleType
-from typing import Literal, Sequence
+from typing import Literal, Sequence, overload
 
 from .. import UpAxis
 from ..animation import SkeletonMotion, SkeletonTree
 from ..utils import CoordinateSystem
 from ..scene import MeshData, SkinnedMeshData
+from ..material import Material, NativeMaterial
 from . import amass as amass, smpl as smpl
 from .amass import AMASSInfo as AMASSInfo, AMASSLoader as AMASSLoader
+from .rigid_asset import load_obj_rigid as load_obj_rigid, rigid_from_terrain_mesh as rigid_from_terrain_mesh
 from .smpl import (
     SMPLBody as SMPLBody,
     SMPLHBody as SMPLHBody,
@@ -27,6 +29,11 @@ class ImportDiagnostics:
     warnings: list[str]
 
 class ArticulationDesc:
+    visual_geoms: list[VisualGeomDesc]
+    collision_geoms: dict[int, list[CollisionGeomDesc]]
+    inertials: dict[int, InertialDesc]
+    joints: dict[int, list[JointDesc]]
+    asset_dir: str
     fixed_frames: list[FixedFrameDesc]
     sites: dict[str, SiteDesc]
     def add_fixed_frame(self, frame: FixedFrameDesc) -> None: ...
@@ -34,13 +41,54 @@ class ArticulationDesc:
     traversal_order: Literal["DFS", "BFS", "AUTHORED"]
     def __init__(self, skeleton_tree: SkeletonTree, *, joints: dict[int, list[JointDesc]],
                  collision_geoms: dict[int, list[CollisionGeomDesc]],
-                 inertials: dict[int, InertialDesc]) -> None: ...
+                 inertials: dict[int, InertialDesc],
+                 visual_geoms: Sequence[VisualGeomDesc] = ...,
+                 asset_dir: str = "") -> None: ...
+class RigidDesc:
+    """One body's source geometry; treat descriptors as immutable after instancing."""
+    name: str
+    asset_dir: str
+    visual_geoms: list[VisualGeomDesc]
+    collision_geoms: list[CollisionGeomDesc]
+    inertial: InertialDesc | None
+    def __init__(self, *, name: str = "rigid",
+                 visual_geoms: Sequence[VisualGeomDesc] = ...,
+                 collision_geoms: Sequence[CollisionGeomDesc] = ...,
+                 inertial: InertialDesc | None = None, asset_dir: str = "") -> None: ...
+    @staticmethod
+    def from_articulation(data: ArticulationDesc) -> RigidDesc: ...
 class CollisionGeomDesc:
+    type: CollisionGeomDescType
+    name: str
+    mesh_file: str
+    mesh_data: MeshData | None
+    pos: object
+    quat: object
+    size: list[float]
+    has_from_to: bool
+    from_pos: object
+    to_pos: object
+    @overload
     def __init__(self, *, type: CollisionGeomDescType, size: Sequence[float],
                  position: Sequence[float], quat_xyzw: Sequence[float]) -> None: ...
-class CollisionGeomDescType: ...
+    @overload
+    def __init__(self, *, type: CollisionGeomDescType, mesh: MeshData,
+                 position: Sequence[float] = ...,
+                 quat_xyzw: Sequence[float] = ...) -> None: ...
+class CollisionGeomDescType:
+    CAPSULE: CollisionGeomDescType
+    CYLINDER: CollisionGeomDescType
+    SPHERE: CollisionGeomDescType
+    BOX: CollisionGeomDescType
+    CONVEX_MESH: CollisionGeomDescType
+    TRIANGLE_MESH: CollisionGeomDescType
 class InertialDesc:
-    def __init__(self, mass: float, *, diag_inertia: Sequence[float], com: Sequence[float]) -> None: ...
+    mass: float
+    com: object
+    quat: object
+    diag_inertia: object
+    def __init__(self, mass: float, *, diag_inertia: Sequence[float],
+                 com: Sequence[float], quat_xyzw: Sequence[float] = ...) -> None: ...
 class JointDescType:
     REVOLUTE: JointDescType
     PRISMATIC: JointDescType
@@ -57,7 +105,26 @@ class FixedFrameDesc:
                  pos: Sequence[float] = ..., quat_xyzw: Sequence[float] = ...) -> None: ...
 class SiteDesc(FixedFrameDesc): ...
 class SiteDescType: ...
-class VisualGeomDesc: ...
+class VisualGeomDesc:
+    """Source mesh, material, and body-local pose in metres; scale precedes pose."""
+    body_name: str
+    body_index: int
+    mesh_file: str
+    mesh_data: MeshData | None
+    @property
+    def material(self) -> NativeMaterial | None: ...
+    @material.setter
+    def material(self, value: Material | NativeMaterial | None) -> None: ...
+    pos: object
+    quat: object
+    quat_xyzw: tuple[float, float, float, float]
+    rgba: object
+    scale: object
+    def __init__(self, *, mesh_data: MeshData | None = None, mesh_file: str = "",
+                 position: Sequence[float] = ..., quat_xyzw: Sequence[float] = ...,
+                 scale: Sequence[float] = ..., rgba: Sequence[float] = ...,
+                 body_index: int = 0, body_name: str = "",
+                 material: Material | NativeMaterial | None = None) -> None: ...
 
 class MJCFImportResult:
     articulation: ArticulationDesc
@@ -355,9 +422,9 @@ class USDLoader:
 
 class ObjMaterialInfo:
     name: str
-    ambient_color: tuple[float, float, float]
-    diffuse_color: tuple[float, float, float]
-    specular_color: tuple[float, float, float]
+    ambient_color: tuple[float, float, float, float]
+    diffuse_color: tuple[float, float, float, float]
+    specular_color: tuple[float, float, float, float]
     shininess: float
     diffuse_texture_path: str
     specular_texture_path: str

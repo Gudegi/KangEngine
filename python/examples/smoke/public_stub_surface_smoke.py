@@ -79,7 +79,9 @@ def _missing_public_docstrings(stub_path: Path, public_names: set[str]) -> list[
 
 
 def _native_function_parameters(function) -> tuple[str, ...]:
-    signature = function.__doc__.splitlines()[0]
+    lines = function.__doc__.splitlines()
+    signature = next((line[3:] for line in lines if line.startswith("1. ")), lines[0])
+    signature = signature.replace("KE::Asset::ArticulationDesc", "ArticulationDesc")
     parsed = ast.parse(f"def {signature}: ...")
     definition = parsed.body[0]
     return tuple(argument.arg for argument in definition.args.args)
@@ -132,6 +134,31 @@ def main() -> None:
                         f"{stub_parameters.get(name)} do not match native "
                         f"parameters {native_parameters}"
                     )
+
+    articulation_stub = package_root / "visual" / "articulation_visual.pyi"
+    classes = {
+        node.name: node
+        for node in ast.parse(articulation_stub.read_text()).body
+        if isinstance(node, ast.ClassDef)
+    }
+    for class_name in ("ArticulationVisual", "ArticulationVisualAsset"):
+        public_class = getattr(ke.visual, class_name)
+        stub_parameters = {
+            node.name: tuple(argument.arg for argument in node.args.args)
+            for node in classes[class_name].body
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_")
+        }
+        runtime_methods = {
+            name
+            for name in dir(public_class)
+            if not name.startswith("_") and callable(getattr(public_class, name))
+        }
+        assert set(stub_parameters) == runtime_methods, f"{class_name} method coverage"
+        for name in runtime_methods:
+            native_parameters = _native_function_parameters(getattr(public_class, name))
+            assert stub_parameters[name] == native_parameters, (
+                f"{class_name}.{name} signature"
+            )
     print("PASS: public package stubs cover runtime exports and checked signatures")
 
 

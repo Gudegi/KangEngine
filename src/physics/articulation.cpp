@@ -195,6 +195,10 @@ void attachCollisionShapes(
                 PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
             break;
         }
+        case Type::TriangleMesh:
+            throw std::invalid_argument(
+                "triangle mesh collisions require a static or kinematic rigid body, "
+                "not an articulation link");
         }
         if (shape) {
             shape->setLocalPose(localPose);
@@ -731,6 +735,7 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
     auto compact = std::make_shared<Animation::SkeletonTree>(
         names, parents, translations, rotations, dofCounts);
     auto result = createPhysical(compact, geoms, joints, inertials, cfg);
+    result->_sourceData = std::make_shared<const Asset::ArticulationDesc>(data);
     result->_sourceFrames = sourceFrames;
     result->_bodySourceIndices = sources;
     for (int i = 0; i < count; ++i)

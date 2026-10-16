@@ -77,6 +77,9 @@ class ArticulationVisualBridge {
     const std::vector<int>& renderPrimBodyIndices() const {
         return _renderPrimBodyIndices;
     }
+    const std::vector<int>& renderPrimVisualIndices() const {
+        return _renderPrimVisualIndices;
+    }
     Scene::Prim* bodyPrim(int idx) const { return _bodyPrims[idx]; }
     int numBodies() const { return _fk.numBodies(); }
 
@@ -88,6 +91,8 @@ class ArticulationVisualBridge {
     std::vector<Scene::Prim*> _bodyPrims;   // non-owning, scene owns
     std::vector<Scene::Prim*> _renderPrims; // actual renderable mesh prims
     std::vector<int> _renderPrimBodyIndices;
+    // Descriptor visual index per render prim; -1 denotes collision fallback.
+    std::vector<int> _renderPrimVisualIndices;
 };
 
 class ArticulationVisualBridgeAsset {

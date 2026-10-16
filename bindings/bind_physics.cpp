@@ -14,6 +14,7 @@
 #ifdef KANGENGINE_USE_PHYSX
 #include "asset/heightmap_loader.hpp"
 #include "asset/articulation_desc.hpp"
+#include "asset/rigid_desc.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/articulation_visual_bridge.hpp"
 #include "engine/core/app/app.hpp"
@@ -694,15 +695,18 @@ void bind_physics(py::module& m) {
                 self.setGlobalPose(PxTransform(
                     PxVec3(p.data[0], p.data[1], p.data[2]),
                     PxQuat(q.data[0], q.data[1], q.data[2], q.data[3])));
-                self.setLinearVelocity(
-                    PxVec3(lv.data[0], lv.data[1], lv.data[2]));
-                self.setAngularVelocity(
-                    PxVec3(av.data[0], av.data[1], av.data[2]));
-                self.wakeUp();
+
+                if (!(self.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)) {
+                    self.setLinearVelocity(
+                        PxVec3(lv.data[0], lv.data[1], lv.data[2]));
+                    self.setAngularVelocity(
+                        PxVec3(av.data[0], av.data[1], av.data[2]));
+                    self.wakeUp();
+                }
             },
             py::arg("pos"), py::arg("quat_xyzw"), py::arg("linear_velocity"),
             py::arg("angular_velocity"),
-            "Set root pose and velocities from numpy arrays.")
+            "Reset root pose and dynamic velocities; kinematics use pose only.")
         .def(
             "set_root_state",
             [](PxRigidDynamic& self, const std::vector<float>& pos,
@@ -720,18 +724,21 @@ void bind_physics(py::module& m) {
                     PxTransform(PxVec3(pos[0], pos[1], pos[2]),
                                 PxQuat(quat_xyzw[0], quat_xyzw[1], quat_xyzw[2],
                                        quat_xyzw[3])));
-                self.setLinearVelocity(PxVec3(linear_velocity[0],
-                                              linear_velocity[1],
-                                              linear_velocity[2]));
-                self.setAngularVelocity(PxVec3(angular_velocity[0],
-                                               angular_velocity[1],
-                                               angular_velocity[2]));
-                self.wakeUp();
+
+                if (!(self.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)) {
+                    self.setLinearVelocity(PxVec3(linear_velocity[0],
+                                                  linear_velocity[1],
+                                                  linear_velocity[2]));
+                    self.setAngularVelocity(PxVec3(angular_velocity[0],
+                                                   angular_velocity[1],
+                                                   angular_velocity[2]));
+                    self.wakeUp();
+                }
             },
             py::arg("pos"), py::arg("quat_xyzw"),
             py::arg("linear_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             py::arg("angular_velocity") = std::vector<float>{0.f, 0.f, 0.f},
-            "Set root pose and velocities from Python sequences.")
+            "Reset root pose and dynamic velocities; kinematics use pose only.")
         .def(
             "add_force",
             [](PxRigidDynamic& self, const FloatArray& force) {
@@ -1164,14 +1171,14 @@ void bind_physics(py::module& m) {
              &PhysicsWorld::setRigidCollisionMaterialOverrides,
              py::arg("rigid"), py::arg("data"), py::arg("material_overrides"),
              "Apply named/indexed material overrides to an existing rigid body "
-             "created from an articulation description. Returns updated shape count.")
+             "created from a rigid description. Returns updated shape count.")
         .def(
             "create_dynamic_rigid",
-            [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
+            [](PhysicsWorld& self, const Asset::RigidDesc& data,
                const FloatArray& pos, const FloatArray& quat_xyzw, float density,
                PxU32 collisionGroup, float contactOffset, float restOffset,
                const std::vector<CollisionMaterialOverride>&
-                   materialOverrides) {
+                   materialOverrides, bool kinematic) {
                 auto p = vec3ArrayView(pos, "pos");
                 auto q = vec4ArrayView(quat_xyzw, "quat_xyzw");
                 if (p.count != 1 || q.count != 1) {
@@ -1182,18 +1189,19 @@ void bind_physics(py::module& m) {
                     data, glm::vec3(p.data[0], p.data[1], p.data[2]),
                     glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
                     density, collisionGroup, contactOffset, restOffset,
-                    materialOverrides);
+                    materialOverrides, kinematic);
             },
             py::arg("data"), py::arg("pos"), py::arg("quat_xyzw"),
             py::arg("density") = 1.0f, py::arg("collision_group") = 0,
             py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.0f,
             py::arg("material_overrides") =
                 std::vector<CollisionMaterialOverride>{},
+            py::arg("kinematic") = false,
             py::return_value_policy::reference,
-            "Create a dynamic rigid body from an articulation description.")
+            "Create a dynamic or kinematic rigid body from a rigid description.")
         .def(
             "create_static_rigid",
-            [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
+            [](PhysicsWorld& self, const Asset::RigidDesc& data,
                const std::vector<float>& pos,
                const std::vector<float>& quat_xyzw, PxU32 collisionGroup,
                float contactOffset, float restOffset,
@@ -1216,15 +1224,15 @@ void bind_physics(py::module& m) {
             py::arg("material_overrides") =
                 std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
-            "Create a static rigid body from an articulation description.")
+            "Create a static rigid body from a rigid description.")
         .def(
             "create_dynamic_rigid",
-            [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
+            [](PhysicsWorld& self, const Asset::RigidDesc& data,
                const std::vector<float>& pos,
                const std::vector<float>& quat_xyzw, float density,
                PxU32 collisionGroup, float contactOffset, float restOffset,
                const std::vector<CollisionMaterialOverride>&
-                   materialOverrides) {
+                   materialOverrides, bool kinematic) {
                 if (pos.size() != 3 || quat_xyzw.size() != 4) {
                     throw std::runtime_error(
                         "create_dynamic_rigid expects pos[3], quat_xyzw[4]");
@@ -1234,7 +1242,7 @@ void bind_physics(py::module& m) {
                     glm::quat(quat_xyzw[3], quat_xyzw[0], quat_xyzw[1],
                               quat_xyzw[2]),
                     density, collisionGroup, contactOffset, restOffset,
-                    materialOverrides);
+                    materialOverrides, kinematic);
             },
             py::arg("data"), py::arg("pos"),
             py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
@@ -1242,8 +1250,9 @@ void bind_physics(py::module& m) {
             py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.0f,
             py::arg("material_overrides") =
                 std::vector<CollisionMaterialOverride>{},
+            py::arg("kinematic") = false,
             py::return_value_policy::reference,
-            "Create a dynamic rigid body from an articulation description.")
+            "Create a dynamic or kinematic rigid body from a rigid description.")
         .def("set_dt", &PhysicsWorld::setDt, py::arg("dt"),
              "Set simulation timestep in seconds.");
 
@@ -1444,6 +1453,9 @@ void bind_physics(py::module& m) {
             "and DOF metadata.")
         .def("num_links", &ArticulationTemplate::numLinks)
         .def("num_dofs", &ArticulationTemplate::numDofs)
+        .def_property_readonly("source_data", &ArticulationTemplate::sourceData,
+                               py::return_value_policy::reference_internal,
+                               "Original source description shared by template instances.")
         .def_property_readonly("body_names", &ArticulationTemplate::bodyNames)
         .def_property_readonly("source_frames", &ArticulationTemplate::sourceFrames)
         .def_property_readonly("fixed_frames", &ArticulationTemplate::fixedFrames)

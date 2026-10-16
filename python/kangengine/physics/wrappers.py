@@ -416,7 +416,9 @@ class PhysicsWorld(_NativeWrapper):
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
         material_overrides: Sequence[CollisionMaterialOverride] = (),
+        kinematic: bool = False,
     ) -> RigidDynamic:
+        """Create a rigid body; triangle collision meshes require kinematic mode."""
         return self._native.create_dynamic_rigid(
             data,
             pos,
@@ -426,6 +428,7 @@ class PhysicsWorld(_NativeWrapper):
             contact_offset,
             rest_offset,
             material_overrides,
+            kinematic,
         )
 
     def set_dt(self, dt: float) -> None:

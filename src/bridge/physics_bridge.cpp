@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <stdexcept>
 
 namespace KE {
 namespace Bridge {
@@ -34,6 +35,9 @@ toCollisionShapeType(Asset::CollisionGeomDesc::Type type) {
         return Scene::CollisionShapeType::Box;
     case Asset::CollisionGeomDesc::Type::ConvexMesh:
         return Scene::CollisionShapeType::ConvexMesh;
+    case Asset::CollisionGeomDesc::Type::TriangleMesh:
+        throw std::invalid_argument(
+            "triangle mesh collisions are not supported on articulation links");
     }
     return Scene::CollisionShapeType::Sphere;
 }
@@ -177,6 +181,9 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
                         }
                     }
                     break;
+                case Asset::CollisionGeomDesc::Type::TriangleMesh:
+                    throw std::invalid_argument(
+                        "triangle mesh collisions are not supported on articulation links");
                 }
             }
 

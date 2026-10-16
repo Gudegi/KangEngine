@@ -76,6 +76,7 @@ buildCollisionMesh(const std::vector<Asset::CollisionGeomDesc>& geoms) {
                     geom.size[0] * 2.f, geom.size[1] * 2.f, geom.size[2] * 2.f);
                 break;
             case Asset::CollisionGeomDesc::Type::ConvexMesh:
+            case Asset::CollisionGeomDesc::Type::TriangleMesh:
                 if (geom.meshData)
                     part = *geom.meshData;
                 break;
@@ -202,6 +203,10 @@ static std::vector<std::shared_ptr<Scene::MeshData>> buildBodyMeshesFromVisuals(
             bodyMeshes[bodyIdx] =
                 std::make_shared<Scene::MeshData>(std::move(mesh));
     }
+
+    // Authored appearance may deliberately leave collision-bearing links hidden.
+    if (!visualGeomAssets.empty())
+        return bodyMeshes;
 
     for (int i = 0; i < numBodies; i++) {
         if (hasVisual[static_cast<size_t>(i)])
@@ -453,6 +458,7 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
         if (renderBodyMesh) {
             bridge._renderPrims.push_back(prim);
             bridge._renderPrimBodyIndices.push_back(i);
+            bridge._renderPrimVisualIndices.push_back(-1);
         }
     }
 
@@ -492,6 +498,7 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
                 primBasePath);
             bridge._renderPrims.push_back(visualPrim);
             bridge._renderPrimBodyIndices.push_back(bodyIndex);
+            bridge._renderPrimVisualIndices.push_back(visualIndex);
         }
     }
 

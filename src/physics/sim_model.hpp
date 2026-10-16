@@ -24,6 +24,7 @@ struct SimModel {
     std::vector<int> shapeBody;
     std::vector<glm::vec3> shapeLocalPos;
     std::vector<glm::quat> shapeLocalRot;
+    std::vector<glm::vec3> shapeLocalScale;
     std::vector<RenderableHandle> shapeRenderables;
     std::vector<int> objectBodyStart;
     std::vector<int> objectBodyCount;
@@ -36,6 +37,7 @@ struct SimModel {
         shapeBody.clear();
         shapeLocalPos.clear();
         shapeLocalRot.clear();
+        shapeLocalScale.clear();
         shapeRenderables.clear();
         objectBodyStart.clear();
         objectBodyCount.clear();
@@ -53,7 +55,8 @@ struct SimModel {
     int addShape(int bodyId, RenderableHandle renderable,
                  const glm::vec3& localPos = glm::vec3(0.0f),
                  const glm::quat& localRot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                 const std::string& name = {}) {
+                 const std::string& name = {},
+                 const glm::vec3& localScale = glm::vec3(1.0f)) {
         if (bodyId < 0)
             throw std::invalid_argument(
                 "SimModel shape body index must be non-negative");
@@ -62,6 +65,7 @@ struct SimModel {
         shapeBody.push_back(bodyId);
         shapeLocalPos.push_back(localPos);
         shapeLocalRot.push_back(localRot);
+        shapeLocalScale.push_back(localScale);
         shapeRenderables.push_back(renderable);
         shapeNames.push_back(name);
         return shapeCount() - 1;
@@ -88,7 +92,8 @@ struct SimModel {
     bool isValid() const {
         const size_t count = shapeRenderables.size();
         if (shapeBody.size() != count || shapeLocalPos.size() != count ||
-            shapeLocalRot.size() != count || shapeNames.size() != count)
+            shapeLocalRot.size() != count || shapeLocalScale.size() != count ||
+            shapeNames.size() != count)
             return false;
         for (int bodyId : shapeBody) {
             if (bodyId < 0 || bodyId >= numBodies)
@@ -156,6 +161,7 @@ class SimVisualBatch {
         _shapeBody.clear();
         _shapeLocalPos.clear();
         _shapeLocalRot.clear();
+        _shapeLocalScale.clear();
         _renderables.clear();
         _renderableTransforms.clear();
     }
@@ -168,6 +174,7 @@ class SimVisualBatch {
         _shapeBody = model->shapeBody;
         _shapeLocalPos = model->shapeLocalPos;
         _shapeLocalRot = model->shapeLocalRot;
+        _shapeLocalScale = model->shapeLocalScale;
         _renderables = model->shapeRenderables;
         _renderableTransforms.clear();
         if (!model->isValid())
@@ -188,6 +195,7 @@ class SimVisualBatch {
         assert(_shapeBody.size() == _renderables.size() &&
                _shapeLocalPos.size() == _renderables.size() &&
                _shapeLocalRot.size() == _renderables.size() &&
+               _shapeLocalScale.size() == _renderables.size() &&
                "SimVisualBatch model arrays must have matching shape counts");
         _renderableTransforms.resize(static_cast<size_t>(shapeCount));
 
@@ -199,7 +207,9 @@ class SimVisualBatch {
             const glm::mat4 local =
                 glm::translate(glm::mat4(1.0f),
                                _shapeLocalPos[static_cast<size_t>(shapeId)]) *
-                glm::mat4_cast(_shapeLocalRot[static_cast<size_t>(shapeId)]);
+                glm::mat4_cast(_shapeLocalRot[static_cast<size_t>(shapeId)]) *
+                glm::scale(glm::mat4(1.0f),
+                           _shapeLocalScale[static_cast<size_t>(shapeId)]);
             auto& transforms =
                 _renderableTransforms[static_cast<size_t>(shapeId)];
             transforms.resize(static_cast<size_t>(state.numEnvs));
@@ -250,6 +260,7 @@ class SimVisualBatch {
     std::vector<int> _shapeBody;
     std::vector<glm::vec3> _shapeLocalPos;
     std::vector<glm::quat> _shapeLocalRot;
+    std::vector<glm::vec3> _shapeLocalScale;
     std::vector<RenderableHandle> _renderables;
     std::vector<std::vector<glm::mat4>> _renderableTransforms;
 };

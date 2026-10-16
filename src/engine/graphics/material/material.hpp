@@ -8,6 +8,8 @@
 #include "engine/graphics/renderer/renderer_types.hpp"
 
 #include <glm/glm.hpp>
+#include <string>
+#include <unordered_map>
 
 namespace KE {
 
@@ -27,6 +29,9 @@ enum class VertexColorStyle {
 
 class Material {
   public:
+    // Source files are resolved into scene-local textures by the owning App.
+    std::unordered_map<std::string, std::string> texturePaths;
+
     virtual ~Material() = default;
     virtual bool hasNormalMap() const { return false; }
     // Texture sampled by depth-only passes when AlphaMode::Mask is active.

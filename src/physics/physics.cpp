@@ -3,6 +3,7 @@
 #include "PxBroadPhase.h"
 #include "PxSceneDesc.h"
 #include "asset/articulation_desc.hpp"
+#include "asset/rigid_desc.hpp"
 #include "articulation.hpp"
 #include "collision_material_utils.hpp"
 #include "physics/physx_compat.hpp"
@@ -806,19 +807,12 @@ PxRigidStatic* PhysicsWorld::createStaticHeightField(
     return actor;
 }
 
-PxRigidStatic* PhysicsWorld::createStaticTriangleMesh(
-    std::shared_ptr<const Scene::MeshData> mesh, const glm::vec3& position,
-    const glm::quat& rotation, const Physics::PhysicsMaterialDesc& material,
-    bool gpuCompatible, float contactOffset, float restOffset, bool registerAsGround,
+PxTriangleMesh* PhysicsWorld::getOrCreateTriangleMesh(
+    std::shared_ptr<const Scene::MeshData> mesh, bool gpuCompatible,
     uint32_t numPrimsPerLeaf, float weldTolerance) {
     if (numPrimsPerLeaf < 2 || numPrimsPerLeaf > 15 ||
         !std::isfinite(weldTolerance) || weldTolerance < 0.f)
         throw std::invalid_argument("triangle mesh cooking requires leaf size 2..15 and finite nonnegative weld tolerance");
-    const PxTransform pose(PxVec3(position.x, position.y, position.z),
-                           PxQuat(rotation.x, rotation.y, rotation.z, rotation.w));
-    if (!pose.isValid() || !std::isfinite(contactOffset) ||
-        !std::isfinite(restOffset) || contactOffset <= restOffset || contactOffset <= 0.f)
-        throw std::invalid_argument("invalid triangle mesh pose or contact offsets");
     if (!mesh || mesh->vertices.size() < 3 || mesh->indices.empty() ||
         mesh->indices.size() % 3 || mesh->vertices.size() > std::numeric_limits<PxU32>::max() ||
         mesh->indices.size() / 3 > std::numeric_limits<PxU32>::max())
@@ -862,6 +856,22 @@ PxRigidStatic* PhysicsWorld::createStaticTriangleMesh(
             throw std::runtime_error("PhysX triangle mesh cooking failed: " + std::to_string(int(result)));
         _triangleMeshCache.push_back({mesh, gpuCompatible, numPrimsPerLeaf, weldTolerance, cooked});
     }
+    return cooked;
+}
+
+PxRigidStatic* PhysicsWorld::createStaticTriangleMesh(
+    std::shared_ptr<const Scene::MeshData> mesh, const glm::vec3& position,
+    const glm::quat& rotation, const Physics::PhysicsMaterialDesc& material,
+    bool gpuCompatible, float contactOffset, float restOffset, bool registerAsGround,
+    uint32_t numPrimsPerLeaf, float weldTolerance) {
+    const PxTransform pose(PxVec3(position.x, position.y, position.z),
+                           PxQuat(rotation.x, rotation.y, rotation.z, rotation.w));
+    if (!pose.isValid() || !std::isfinite(contactOffset) ||
+        !std::isfinite(restOffset) || contactOffset <= restOffset || contactOffset <= 0.f)
+        throw std::invalid_argument("invalid triangle mesh pose or contact offsets");
+
+    PxTriangleMesh* cooked = getOrCreateTriangleMesh(
+        std::move(mesh), gpuCompatible, numPrimsPerLeaf, weldTolerance);
     PxRigidStatic* actor = _physics->createRigidStatic(pose);
     if (!actor)
         throw std::runtime_error("PhysX static actor creation failed");
@@ -911,37 +921,55 @@ PxRigidDynamic* PhysicsWorld::createDynamicSphere(float radius,
 }
 
 PxRigidDynamic* PhysicsWorld::createDynamicRigid(
-    const Asset::ArticulationDesc& data, const glm::vec3& pos,
+    const Asset::RigidDesc& data, const glm::vec3& pos,
     const glm::quat& rot, float density, PxU32 collisionGroup,
     float contactOffset, float restOffset,
-    const std::vector<Physics::CollisionMaterialOverride>& materialOverrides) {
+    const std::vector<Physics::CollisionMaterialOverride>& materialOverrides,
+    bool kinematic) {
     PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
                      PxQuat(rot.x, rot.y, rot.z, rot.w));
+
+    const auto* geoms = data.collisionGeoms.empty() ? nullptr : &data.collisionGeoms;
+    const std::vector<std::string> bodyNames{data.name};
+
+    // Validate authored mass properties before allocating a PhysX actor.
+    if (data.inertial) {
+        const auto& inertia = *data.inertial;
+        if (!std::isfinite(inertia.mass) || inertia.mass <= 0.f ||
+            !inertia.diagInertia.allFinite() ||
+            (inertia.diagInertia.array() <= 0.f).any() ||
+            2.f * inertia.diagInertia.maxCoeff() > inertia.diagInertia.sum() + 1e-6f ||
+            !inertia.com.allFinite() || !inertia.quat.coeffs().allFinite() ||
+            std::abs(inertia.quat.squaredNorm() - 1.f) > 1e-3f)
+            throw std::invalid_argument("Invalid rigid mass, inertia, or center-of-mass frame");
+    }
+
+    // Cook triangle geometry before allocating the actor, then enable its mode
+    // before attaching shapes: PhysX rejects non-SDF triangles on dynamic bodies.
+    bool hasTriangleMesh = false;
+    if (geoms) {
+        for (const auto& geom : *geoms) {
+            if (geom.type != Asset::CollisionGeomDesc::Type::TriangleMesh)
+                continue;
+            if (!kinematic)
+                throw std::invalid_argument(
+                    "triangle mesh rigid bodies require kinematic=true");
+            getOrCreateTriangleMesh(geom.meshData);
+            hasTriangleMesh = true;
+        }
+    }
+
     PxRigidDynamic* actor = _physics->createRigidDynamic(pose);
     if (!actor)
         return nullptr;
-
-    const std::vector<Asset::CollisionGeomDesc>* geoms = nullptr;
-    int sourceBodyIndex = -1;
-    auto rootIt = data.collisionGeoms.find(0);
-    if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
-        geoms = &rootIt->second;
-        sourceBodyIndex = 0;
-    } else {
-        for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
-            if (!bodyGeoms.empty()) {
-                geoms = &bodyGeoms;
-                sourceBodyIndex = bodyIdx;
-                break;
-            }
-        }
-    }
+    if (kinematic)
+        actor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 
     if (!geoms) {
         Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
         const auto material = resolveCollisionMaterial(
-            fallbackGeom, materialOverrides, data.skeletonTree, -1, 0);
+            fallbackGeom, materialOverrides, bodyNames, 0, 0);
         PxShape* shape =
             createExclusiveShape(*actor, PxSphereGeometry(0.1f), material);
         applyRigidContactOffsets(shape, contactOffset, restOffset);
@@ -950,7 +978,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
         for (std::size_t i = 0; i < geoms->size(); ++i) {
             const auto& g = (*geoms)[i];
             const auto material = resolveCollisionMaterial(
-                g, materialOverrides, data.skeletonTree, sourceBodyIndex,
+                g, materialOverrides, bodyNames, 0,
                 static_cast<int>(i));
 
             PxShape* shape = nullptr;
@@ -1001,6 +1029,20 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
                 break;
             }
+            case Type::TriangleMesh: {
+                PxTriangleMesh* mesh = getOrCreateTriangleMesh(g.meshData);
+                shape = createExclusiveShape(
+                    *actor, PxTriangleMeshGeometry(mesh), material);
+                if (!shape) {
+                    actor->release();
+                    throw std::runtime_error(
+                        "PhysX kinematic triangle mesh shape creation failed");
+                }
+                localPose = PxTransform(
+                    PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                    PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+                break;
+            }
             }
 
             if (shape) {
@@ -1012,44 +1054,50 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
         }
     }
 
-    PxRigidBodyExt::updateMassAndInertia(*actor, density);
+    // Kinematic terrain keeps default mass/inertia; contact response treats it
+    // as infinite mass and does not require density-based mesh integration.
+    if (data.inertial) {
+        const auto& inertia = *data.inertial;
+        actor->setMass(inertia.mass);
+        actor->setMassSpaceInertiaTensor(
+            PxVec3(inertia.diagInertia.x(), inertia.diagInertia.y(), inertia.diagInertia.z()));
+        actor->setCMassLocalPose(PxTransform(
+            PxVec3(inertia.com.x(), inertia.com.y(), inertia.com.z()),
+            PxQuat(inertia.quat.x(), inertia.quat.y(), inertia.quat.z(), inertia.quat.w())));
+    } else if (!hasTriangleMesh)
+        PxRigidBodyExt::updateMassAndInertia(*actor, density);
     setRigidCollisionFilterData(actor, collisionGroup);
     _scene->addActor(*actor);
     return actor;
 }
 
 PxRigidStatic* PhysicsWorld::createStaticRigid(
-    const Asset::ArticulationDesc& data, const glm::vec3& pos,
+    const Asset::RigidDesc& data, const glm::vec3& pos,
     const glm::quat& rot, PxU32 collisionGroup, float contactOffset,
     float restOffset,
     const std::vector<Physics::CollisionMaterialOverride>& materialOverrides) {
     PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
                      PxQuat(rot.x, rot.y, rot.z, rot.w));
+
+    const auto* geoms = data.collisionGeoms.empty() ? nullptr : &data.collisionGeoms;
+    const std::vector<std::string> bodyNames{data.name};
+
+    if (geoms) {
+        for (const auto& geom : *geoms) {
+            if (geom.type == Asset::CollisionGeomDesc::Type::TriangleMesh)
+                getOrCreateTriangleMesh(geom.meshData);
+        }
+    }
+
     PxRigidStatic* actor = _physics->createRigidStatic(pose);
     if (!actor)
         return nullptr;
-
-    const std::vector<Asset::CollisionGeomDesc>* geoms = nullptr;
-    int sourceBodyIndex = -1;
-    auto rootIt = data.collisionGeoms.find(0);
-    if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
-        geoms = &rootIt->second;
-        sourceBodyIndex = 0;
-    } else {
-        for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
-            if (!bodyGeoms.empty()) {
-                geoms = &bodyGeoms;
-                sourceBodyIndex = bodyIdx;
-                break;
-            }
-        }
-    }
 
     if (!geoms) {
         Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
         const auto material = resolveCollisionMaterial(
-            fallbackGeom, materialOverrides, data.skeletonTree, -1, 0);
+            fallbackGeom, materialOverrides, bodyNames, 0, 0);
         PxShape* shape =
             createExclusiveShape(*actor, PxSphereGeometry(0.1f), material);
         applyRigidContactOffsets(shape, contactOffset, restOffset);
@@ -1058,7 +1106,7 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
         for (std::size_t i = 0; i < geoms->size(); ++i) {
             const auto& g = (*geoms)[i];
             const auto material = resolveCollisionMaterial(
-                g, materialOverrides, data.skeletonTree, sourceBodyIndex,
+                g, materialOverrides, bodyNames, 0,
                 static_cast<int>(i));
 
             PxShape* shape = nullptr;
@@ -1109,6 +1157,20 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
                 break;
             }
+            case Type::TriangleMesh: {
+                PxTriangleMesh* mesh = getOrCreateTriangleMesh(g.meshData);
+                shape = createExclusiveShape(
+                    *actor, PxTriangleMeshGeometry(mesh), material);
+                if (!shape) {
+                    actor->release();
+                    throw std::runtime_error(
+                        "PhysX static triangle mesh shape creation failed");
+                }
+                localPose = PxTransform(
+                    PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                    PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+                break;
+            }
             }
 
             if (shape) {
@@ -1148,26 +1210,13 @@ int PhysicsWorld::setRigidCollisionMaterial(
 }
 
 int PhysicsWorld::setRigidCollisionMaterialOverrides(
-    PxRigidDynamic& rigid, const Asset::ArticulationDesc& data,
+    PxRigidDynamic& rigid, const Asset::RigidDesc& data,
     const std::vector<Physics::CollisionMaterialOverride>& overrides) {
     if (!_physics)
         return 0;
 
-    const std::vector<Asset::CollisionGeomDesc>* geoms = nullptr;
-    int sourceBodyIndex = -1;
-    auto rootIt = data.collisionGeoms.find(0);
-    if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
-        geoms = &rootIt->second;
-        sourceBodyIndex = 0;
-    } else {
-        for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
-            if (!bodyGeoms.empty()) {
-                geoms = &bodyGeoms;
-                sourceBodyIndex = bodyIdx;
-                break;
-            }
-        }
-    }
+    const auto* geoms = data.collisionGeoms.empty() ? nullptr : &data.collisionGeoms;
+    const std::vector<std::string> bodyNames{data.name};
 
     const PxU32 shapeCount = rigid.getNbShapes();
     if (shapeCount == 0)
@@ -1181,7 +1230,7 @@ int PhysicsWorld::setRigidCollisionMaterialOverrides(
         Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
         const auto material = resolveCollisionMaterial(
-            fallbackGeom, overrides, data.skeletonTree, -1, 0);
+            fallbackGeom, overrides, bodyNames, 0, 0);
         for (auto* shape : shapes) {
             if (!shape)
                 continue;
@@ -1199,8 +1248,8 @@ int PhysicsWorld::setRigidCollisionMaterialOverrides(
         if (!shape)
             continue;
         const auto material =
-            resolveCollisionMaterial((*geoms)[i], overrides, data.skeletonTree,
-                                     sourceBodyIndex, static_cast<int>(i));
+            resolveCollisionMaterial((*geoms)[i], overrides, bodyNames,
+                                     0, static_cast<int>(i));
         PxMaterial* shapeMat = materialForDesc(material);
         shape->setMaterials(&shapeMat, 1);
         ++updated;

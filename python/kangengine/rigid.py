@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from .asset.rigid_asset import _as_rigid_desc
 from .utils.math import (
     quat_xyzw_from_two_vectors,
     quat_xyzw_multiply,
@@ -36,30 +37,24 @@ class RigidShapeSpec:
 
 
 def rigid_shape_specs(data) -> list[RigidShapeSpec]:
-    """Build render/state slots from MJCF collision geoms.
+    """Build shape metadata from a RigidDesc's collision geometry.
 
     KangEngine represents MimicKit rigid objects as one PhysX rigid actor with
     one or more attached shapes. The slots returned here are visual/body API
     slots for those shapes, not separate simulated rigid bodies.
     """
 
-    geoms_by_body = getattr(data, "collision_geoms", {})
-    names = _node_names(data)
-    specs: list[RigidShapeSpec] = []
-    for body_idx in range(len(names)):
-        geoms = list(geoms_by_body.get(body_idx, []))
-        for geom_idx, geom in enumerate(geoms):
-            base_name = names[body_idx] if body_idx < len(names) else f"body_{body_idx}"
-            slot_name = base_name if len(geoms) == 1 else f"{base_name}:geom_{geom_idx}"
-            specs.append(_shape_spec(slot_name, geom))
+    data = _as_rigid_desc(data)
+    geoms = data.collision_geoms
+    if geoms:
+        return [
+            _shape_spec(data.name if len(geoms) == 1 else f"{data.name}:geom_{index}", geom)
+            for index, geom in enumerate(geoms)
+        ]
 
-    if specs:
-        return specs
-
-    root_name = names[0] if names else "rigid"
     return [
         RigidShapeSpec(
-            root_name,
+            data.name,
             "Sphere",
             np.zeros(3, dtype=np.float32),
             np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32),
@@ -111,7 +106,7 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
         local_pos = _vec3(geom.pos)
         local_quat_xyzw = (
             _quat(geom.quat)
-            if geom_type == "Box"
+            if geom_type in ("Box", "ConvexMesh", "TriangleMesh")
             else np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
         )
 
@@ -125,13 +120,6 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
     )
 
 
-def _node_names(data):
-    tree = getattr(data, "skeleton_tree", None)
-    if tree is None:
-        return []
-    return list(tree.node_names())
-
-
 def _geom_type_name(geom):
     value = geom.type
     name = getattr(value, "name", str(value).split(".")[-1])
@@ -141,6 +129,7 @@ def _geom_type_name(geom):
         "SPHERE": "Sphere",
         "BOX": "Box",
         "CONVEX_MESH": "ConvexMesh",
+        "TRIANGLE_MESH": "TriangleMesh",
     }
     try:
         return map[str(name).upper()]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..._core import _ke
-from .utils import normalize_color
+from ..utils import normalize_color
 
 
 @dataclass(slots=True)
@@ -30,6 +30,8 @@ class VisualArticulationSceneGraph:
     collision_prims: list[object]
     body_handles: list[int]
     handle_body_ids: dict[int, int] | None = None
+    base_colors: list | None = None
+    owned_paths: tuple = ()
 
     @property
     def key(self):
@@ -71,8 +73,12 @@ class VisualArticulationSceneGraph:
     def set_color(self, color):
         rgba_vec = normalize_color(color)
         if rgba_vec is not None:
-            for prim in self.render_prims:
-                prim.set_display_color_alpha(rgba_vec)
+            for index, prim in enumerate(self.render_prims):
+                base = (1.0, 1.0, 1.0, 1.0) if self.base_colors is None else self.base_colors[index]
+                prim.set_display_color_alpha(_ke.Vec4(
+                    rgba_vec.x * base[0], rgba_vec.y * base[1],
+                    rgba_vec.z * base[2], rgba_vec.w * base[3],
+                ))
         return self
 
     def set_alpha(self, alpha: float):
@@ -119,14 +125,11 @@ class VisualRigidSceneGraph:
 
     @property
     def num_bodies(self) -> int:
-        return len(self.body_prims)
+        return 1
 
     def body_id_from_render_handle(self, handle) -> int | None:
         handle = int(handle)
-        for body_id, body_handle in enumerate(self.body_handles):
-            if int(body_handle) == handle:
-                return body_id
-        return None
+        return 0 if handle in self.body_handles else None
 
     def pick_body(self, selection) -> VisualBodyPick | None:
         if selection is None or not getattr(selection, "hit", False):
@@ -139,8 +142,11 @@ class VisualRigidSceneGraph:
     def set_color(self, color):
         rgba = normalize_color(color)
         if rgba is not None:
-            for prim in self.body_prims:
-                prim.set_display_color_alpha(rgba)
+            for prim, base in zip(self.body_prims, self.rigid_visual.base_colors):
+                prim.set_display_color_alpha(_ke.Vec4(
+                    rgba.x * base[0], rgba.y * base[1],
+                    rgba.z * base[2], rgba.w * base[3],
+                ))
         return self
 
     def set_visible(self, visible: bool):

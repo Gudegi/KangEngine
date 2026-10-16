@@ -2,6 +2,9 @@
 
 #include <cuda_runtime.h>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -14,6 +17,10 @@ constexpr int kMaxMappedArticulationLinks = 128;
 
 struct MappedTransformPointers {
     float* links[kMaxMappedArticulationLinks];
+};
+
+struct LocalTransform {
+    float values[16];
 };
 
 void checkCUDA(cudaError_t result, const char* operation) {
@@ -84,6 +91,35 @@ __global__ void indexedRigidStateToMat4Kernel(const float* rigidState,
     m[13] = row[1];
     m[14] = row[2];
     m[15] = 1.0f;
+}
+
+__global__ void rigidStateToMappedMat4Kernel(
+    const float* rigidState, const int* rigidRows, LocalTransform local,
+    float* out, int count, int stateCount) {
+    const int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= count)
+        return;
+
+    const int rowIndex = rigidRows[index];
+    // Invalid metadata must fail before it can address another GPU allocation.
+    if (rowIndex < 0 || rowIndex >= stateCount) {
+        __trap();
+        return;
+    }
+    const float* row = rigidState + static_cast<size_t>(rowIndex) * 13;
+    float rotation[16];
+    quatToMat3(row[3], row[4], row[5], row[6], rotation);
+    float* matrix = out + static_cast<size_t>(index) * 16;
+
+    // Actor pose * local matrix preserves local translation, rotation, and scale.
+    for (int col = 0; col < 4; ++col) {
+        const float* source = local.values + col * 4;
+        for (int axis = 0; axis < 3; ++axis)
+            matrix[col * 4 + axis] = rotation[axis] * source[0] +
+                rotation[4 + axis] * source[1] +
+                rotation[8 + axis] * source[2] + row[axis] * source[3];
+        matrix[col * 4 + 3] = source[3];
+    }
 }
 
 __global__ void articulationLinkStateToMat4Kernel(
@@ -180,6 +216,27 @@ cudaStream_t transformStream(const GpuArrayView& state,
                   "cudaStreamWaitEvent(state to mat4)");
     }
     return stream;
+}
+
+void validateContiguous(const GpuArrayView& view,
+                        const std::vector<int64_t>& strides,
+                        const char* name) {
+    if (!view.strides.empty() && view.strides != strides)
+        throw std::runtime_error(std::string(name) + " must be contiguous");
+}
+
+void validateInputStream(const GpuArrayView& view, uint64_t outputStream,
+                         const char* name) {
+    if (view.streamHandle != outputStream && view.readyEventHandle == 0)
+        throw std::runtime_error(std::string(name) +
+            " requires a ready event when produced on another CUDA stream");
+}
+
+void waitForInput(const GpuArrayView& view, cudaStream_t stream) {
+    if (view.readyEventHandle != 0)
+        checkCUDA(cudaStreamWaitEvent(
+                      stream, reinterpret_cast<cudaEvent_t>(view.readyEventHandle), 0),
+                  "cudaStreamWaitEvent(mapped rigid transforms)");
 }
 
 } // namespace
@@ -301,6 +358,78 @@ void launchIndexedRigidStateToMat4CUDA(const GpuArrayView& rigidState,
         static_cast<const int*>(rigidRows.data),
         static_cast<float*>(transforms.data), count);
     checkCUDA(cudaGetLastError(), "indexedRigidStateToMat4Kernel");
+}
+
+void launchRigidStateToMappedMat4CUDA(
+    const GpuArrayView& rigidState, const GpuArrayView& rigidRows,
+    const std::vector<std::array<float, 16>>& localTransforms,
+    const std::vector<GpuArrayView>& mappedTransforms) {
+    if (localTransforms.size() != mappedTransforms.size())
+        throw std::runtime_error(
+            "each rigid local transform requires one mapped output buffer");
+    if (mappedTransforms.empty())
+        return;
+
+    // Validate metadata before scheduling writes into mapped graphics memory.
+    if (!rigidState.isCUDA() || rigidState.dtype != SimDType::Float32 ||
+        !rigidState.data || rigidState.shape.size() != 2 ||
+        rigidState.shape[1] != 13 || rigidState.shape[0] <= 0 ||
+        rigidState.shape[0] > std::numeric_limits<int>::max())
+        throw std::runtime_error(
+            "rigid state must be a non-null CUDA float32 [R, 13] view");
+    if (rigidState.deviceId < 0)
+        throw std::runtime_error("rigid state requires an explicit CUDA device");
+    if (rigidRows.shape.size() != 1 || rigidRows.shape[0] < 0 ||
+        rigidRows.shape[0] > std::numeric_limits<int>::max())
+        throw std::runtime_error("rigid rows must have shape [N]");
+    const int count = static_cast<int>(rigidRows.shape[0]);
+    validateIndexView(rigidRows, count, rigidState.deviceId);
+    if (rigidRows.deviceId != rigidState.deviceId)
+        throw std::runtime_error(
+            "rigid rows and state must use the same CUDA device");
+    validateContiguous(rigidState, {13, 1}, "rigid state");
+    validateContiguous(rigidRows, {1}, "rigid rows");
+
+    const uint64_t streamHandle = mappedTransforms.front().streamHandle;
+    for (size_t part = 0; part < mappedTransforms.size(); ++part) {
+        const auto& output = mappedTransforms[part];
+        validateMat4Output(output, count);
+        validateContiguous(output, {16, 4, 1}, "mapped rigid output");
+        if (output.memoryType != SimMemoryType::OpenGLBuffer)
+            throw std::runtime_error(
+                "direct rigid output must be a mapped OpenGL buffer");
+        if (output.deviceId != rigidState.deviceId ||
+            output.streamHandle != streamHandle)
+            throw std::runtime_error(
+                "mapped rigid outputs must use the state device and one CUDA stream");
+        for (float value : localTransforms[part])
+            if (!std::isfinite(value))
+                throw std::runtime_error("rigid local transforms must be finite");
+    }
+    validateInputStream(rigidState, streamHandle, "rigid state");
+    validateInputStream(rigidRows, streamHandle, "rigid rows");
+    if (count == 0)
+        return;
+
+    // Both state and cached row indices can have independent producer streams.
+    checkCUDA(cudaSetDevice(rigidState.deviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
+    waitForInput(rigidState, stream);
+    waitForInput(rigidRows, stream);
+
+    const int blockSize = 256;
+    const int gridSize = (count - 1) / blockSize + 1;
+    for (size_t part = 0; part < mappedTransforms.size(); ++part) {
+        LocalTransform local;
+        std::copy(localTransforms[part].begin(), localTransforms[part].end(),
+                  local.values);
+        rigidStateToMappedMat4Kernel<<<gridSize, blockSize, 0, stream>>>(
+            static_cast<const float*>(rigidState.data),
+            static_cast<const int*>(rigidRows.data), local,
+            static_cast<float*>(mappedTransforms[part].data), count,
+            static_cast<int>(rigidState.shape[0]));
+        checkCUDA(cudaGetLastError(), "rigidStateToMappedMat4Kernel");
+    }
 }
 
 void launchArticulationLinkStateToMat4CUDA(

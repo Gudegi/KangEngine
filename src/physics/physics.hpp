@@ -25,6 +25,7 @@ class D6Joint;
 class JointBody;
 namespace Asset {
 struct ArticulationDesc;
+struct RigidDesc;
 } // namespace Asset
 namespace Scene {
 struct MeshData;
@@ -178,6 +179,10 @@ class PhysicsWorld {
     physx::PxMaterial*
     materialForDesc(const Physics::PhysicsMaterialDesc& material);
 
+    physx::PxTriangleMesh* getOrCreateTriangleMesh(
+        std::shared_ptr<const Scene::MeshData> mesh, bool gpuCompatible = true,
+        uint32_t numPrimsPerLeaf = 4, float weldTolerance = 0.0f);
+
   public:
     PhysicsWorld(PhysicsConfig config);
     ~PhysicsWorld();
@@ -259,16 +264,16 @@ class PhysicsWorld {
         float density = 1.0f);
 
     physx::PxRigidDynamic*
-    createDynamicRigid(const Asset::ArticulationDesc& data,
+    createDynamicRigid(const Asset::RigidDesc& data,
                        const glm::vec3& pos,
                        const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                        float density = 1.0f, PxU32 collisionGroup = 0,
                        float contactOffset = 0.02f, float restOffset = 0.0f,
                        const std::vector<Physics::CollisionMaterialOverride>&
-                           materialOverrides = {});
+                           materialOverrides = {}, bool kinematic = false);
 
     physx::PxRigidStatic*
-    createStaticRigid(const Asset::ArticulationDesc& data, const glm::vec3& pos,
+    createStaticRigid(const Asset::RigidDesc& data, const glm::vec3& pos,
                       const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                       PxU32 collisionGroup = 0, float contactOffset = 0.02f,
                       float restOffset = 0.0f,
@@ -279,7 +284,7 @@ class PhysicsWorld {
                                   const Physics::PhysicsMaterialDesc& material);
 
     int setRigidCollisionMaterialOverrides(
-        physx::PxRigidDynamic& rigid, const Asset::ArticulationDesc& data,
+        physx::PxRigidDynamic& rigid, const Asset::RigidDesc& data,
         const std::vector<Physics::CollisionMaterialOverride>& overrides);
 
     void fecthData();

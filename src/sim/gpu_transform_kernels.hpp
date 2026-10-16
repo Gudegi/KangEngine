@@ -3,6 +3,7 @@
 
 #include "sim/gpu_array_view.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -41,6 +42,13 @@ void launchRigidStateToMat4CUDA(const GpuArrayView& rigidState,
 void launchIndexedRigidStateToMat4CUDA(const GpuArrayView& rigidState,
                                        const GpuArrayView& rigidRows,
                                        GpuArrayView& transforms);
+
+// Compose selected actor poses with column-major local matrices directly in
+// each part's mapped renderer buffer, without intermediate GPU matrices.
+void launchRigidStateToMappedMat4CUDA(
+    const GpuArrayView& rigidState, const GpuArrayView& rigidRows,
+    const std::vector<std::array<float, 16>>& localTransforms,
+    const std::vector<GpuArrayView>& mappedTransforms);
 
 // Gather selected articulation rows into link-major renderer transforms:
 // [articulation, link, 13] -> [link, selected_articulation, 4, 4].

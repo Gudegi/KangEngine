@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from .._core import _ke
+
+if TYPE_CHECKING:
+    import torch
 
 
 class TerrainMesh:
@@ -112,22 +117,50 @@ class TerrainMesh:
             weld_tolerance=weld_tolerance,
         )
 
+    def _get_query(self, device):
+        from ..geometry._raycast import MeshRaycaster
+
+        key = str(device)
+        if key not in self._queries:
+            self._queries[key] = MeshRaycaster(self.vertices, self.indices, device)
+        return self._queries[key]
+
+    def raycast(
+        self,
+        ray_starts: torch.Tensor,
+        ray_directions: torch.Tensor,
+        *,
+        max_distance: float = 1.0e6,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Find the nearest mesh intersection along each ray.
+
+        Args:
+            ray_starts: Float32 CPU/CUDA tensor [..., 3] in mesh coordinates,
+                in metres. Keep CUDA inputs synchronized with the current stream.
+            ray_directions: Float32 tensor [..., 3] on the same device. Leading
+                dimensions broadcast with ray_starts. Directions are normalized
+                internally; zero directions produce misses.
+            max_distance: Maximum ray travel in metres.
+
+        Returns:
+            Hit positions [..., 3] and distances [...] in metres, on the input
+            device. Misses have +inf in every position component and distance.
+        """
+        return self._get_query(ray_starts.device).raycast(
+            ray_starts, ray_directions, max_distance
+        )
+
     def sample_height(self, positions, *, ray_start_height=None):
         """Return downward mesh hits at world XY on the input tensor's device.
 
         No hit returns -inf. A supplied ray_start_height matches a height
         scanner's finite origin; otherwise rays start above the entire mesh.
         """
-        from ._raycast import TerrainRaycaster
-
-        key = str(positions.device)
-        if key not in self._queries:
-            self._queries[key] = TerrainRaycaster(
-                self.vertices, self.indices, positions.device
-            )
         if ray_start_height is None:
             ray_start_height = float(self.vertices[:, 2].max()) + 1.0
-        return self._queries[key].sample_height(positions, ray_start_height)
+        return self._get_query(positions.device).sample_height(
+            positions, ray_start_height
+        )
 
 
 class TerrainInstance:
@@ -170,6 +203,24 @@ class TerrainInstance:
             view = scene.add_mesh(chunk_path, mesh, material)
             view.set_world_translation(_ke.Vec3(*self.position))
             self._prims.append((scene, chunk_path))
+
+    def raycast(
+        self,
+        ray_starts: torch.Tensor,
+        ray_directions: torch.Tensor,
+        *,
+        max_distance: float = 1.0e6,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Query world-space rays against this translated terrain instance.
+
+        Inputs and results follow TerrainMesh.raycast, with starts and hit
+        positions expressed in world coordinates. Distances remain in metres.
+        """
+        offset = ray_starts.new_tensor(self.position)
+        positions, distances = self.asset.raycast(
+            ray_starts - offset, ray_directions, max_distance=max_distance
+        )
+        return positions + offset, distances
 
     def sample_height(self, positions, *, ray_start_height=None):
         offset = positions.new_tensor(self.position)

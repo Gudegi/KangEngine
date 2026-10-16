@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from torch import Tensor
 from .. import Quat
+from ..asset import ArticulationDesc, RigidDesc
 from .articulation_builder import ArticulationBuilder as ArticulationBuilder
 
 class PhysicsGpuDynamicsConfig:
@@ -161,6 +162,7 @@ class RigidDynamic:
     def get_local_com_quat_xyzw(self) -> Any: ...
     def get_mass_space_inertia(self) -> Any: ...
     def get_mass_space_inverse_inertia(self) -> Any: ...
+    def set_kinematic(self, enabled: bool = True) -> None: ...
     def release(self) -> None: ...
     def set_root_state(
         self,
@@ -438,12 +440,12 @@ class PhysicsWorld:
     def set_rigid_collision_material_overrides(
         self,
         rigid: RigidDynamic,
-        data: Any,
+        data: RigidDesc,
         material_overrides: Sequence[CollisionMaterialOverride],
     ) -> int: ...
     def create_dynamic_rigid(
         self,
-        data: Any,
+        data: RigidDesc,
         pos: Any,
         quat_xyzw: Any = ...,
         density: float = 1.0,
@@ -451,7 +453,14 @@ class PhysicsWorld:
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
         material_overrides: Sequence[CollisionMaterialOverride] = ...,
+        kinematic: bool = False,
     ) -> RigidDynamic: ...
+    def create_static_rigid(
+        self, data: RigidDesc, pos: Any, quat_xyzw: Any = ...,
+        collision_group: int = 0, contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+        material_overrides: Sequence[CollisionMaterialOverride] = ...,
+    ) -> Any: ...
     def set_dt(self, dt: float) -> None: ...
 
 class ArticulationConfig:
@@ -505,6 +514,7 @@ class ArticulationConfig:
     def free_base() -> ArticulationConfig: ...
 
 class ArticulationTemplate:
+    source_data: ArticulationDesc
     body_names: list[str]
     source_frames: list[Any]
     fixed_frames: list[Any]
@@ -660,6 +670,17 @@ class SimMemoryType: ...
 class SimDType: ...
 class SimLifetimePolicy: ...
 class GpuArrayView: ...
-class SimModel: ...
+class SimModel:
+    def __init__(self) -> None: ...
+    def add_shape(
+        self,
+        body_id: int,
+        renderable_handle: int,
+        local_pos: Sequence[float] = (0.0, 0.0, 0.0),
+        local_quat_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
+        name: str = "",
+        *,
+        local_scale: Sequence[float] = (1.0, 1.0, 1.0),
+    ) -> int: ...
 class SimState: ...
 class SimVisualBatch: ...

@@ -15,6 +15,7 @@ from kangengine.sim import run_mode as sim_run_mode
 from kangengine.sim import timing as sim_timing
 from kangengine.sim import world as sim_world
 from kangengine.terrain import heightfield as terrain_heightfield
+from kangengine.visual import articulation_visual, rigid_visual
 
 
 def main() -> None:
@@ -70,6 +71,25 @@ def main() -> None:
     assert ke.material.PBRMaterial is materials.PBRMaterial
     assert ke.material.PBRMaterial.__module__ == "kangengine.material"
     assert ke.material.NativePBRMaterial is _ke.PBRMaterial
+
+    assert ke.visual.RigidVisual is rigid_visual.RigidVisual
+    assert rigid_visual.__name__ == "kangengine.visual.rigid_visual"
+    assert ke.visual.RigidVisual.__module__ == rigid_visual.__name__
+    assert "RigidVisual" in ke.visual.__all__
+    assert not hasattr(ke, "RigidVisual")
+    assert callable(ke.visual.RigidVisual.apply_pose)
+    assert callable(ke.visual.RigidVisual.remove)
+    assert not hasattr(ke.visual.RigidVisual, "sync")
+    assert importlib.util.find_spec("kangengine.visual.sim.rigid_visual") is None
+    assert importlib.util.find_spec("kangengine.visual.rigid") is None
+    assert importlib.util.find_spec("kangengine.visual.articulation") is None
+    assert articulation_visual.__name__ == "kangengine.visual.articulation_visual"
+    for name in ("ArticulationVisual", "ArticulationVisualAsset"):
+        public_class = getattr(ke.visual, name)
+        assert public_class is getattr(articulation_visual, name)
+        assert public_class is getattr(_ke.animation, name)
+        assert public_class.__module__ == articulation_visual.__name__
+        assert name in ke.visual.__all__
 
     # Simulation and motion-module APIs have exclusive domain paths. Accessing
     # the packages may be lazy, but the classes must not reappear at ke.*.
