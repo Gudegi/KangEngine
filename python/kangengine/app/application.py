@@ -1151,21 +1151,28 @@ class App(_NativeApp):
                 self.textures.append(texture)
                 self._register_texture_resource(texture)
 
-    def load_texture(self, path, *, flip: bool = True) -> render_api.Texture:
-        """Load and retain a GPU texture, cached by normalized path."""
+    def load_texture(
+        self, path, *, flip: bool = True, srgb: bool = False
+    ) -> render_api.Texture:
+        """Load and retain a texture, with optional sRGB decoding for color maps.
+
+        Normal, roughness, metallic and other data maps use ``srgb=False``.
+        Cache identity includes image orientation and color space.
+        """
         texture_path = str(_texture_path_candidate(path).resolve())
-        cached = self._textures_by_uri.get(texture_path)
+        key = (texture_path, bool(flip), bool(srgb))
+        cached = self._textures_by_uri.get(key)
         if cached is not None:
             return cached
         device = self.get_renderer().device()
-        texture = device.create_texture(texture_path, bool(flip))
+        texture = device.create_texture(texture_path, bool(flip), srgb=srgb)
         self.textures.append(texture)
         self._register_texture_resource(
             texture,
             display_name=Path(texture_path).name,
-            uri=texture_path,
+            uri=f"{texture_path}#flip={int(flip)}&srgb={int(srgb)}",
         )
-        self._textures_by_uri[texture_path] = texture
+        self._textures_by_uri[key] = texture
         return texture
 
     def create_phong_material(

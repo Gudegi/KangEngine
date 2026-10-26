@@ -4,6 +4,7 @@ Use the scene layer for inspectable paths, transforms, materials, imported
 assets, and interactive tools.
 
 - [Materials and Textures](MATERIALS_TEXTURES.md)
+- [Scene Lighting](LIGHTING.md)
 - [Load Assets](LOAD_ASSETS.md)
 - [Camera and Viewer](CAMERA_VIEWER.md)
 - [Video Recording](VIDEO_RECORDING.md)

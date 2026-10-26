@@ -81,6 +81,10 @@ const char* lightTypeLabel(Scene::LightType type) {
         return "Point";
     case Scene::LightType::Spot:
         return "Spot";
+    case Scene::LightType::Rect:
+        return "Rect";
+    case Scene::LightType::Dome:
+        return "Dome";
     }
     return "Unknown";
 }
@@ -254,6 +258,12 @@ Scene::Prim* addLightPrim(App* app, Scene::LightType type) {
     case Scene::LightType::Spot:
         baseName = "spot";
         break;
+    case Scene::LightType::Rect:
+        baseName = "rect";
+        break;
+    case Scene::LightType::Dome:
+        baseName = "dome";
+        break;
     }
 
     Scene::Prim* prim = app->getScene()->definePrim(
@@ -281,6 +291,12 @@ Scene::Prim* addLightPrim(App* app, Scene::LightType type) {
         prim->setSpotLight(light);
         break;
     }
+    case Scene::LightType::Rect:
+        prim->setRectLight(Scene::RectLight{});
+        break;
+    case Scene::LightType::Dome:
+        prim->setDomeLight(Scene::DomeLight{});
+        break;
     }
 
     app->selectPrim(prim);
@@ -336,6 +352,39 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
     ImGui::Text("%llu", static_cast<unsigned long long>(component->version()));
 
     switch (component->type()) {
+    case Scene::LightType::Rect:
+    case Scene::LightType::Dome: {
+        const bool isRect = component->type() == Scene::LightType::Rect;
+        auto rect = component->rectLight();
+        auto dome = component->domeLight();
+        Scene::LightEmission& light = isRect
+            ? static_cast<Scene::LightEmission&>(rect)
+            : static_cast<Scene::LightEmission&>(dome);
+        bool lightChanged = ImGui::ColorEdit3("Color", &light.color.x);
+        lightChanged |= ImGui::DragFloat("Intensity", &light.intensity, 1.0f, 0.0f, FLT_MAX);
+        lightChanged |= ImGui::DragFloat("Exposure (stops)", &light.exposure, 0.1f, -30.0f, 30.0f);
+        lightChanged |= ImGui::Checkbox("Color temperature", &light.enableColorTemperature);
+        if (light.enableColorTemperature)
+            lightChanged |= ImGui::SliderFloat("Temperature (K)", &light.colorTemperature, 1000.0f, 10000.0f);
+        lightChanged |= ImGui::SliderFloat("Diffuse", &light.diffuse, 0.0f, 1.0f);
+        lightChanged |= ImGui::SliderFloat("Specular", &light.specular, 0.0f, 1.0f);
+        if (isRect) {
+            lightChanged |= ImGui::DragFloat("Width", &rect.width, 0.01f, 0.001f, FLT_MAX);
+            lightChanged |= ImGui::DragFloat("Height", &rect.height, 0.01f, 0.001f, FLT_MAX);
+            lightChanged |= ImGui::Checkbox("Normalize by world area", &light.normalize);
+            ImGui::TextDisabled("Local XY rectangle, emits toward -Z");
+        } else {
+            ImGui::TextDisabled("Uniform diffuse environment; no specular IBL");
+        }
+        if (lightChanged) {
+            if (isRect)
+                prim.setRectLight(rect);
+            else
+                prim.setDomeLight(dome);
+            changed = true;
+        }
+        break;
+    }
     case Scene::LightType::Directional: {
         Scene::DirectionalLight light = component->directionalLight();
         glm::vec3 direction = light.direction;
@@ -2038,6 +2087,10 @@ void MenuBarPanel::buildPanel() {
                     addLightPrim(_app, Scene::LightType::Point);
                 if (ImGui::MenuItem("Spot"))
                     addLightPrim(_app, Scene::LightType::Spot);
+                if (ImGui::MenuItem("Rect"))
+                    addLightPrim(_app, Scene::LightType::Rect);
+                if (ImGui::MenuItem("Dome"))
+                    addLightPrim(_app, Scene::LightType::Dome);
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();

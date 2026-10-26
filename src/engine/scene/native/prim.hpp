@@ -341,6 +341,10 @@ class Prim {
     PointLight getPointLight();
     void setSpotLight(const SpotLight& light);
     SpotLight getSpotLight();
+    void setRectLight(const RectLight& light);
+    RectLight getRectLight() const;
+    void setDomeLight(const DomeLight& light);
+    DomeLight getDomeLight() const;
 
     void setLocalTranslation(glm::vec3 trans);
     void setLocalScale(glm::vec3 scale);

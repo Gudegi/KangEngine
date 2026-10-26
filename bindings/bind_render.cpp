@@ -338,11 +338,12 @@ void bind_render(py::module& m) {
         .def(
             "create_texture",
             [](Backend::GraphicsDevice& device, const std::string& path,
-               bool flip, const Backend::SamplerDesc& sampler) {
-                return device.createTexture(path, flip, sampler);
+               bool flip, const Backend::SamplerDesc& sampler, bool srgb) {
+                return device.createTexture(path, flip, sampler, srgb);
             },
             py::arg("path"), py::arg("flip") = false,
             py::arg("sampler") = Backend::SamplerDesc(),
+            py::kw_only(), py::arg("srgb") = false,
             py::return_value_policy::take_ownership,
             "Load a texture from an image file.")
         .def(

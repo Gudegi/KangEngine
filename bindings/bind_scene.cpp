@@ -107,6 +107,29 @@ void bind_scene(py::module& m) {
         .def_readwrite("outer_cone_angle",
                        &KE::Scene::SpotLight::outerConeAngle);
 
+    py::class_<KE::Scene::LightEmission>(scene, "LightEmission",
+        "Authored USD-compatible emission; exposure is in stops, temperature in kelvin.")
+        .def(py::init<>())
+        .def_readwrite("color", &KE::Scene::LightEmission::color)
+        .def_readwrite("intensity", &KE::Scene::LightEmission::intensity)
+        .def_readwrite("exposure", &KE::Scene::LightEmission::exposure)
+        .def_readwrite("normalize", &KE::Scene::LightEmission::normalize)
+        .def_readwrite("enable_color_temperature", &KE::Scene::LightEmission::enableColorTemperature)
+        .def_readwrite("color_temperature", &KE::Scene::LightEmission::colorTemperature)
+        .def_readwrite("diffuse", &KE::Scene::LightEmission::diffuse)
+        .def_readwrite("specular", &KE::Scene::LightEmission::specular);
+    py::class_<KE::Scene::RectLight, KE::Scene::LightEmission>(scene, "RectLight",
+        "Local XY rectangle emitting toward -Z; transform belongs to the owning prim.")
+        .def(py::init<>())
+        .def_readwrite("width", &KE::Scene::RectLight::width)
+        .def_readwrite("height", &KE::Scene::RectLight::height)
+        .def_readwrite("texture_path", &KE::Scene::RectLight::texturePath);
+    py::class_<KE::Scene::DomeLight, KE::Scene::LightEmission>(scene, "DomeLight",
+        "Uniform environment light. The rasterizer currently evaluates diffuse illumination only.")
+        .def(py::init<>())
+        .def_readwrite("texture_path", &KE::Scene::DomeLight::texturePath)
+        .def_readwrite("texture_format", &KE::Scene::DomeLight::textureFormat);
+
     // Token class
     py::class_<KE::Scene::Token>(
         scene, "Token", "Interned-style attribute key used by scene prims.")
@@ -184,7 +207,9 @@ void bind_scene(py::module& m) {
         "Light prim subtype used by renderer scene-light sync.")
         .value("DIRECTIONAL", KE::Scene::LightType::Directional)
         .value("POINT", KE::Scene::LightType::Point)
-        .value("SPOT", KE::Scene::LightType::Spot);
+        .value("SPOT", KE::Scene::LightType::Spot)
+        .value("RECT", KE::Scene::LightType::Rect)
+        .value("DOME", KE::Scene::LightType::Dome);
 
     py::enum_<KE::Scene::CameraProjectionType>(
         scene, "CameraProjectionType",
@@ -691,6 +716,11 @@ void bind_scene(py::module& m) {
              py::arg("light"), "Set this component from spot light data.")
         .def("spot_light", &KE::Scene::LightComponent::spotLight,
              "Return spot light data in world space.")
+        .def("set_rect_light", &KE::Scene::LightComponent::setRectLight, py::arg("light"))
+        .def("rect_light", &KE::Scene::LightComponent::rectLight,
+             "Return authored rectangle dimensions and emission, without applying the prim transform.")
+        .def("set_dome_light", &KE::Scene::LightComponent::setDomeLight, py::arg("light"))
+        .def("dome_light", &KE::Scene::LightComponent::domeLight)
         .def("__repr__", [](const KE::Scene::LightComponent& c) {
             const KE::Scene::Prim* owner = c.owner();
             const std::string path = owner ? owner->getPath() : "<detached>";
@@ -1134,6 +1164,10 @@ void bind_scene(py::module& m) {
         .def("set_directional_light", &KE::Scene::Prim::setDirectionalLight,
              py::arg("light"),
              "Attach directional light data to this Light prim.")
+        .def("set_rect_light", &KE::Scene::Prim::setRectLight, py::arg("light"))
+        .def("get_rect_light", &KE::Scene::Prim::getRectLight)
+        .def("set_dome_light", &KE::Scene::Prim::setDomeLight, py::arg("light"))
+        .def("get_dome_light", &KE::Scene::Prim::getDomeLight)
         .def("get_directional_light", &KE::Scene::Prim::getDirectionalLight,
              "Return directional light data from this Light prim.")
         .def("set_point_light", &KE::Scene::Prim::setPointLight,

@@ -22,6 +22,11 @@ class LightComponent : public ComponentBase {
     void setSpotLight(const SpotLight& light);
     SpotLight spotLight() const;
 
+    void setRectLight(const RectLight& light);
+    RectLight rectLight() const;
+    void setDomeLight(const DomeLight& light);
+    DomeLight domeLight() const;
+
   private:
     friend class Prim;
 
@@ -29,6 +34,8 @@ class LightComponent : public ComponentBase {
     void detach();
 
     LightType _type = LightType::Point;
+    RectLight _rect;
+    DomeLight _dome;
     glm::vec3 _direction = {0.0f, 0.0f, -1.0f};
     glm::vec3 _color = {1.0f, 1.0f, 1.0f};
     float _intensity = 1.0f;

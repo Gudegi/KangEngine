@@ -151,6 +151,7 @@ struct TextureDesc {
     int channels = 4;
     const void* data = nullptr;
     std::string name;
+    bool srgb = false;
 };
 
 struct SamplerDesc {
@@ -283,7 +284,7 @@ class GraphicsDevice {
                                                    bool flip = false) = 0;
     virtual std::unique_ptr<Texture>
     createTexture(const std::string path, bool flip,
-                  const SamplerDesc& sampler) = 0;
+                  const SamplerDesc& sampler, bool srgb = false) = 0;
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip, float warpParam,
                                                    float minFilferParam,

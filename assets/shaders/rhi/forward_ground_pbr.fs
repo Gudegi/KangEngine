@@ -11,6 +11,7 @@ in vec4 vColor;
 
 const int MAX_POINT_LIGHTS = 4;
 const int MAX_SPOT_LIGHTS = 2;
+const int MAX_RECT_LIGHTS = 16;
 
 layout(std140) uniform ke_g0_b1 {
     vec4 lightDir;
@@ -22,6 +23,10 @@ layout(std140) uniform ke_g0_b1 {
     vec4 spotDirectionInner[MAX_SPOT_LIGHTS];
     vec4 spotColorOuter[MAX_SPOT_LIGHTS];
     ivec4 lightCounts;
+    vec4 rectCenter[MAX_RECT_LIGHTS];
+    vec4 rectEdgeX[MAX_RECT_LIGHTS];
+    vec4 rectEdgeY[MAX_RECT_LIGHTS];
+    vec4 rectRadiance[MAX_RECT_LIGHTS];
 };
 layout(std140) uniform ke_g0_b2 {
     mat4 lightSpaceMatrices[4];
@@ -105,6 +110,8 @@ float attenuation(float distanceToLight, float range) {
     return f * f / max(distanceToLight * distanceToLight, 1.0);
 }
 
+#import "rect_lighting.glsl"
+
 void main() {
     vec2 uv = TexCoord * max(groundFactors.w, 0.0001);
     float gridMask = groundFactors.x > 0.5
@@ -142,6 +149,7 @@ void main() {
             attenuation(len, spotPositionRange[i].w),
             albedo, metallic, roughness);
     }
+    direct += evaluateRectLights(N, V, FragPos, albedo, metallic, roughness);
     vec3 gridEmission = gridColor.rgb * gridFactors.y * gridMask;
     outColor = vec4((ambient.rgb * albedo + direct + gridEmission) *
                     ShadowCascadeTint(), base.a);

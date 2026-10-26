@@ -8,15 +8,16 @@
 namespace KE {
 namespace Backend {
 
-TextureDesc loadImage(const std::string path, bool flip)
+TextureDesc loadImage(const std::string path, bool flip, bool srgb)
 {
     TextureDesc desc;
     desc.name = path;
+    desc.srgb = srgb;
 
     stbi_set_flip_vertically_on_load(flip);
 
     int width, height, channels;
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
+    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, srgb ? STBI_rgb_alpha : 0);
     if (!data) {
         std::cerr << "Failed to load texture '" << path << "': " 
                   << stbi_failure_reason() << std::endl;
@@ -26,7 +27,7 @@ TextureDesc loadImage(const std::string path, bool flip)
     else {
         desc.width = width;
         desc.height = height;
-        desc.channels = channels;
+        desc.channels = srgb ? 4 : channels;
         desc.data = data;
         //stbi_image_free((void*)desc.data) // NOTE: You need release this data memory in device specific texture constructor.
         return desc;

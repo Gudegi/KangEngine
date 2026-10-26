@@ -465,7 +465,7 @@ LightType Prim::getLightType(LightType defaultType) const {
         return defaultType;
     const int value = getAttribute<int>("light:type");
     if (value < static_cast<int>(LightType::Directional) ||
-        value > static_cast<int>(LightType::Spot))
+        value > static_cast<int>(LightType::Dome))
         return defaultType;
     return static_cast<LightType>(value);
 }
@@ -565,6 +565,26 @@ SpotLight Prim::getSpotLight() {
         light.innerConeAngle,
         getAttribute<float>("light:outerConeAngle", light.outerConeAngle));
     return light;
+}
+
+void Prim::setRectLight(const RectLight& light) {
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setRectLight(light);
+}
+
+RectLight Prim::getRectLight() const {
+    return _lightComponent ? _lightComponent->rectLight() : RectLight{};
+}
+
+void Prim::setDomeLight(const DomeLight& light) {
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setDomeLight(light);
+}
+
+DomeLight Prim::getDomeLight() const {
+    return _lightComponent ? _lightComponent->domeLight() : DomeLight{};
 }
 
 bool Prim::isActiveInHierarchy() const {

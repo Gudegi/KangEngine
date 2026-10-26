@@ -77,7 +77,7 @@ class WebGPUDevice : public GraphicsDevice {
     std::unique_ptr<Texture> createTexture(const std::string path,
                                            bool flip = false) override;
     std::unique_ptr<Texture> createTexture(const std::string path, bool flip,
-                                           const SamplerDesc& sampler) override;
+                                           const SamplerDesc& sampler, bool srgb = false) override;
     std::unique_ptr<Texture> createTexture(const std::string path, bool flip,
                                            float warpParam,
                                            float minFilferParam,

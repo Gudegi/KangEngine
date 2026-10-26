@@ -3,6 +3,7 @@
 #include "engine/scene/native/prim.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <glm/geometric.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/mat4x4.hpp>
@@ -16,6 +17,17 @@ glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
     if (glm::length(direction) < 1e-4f)
         return glm::normalize(fallback);
     return glm::normalize(direction);
+}
+
+void validateEmission(const LightEmission& light) {
+    if (!std::isfinite(light.intensity) || light.intensity < 0 ||
+        !std::isfinite(light.exposure) || !std::isfinite(std::exp2(light.exposure) * light.intensity) ||
+        !std::isfinite(light.colorTemperature) || light.colorTemperature <= 0 ||
+        !std::isfinite(light.diffuse) || light.diffuse < 0 ||
+        !std::isfinite(light.specular) || light.specular < 0 ||
+        !std::isfinite(light.color.r) || !std::isfinite(light.color.g) ||
+        !std::isfinite(light.color.b) || glm::any(glm::lessThan(light.color, glm::vec3(0))))
+        throw std::invalid_argument("Light emission must be finite and nonnegative; temperature must be positive");
 }
 } // namespace
 
@@ -102,6 +114,35 @@ SpotLight LightComponent::spotLight() const {
     light.innerConeAngle = std::max(0.0f, _innerConeAngle);
     light.outerConeAngle = std::max(light.innerConeAngle, _outerConeAngle);
     return light;
+}
+
+void LightComponent::setRectLight(const RectLight& light) {
+    requireAttached();
+    validateEmission(light);
+    if (!std::isfinite(light.width) || !std::isfinite(light.height) ||
+        light.width <= 0 || light.height <= 0)
+        throw std::invalid_argument("RectLight dimensions must be finite and positive");
+    _type = LightType::Rect;
+    _rect = light;
+    markChanged();
+}
+
+RectLight LightComponent::rectLight() const {
+    requireAttached();
+    return _rect;
+}
+
+void LightComponent::setDomeLight(const DomeLight& light) {
+    requireAttached();
+    validateEmission(light);
+    _type = LightType::Dome;
+    _dome = light;
+    markChanged();
+}
+
+DomeLight LightComponent::domeLight() const {
+    requireAttached();
+    return _dome;
 }
 
 } // namespace Scene

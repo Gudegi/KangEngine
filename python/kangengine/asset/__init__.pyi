@@ -6,10 +6,10 @@ import numpy.typing as npt
 from types import ModuleType
 from typing import Literal, Sequence, overload
 
-from .. import UpAxis
+from .. import UpAxis, Vec3, Mat4
 from ..animation import SkeletonMotion, SkeletonTree
 from ..utils import CoordinateSystem
-from ..scene import MeshData, SkinnedMeshData
+from ..scene import MeshData, SkinnedMeshData, LightType, RectLight, DomeLight
 from ..material import Material, NativeMaterial
 from . import amass as amass, smpl as smpl
 from .amass import AMASSInfo as AMASSInfo, AMASSLoader as AMASSLoader
@@ -390,17 +390,61 @@ class FBXLoader:
         ...
 
 class USDMeshInfo:
+    """Visible render mesh with world-baked geometry and Preview Surface factors."""
     prim_path: str
     name: str
     material_path: str
     diffuse_texture_path: str
     normal_texture_path: str
+    metallic_roughness_texture_path: str
+    metallic_texture_path: str
+    roughness_texture_path: str
+    emissive_texture_path: str
+    diffuse_texture_srgb: bool
+    emissive_texture_srgb: bool
+    base_color: tuple[float, float, float, float]
+    emissive_color: tuple[float, float, float]
+    metallic: float
+    roughness: float
+    opacity_threshold: float
+    double_sided: bool
+    bounds: tuple[Vec3, Vec3]
     mesh_data: MeshData
     vertex_count: int
     index_count: int
 
+class USDCameraInfo:
+    """Perspective camera in scaled scene coordinates; vertical FOV in degrees."""
+
+    prim_path: str
+    position: Vec3
+    target: Vec3
+    vertical_fov: float
+    near_plane: float
+    far_plane: float
+    exposure: float
+    exposure_time: float
+    exposure_iso: float
+    exposure_f_stop: float
+    exposure_responsivity: float
+    linear_exposure_scale: float
+
+class USDLightInfo:
+    """Authored light parameters plus an evaluated world transform."""
+
+    prim_path: str
+    type: LightType
+    world_transform: Mat4
+    visible: bool
+    rect: RectLight
+    dome: DomeLight
+
 class USDImportResult:
     meshes: list[USDMeshInfo]
+    cameras: list[USDCameraInfo]
+    lights: list[USDLightInfo]
+    up_axis: UpAxis
+    meters_per_unit: float
     diagnostics: ImportDiagnostics
 
 class USDArticulationImportResult:

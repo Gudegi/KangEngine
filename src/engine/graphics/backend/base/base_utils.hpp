@@ -6,7 +6,7 @@
 namespace KE {
 namespace Backend {
 
-TextureDesc loadImage(const std::string path, bool flip=false);
+TextureDesc loadImage(const std::string path, bool flip=false, bool srgb=false);
 
 } // namespace Backend
 } // namespace KE

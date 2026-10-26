@@ -858,6 +858,26 @@ void bind_asset(py::module& m) {
                       "Resolved diffuse texture path.")
         .def_readonly("normal_texture_path", &USDMeshInfo::normalTexturePath,
                       "Resolved normal texture path.")
+        .def_readonly("metallic_roughness_texture_path", &USDMeshInfo::metallicRoughnessTexturePath)
+        .def_readonly("metallic_texture_path", &USDMeshInfo::metallicTexturePath)
+        .def_readonly("roughness_texture_path", &USDMeshInfo::roughnessTexturePath)
+        .def_readonly("emissive_texture_path", &USDMeshInfo::emissiveTexturePath)
+        .def_readonly("diffuse_texture_srgb", &USDMeshInfo::diffuseTextureSrgb)
+        .def_readonly("emissive_texture_srgb", &USDMeshInfo::emissiveTextureSrgb)
+        .def_property_readonly("base_color", [](const USDMeshInfo& self) {
+            return py::make_tuple(self.baseColor.r, self.baseColor.g, self.baseColor.b, self.baseColor.a);
+        })
+        .def_property_readonly("emissive_color", [](const USDMeshInfo& self) {
+            return py::make_tuple(self.emissiveColor.r, self.emissiveColor.g, self.emissiveColor.b);
+        })
+        .def_readonly("metallic", &USDMeshInfo::metallic)
+        .def_readonly("roughness", &USDMeshInfo::roughness)
+        .def_readonly("opacity_threshold", &USDMeshInfo::opacityThreshold)
+        .def_readonly("double_sided", &USDMeshInfo::doubleSided)
+        .def_property_readonly("bounds", [](const USDMeshInfo& self) {
+            const auto bounds = self.meshData.computeLocalAABB();
+            return py::make_tuple(bounds.min, bounds.max);
+        }, "Axis-aligned bounds in scaled scene coordinates.")
         .def_property_readonly("mesh_data",
                                [](std::shared_ptr<USDMeshInfo> self) {
                                    return std::shared_ptr<KE::Scene::MeshData>(
@@ -871,6 +891,28 @@ void bind_asset(py::module& m) {
             return self.meshData.indices.size();
         });
 
+    py::class_<USDCameraInfo>(asset, "USDCameraInfo")
+        .def_readonly("prim_path", &USDCameraInfo::primPath)
+        .def_readonly("position", &USDCameraInfo::position)
+        .def_readonly("target", &USDCameraInfo::target)
+        .def_readonly("vertical_fov", &USDCameraInfo::verticalFov)
+        .def_readonly("near_plane", &USDCameraInfo::nearPlane)
+        .def_readonly("far_plane", &USDCameraInfo::farPlane)
+        .def_readonly("exposure", &USDCameraInfo::exposure)
+        .def_readonly("exposure_time", &USDCameraInfo::exposureTime)
+        .def_readonly("exposure_iso", &USDCameraInfo::exposureIso)
+        .def_readonly("exposure_f_stop", &USDCameraInfo::exposureFStop)
+        .def_readonly("exposure_responsivity", &USDCameraInfo::exposureResponsivity)
+        .def_readonly("linear_exposure_scale", &USDCameraInfo::linearExposureScale);
+
+    py::class_<USDLightInfo>(asset, "USDLightInfo")
+        .def_readonly("prim_path", &USDLightInfo::primPath)
+        .def_readonly("type", &USDLightInfo::type)
+        .def_readonly("world_transform", &USDLightInfo::worldTransform)
+        .def_readonly("visible", &USDLightInfo::visible)
+        .def_readonly("rect", &USDLightInfo::rect)
+        .def_readonly("dome", &USDLightInfo::dome);
+
     py::class_<USDImportResult>(asset, "USDImportResult",
                                 "Parsed USD meshes plus diagnostics.")
         .def_property_readonly(
@@ -883,6 +925,10 @@ void bind_asset(py::module& m) {
                 return result;
             },
             "Meshes imported from the USD scene.")
+        .def_readonly("cameras", &USDImportResult::cameras)
+        .def_readonly("lights", &USDImportResult::lights)
+        .def_readonly("up_axis", &USDImportResult::upAxis)
+        .def_readonly("meters_per_unit", &USDImportResult::metersPerUnit)
         .def_readonly("diagnostics", &USDImportResult::diagnostics,
                       "Importer diagnostics.");
 

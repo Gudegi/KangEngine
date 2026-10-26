@@ -4,6 +4,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/types/light_color.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
@@ -25,7 +26,7 @@ constexpr int LIGHT_UBO_BIND_SLOT = 1;
 constexpr int SHADOW_UBO_BIND_SLOT = 2;
 constexpr int SHADOW_TEXTURE_SLOT_BASE = KE::RendererTextureSlot::Shadow0;
 constexpr size_t LIGHT_UBO_VEC4_COUNT =
-    3 + KE::MaxPointLights * 2 + KE::MaxSpotLights * 3 + 1;
+    3 + KE::MaxPointLights * 2 + KE::MaxSpotLights * 3 + 1 + KE::MaxRectLights * 4;
 
 namespace {
 
@@ -57,6 +58,12 @@ void appendAABBLines(const KE::Geometry::AABB& box,
 } // namespace
 
 namespace KE {
+
+void Rasterizer::setRectLights(std::vector<RectLightInstance> lights) {
+    if (lights.size() > MaxRectLights)
+        throw std::runtime_error("Rasterizer supports at most 16 visible RectLights");
+    _rectLights = std::move(lights);
+}
 
 Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _graphicsDevice = graphicsDevice;
@@ -553,7 +560,7 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     // vec4 spot position+range[2] | vec4 spot direction+innerCos[2]
     // vec4 spot color+outerCos[2] | ivec4 counts
     glm::vec4 lightColor = glm::vec4(_light.color * _light.intensity, 1.f);
-    glm::vec4 ambient = glm::vec4(_light.ambient, 0.f);
+    glm::vec4 ambient = glm::vec4(_light.ambient + _domeRadiance, 0.f);
     _lightUBO->setData(&lightColor, sizeof(glm::vec4), 1 * sizeof(glm::vec4));
     _lightUBO->setData(&ambient, sizeof(glm::vec4), 2 * sizeof(glm::vec4));
 
@@ -601,6 +608,30 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     constexpr size_t spotColorOffset = spotDirectionOffset + MaxSpotLights;
     constexpr size_t countOffset = spotColorOffset + MaxSpotLights;
 
+    std::array<glm::vec4, MaxRectLights> rectCenter{}, rectEdgeX{}, rectEdgeY{}, rectRadiance{};
+    for (size_t i = 0; i < _rectLights.size(); ++i) {
+        const auto& instance = _rectLights[i];
+        const auto& light = instance.light;
+        const glm::mat4 transform = view * instance.worldTransform;
+        const glm::vec3 edgeX = glm::vec3(transform[0]) * light.width;
+        const glm::vec3 edgeY = glm::vec3(transform[1]) * light.height;
+        const float area = glm::length(glm::cross(edgeX, edgeY));
+        // A zero-area transformed light emits no power; never divide by it.
+        const glm::vec3 radiance = area > 1e-10f
+            ? Scene::emittedRadiance(light) / (light.normalize ? area : 1.0f)
+            : glm::vec3(0);
+        rectCenter[i] = glm::vec4(glm::vec3(transform[3]),
+            glm::determinant(glm::mat3(transform)) < 0 ? -1.0f : 1.0f);
+        rectEdgeX[i] = glm::vec4(edgeX, light.diffuse);
+        rectEdgeY[i] = glm::vec4(edgeY, light.specular);
+        rectRadiance[i] = glm::vec4(radiance, 0);
+    }
+    constexpr size_t rectOffset = countOffset + 1;
+    _lightUBO->setData(rectCenter.data(), sizeof(rectCenter), rectOffset * sizeof(glm::vec4));
+    _lightUBO->setData(rectEdgeX.data(), sizeof(rectEdgeX), (rectOffset + MaxRectLights) * sizeof(glm::vec4));
+    _lightUBO->setData(rectEdgeY.data(), sizeof(rectEdgeY), (rectOffset + MaxRectLights * 2) * sizeof(glm::vec4));
+    _lightUBO->setData(rectRadiance.data(), sizeof(rectRadiance), (rectOffset + MaxRectLights * 3) * sizeof(glm::vec4));
+
     _lightUBO->setData(pointPositionRange.data(), sizeof(pointPositionRange),
                        pointPositionOffset * sizeof(glm::vec4));
     _lightUBO->setData(pointColorIntensity.data(), sizeof(pointColorIntensity),
@@ -612,7 +643,7 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     _lightUBO->setData(spotColorOuter.data(), sizeof(spotColorOuter),
                        spotColorOffset * sizeof(glm::vec4));
     glm::ivec4 lightCounts(static_cast<int>(pointCount),
-                           static_cast<int>(spotCount), 0, 0);
+                           static_cast<int>(spotCount), static_cast<int>(_rectLights.size()), 0);
     _lightUBO->setData(&lightCounts, sizeof(lightCounts),
                        countOffset * sizeof(glm::vec4));
     _lightDirty = false;

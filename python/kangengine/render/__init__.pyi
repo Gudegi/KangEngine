@@ -306,7 +306,7 @@ class RenderHookContext:
 
 class GraphicsDevice:
     """Factory for backend graphics resources."""
-    def create_texture(self, path: str, flip: bool = False, sampler: SamplerDesc = ...) -> Texture:
+    def create_texture(self, path: str, flip: bool = False, sampler: SamplerDesc = ..., *, srgb: bool = False) -> Texture:
         """Load a texture from an image file."""
         ...
     def create_buffer(self, data: Any, usage: BufferUsage, label: str = "") -> Buffer:

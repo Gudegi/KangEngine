@@ -16,6 +16,11 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/mesh.h>
+#include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdLux/lightAPI.h>
+#include <pxr/usd/usdLux/rectLight.h>
+#include <pxr/usd/usdLux/domeLight.h>
+#include <pxr/usd/usdLux/shapingAPI.h>
 #include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdPhysics/rigidBodyAPI.h>
 #include <pxr/usd/usdPhysics/metrics.h>
@@ -72,62 +77,53 @@ std::string resolveUsdTexturePath(const std::string& usdPath,
     return (std::filesystem::path(usdPath).parent_path() / normalized).string();
 }
 
-std::string findTextureInShaderNetwork(const pxr::UsdPrim& prim,
-                                       const std::string& usdPath) {
-    if (!prim)
-        return {};
+struct PreviewTexture {
+    std::string path;
+    pxr::TfToken channel;
+    pxr::GfVec4f scale{1.0f};
+    pxr::GfVec4f bias{0.0f};
+    pxr::TfToken colorSpace{"auto"};
+};
 
-    pxr::UsdShadeShader shader(prim);
-    if (shader) {
-        pxr::UsdShadeInput fileInput = shader.GetInput(pxr::TfToken("file"));
-        if (fileInput) {
-            pxr::SdfAssetPath asset;
-            if (fileInput.Get(&asset)) {
-                return resolveUsdTexturePath(usdPath, assetPathString(asset));
-            }
-        }
+PreviewTexture readPreviewTexture(const pxr::UsdShadeInput& input,
+                                  const std::string& usdPath,
+                                  ImportDiagnostics& diagnostics, bool report) {
+    if (!input || !input.HasConnectedSource())
+        return {};
+    const auto sources = input.GetConnectedSources();
+    auto warn = [&](const std::string& message) {
+        if (report)
+            diagnostics.warnings.push_back(message + ": " + input.GetAttr().GetPath().GetString());
+    };
+    if (sources.size() != 1) {
+        warn("Unsupported USD texture connection");
+        return {};
     }
-
-    for (const pxr::UsdPrim& child : prim.GetChildren()) {
-        std::string path = findTextureInShaderNetwork(child, usdPath);
-        if (!path.empty())
-            return path;
+    const auto& source = sources.front();
+    pxr::UsdShadeShader texture(source.source.GetPrim());
+    pxr::TfToken id;
+    if (!texture || !texture.GetIdAttr().Get(&id) || id != pxr::TfToken("UsdUVTexture")) {
+        warn("Unsupported USD texture node (expected UsdUVTexture)");
+        return {};
     }
-    return {};
-}
-
-std::string connectedTexturePath(const pxr::UsdShadeMaterial& material,
-                                 const std::string& usdPath,
-                                 const pxr::TfToken& inputName) {
-    if (!material)
-        return {};
-
-    pxr::UsdShadeShader shader = material.ComputeSurfaceSource();
-    if (!shader)
-        return {};
-
-    pxr::UsdShadeInput input = shader.GetInput(inputName);
-    if (!input)
-        return {};
-
-    const pxr::UsdShadeInput::SourceInfoVector sources =
-        input.GetConnectedSources();
-    if (sources.empty())
-        return {};
-
-    return findTextureInShaderNetwork(sources.front().source.GetPrim(),
-                                      usdPath);
-}
-
-std::string diffuseTexturePath(const pxr::UsdShadeMaterial& material,
-                               const std::string& usdPath) {
-    return connectedTexturePath(material, usdPath,
-                                pxr::TfToken("diffuseColor"));
-}
-
-std::string normalTexturePath(const pxr::UsdShadeMaterial& material,
-                              const std::string& usdPath) {
-    return connectedTexturePath(material, usdPath, pxr::TfToken("normal"));
+    PreviewTexture result;
+    pxr::SdfAssetPath file;
+    const auto fileInput = texture.GetInput(pxr::TfToken("file"));
+    if (fileInput)
+        fileInput.Get(&file);
+    result.path = resolveUsdTexturePath(usdPath, assetPathString(file));
+    result.channel = source.sourceName;
+    if (const auto value = texture.GetInput(pxr::TfToken("scale")))
+        value.Get(&result.scale);
+    if (const auto value = texture.GetInput(pxr::TfToken("bias")))
+        value.Get(&result.bias);
+    if (const auto value = texture.GetInput(pxr::TfToken("sourceColorSpace")))
+        value.Get(&result.colorSpace);
+    if (result.path.empty() || !std::filesystem::exists(result.path)) {
+        warn("USD texture file missing: " + result.path);
+        result.path.clear();
+    }
+    return result;
 }
 
 pxr::UsdShadeMaterial boundMaterial(const pxr::UsdPrim& prim) {
@@ -320,17 +316,194 @@ size_t faceCount(const pxr::UsdPrim& prim) {
 
 void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
                     const std::string& usdPath, ImportDiagnostics& diagnostics,
-                    std::unordered_set<std::string>& missingTextureWarnings) {
+                    std::unordered_set<std::string>& inspectedMaterials) {
     if (!material)
         return;
     info.materialPath = material.GetPath().GetString();
-    info.diffuseTexturePath = diffuseTexturePath(material, usdPath);
-    info.normalTexturePath = normalTexturePath(material, usdPath);
-    if (info.diffuseTexturePath.empty() &&
-        missingTextureWarnings.insert(info.materialPath).second) {
-        diagnostics.warnings.push_back(
-            "USD diffuse texture was not found for " + info.materialPath);
+    const bool report = inspectedMaterials.insert(info.materialPath).second;
+    auto warn = [&](const std::string& message) {
+        if (report)
+            diagnostics.warnings.push_back(message + ": " + info.materialPath);
+    };
+    const auto shader = material.ComputeSurfaceSource();
+    pxr::TfToken id;
+    if (!shader || !shader.GetIdAttr().Get(&id) || id != pxr::TfToken("UsdPreviewSurface")) {
+        warn("Unsupported USD surface (expected UsdPreviewSurface)");
+        return;
     }
+    auto input = [&](const char* name) { return shader.GetInput(pxr::TfToken(name)); };
+    auto scalar = [&](const char* name, float fallback) {
+        float value = fallback;
+        if (const auto attr = input(name))
+            attr.Get(&value);
+        return value;
+    };
+    auto texture = [&](const char* name) {
+        return readPreviewTexture(input(name), usdPath, diagnostics, report);
+    };
+    auto color = [&](const char* name, const PreviewTexture& map, glm::vec3 fallback) {
+        pxr::GfVec3f value(fallback.x, fallback.y, fallback.z);
+        if (!map.path.empty()) {
+            if (map.channel != pxr::TfToken("rgb") || map.bias != pxr::GfVec4f(0))
+                warn(std::string("Unsupported USD color channel/bias for ") + name);
+            return glm::vec3(map.scale[0], map.scale[1], map.scale[2]);
+        }
+        if (const auto attr = input(name))
+            attr.Get(&value);
+        return glm::vec3(value[0], value[1], value[2]);
+    };
+    const auto diffuse = texture("diffuseColor");
+    const auto normal = texture("normal");
+    const auto metallic = texture("metallic");
+    const auto roughness = texture("roughness");
+    const auto emissive = texture("emissiveColor");
+    info.diffuseTexturePath = diffuse.path;
+    info.normalTexturePath = normal.path;
+    info.emissiveTexturePath = emissive.path;
+    info.diffuseTextureSrgb = diffuse.colorSpace != pxr::TfToken("raw");
+    info.emissiveTextureSrgb = emissive.colorSpace != pxr::TfToken("raw");
+    info.baseColor = glm::vec4(color("diffuseColor", diffuse, glm::vec3(0.18f)), scalar("opacity", 1.0f));
+    info.emissiveColor = color("emissiveColor", emissive, glm::vec3(0.0f));
+    info.metallic = scalar("metallic", 0.0f);
+    info.roughness = scalar("roughness", 0.5f);
+    info.opacityThreshold = scalar("opacityThreshold", 0.0f);
+
+    // Native PBR decodes normal maps from [0,1] to [-1,1] itself.
+    if (!normal.path.empty() && (normal.channel != pxr::TfToken("rgb") ||
+        normal.scale != pxr::GfVec4f(2.0f) || normal.bias != pxr::GfVec4f(-1.0f)))
+        warn("USD normal map differs from the supported scale=2, bias=-1 encoding");
+
+    // Preserve packed G roughness/B metallic without treating absent metallic as 1.
+    const bool packed = !roughness.path.empty() && roughness.channel == pxr::TfToken("g") &&
+        ((!metallic.path.empty() && metallic.path == roughness.path && metallic.channel == pxr::TfToken("b")) ||
+         (metallic.path.empty() && info.metallic == 0.0f));
+    if (packed) {
+        info.metallicRoughnessTexturePath = roughness.path;
+        info.roughness = roughness.scale[1];
+        if (!metallic.path.empty())
+            info.metallic = metallic.scale[2];
+    } else {
+        if (!roughness.path.empty()) {
+            if (roughness.channel == pxr::TfToken("r")) {
+                info.roughnessTexturePath = roughness.path;
+                info.roughness = roughness.scale[0];
+            } else {
+                warn("Unsupported USD roughness channel/packing");
+            }
+        }
+        if (!metallic.path.empty()) {
+            if (metallic.channel == pxr::TfToken("r")) {
+                info.metallicTexturePath = metallic.path;
+                info.metallic = metallic.scale[0];
+            } else {
+                warn("Unsupported USD metallic channel/packing");
+            }
+        }
+    }
+    if (metallic.bias != pxr::GfVec4f(0) || roughness.bias != pxr::GfVec4f(0))
+        warn("USD metallic/roughness texture bias is unsupported");
+    if (input("opacity") && input("opacity").HasConnectedSource())
+        warn("Separate USD opacity texture is unsupported");
+    int specularWorkflow = 0;
+    if (const auto attr = input("useSpecularWorkflow"))
+        attr.Get(&specularWorkflow);
+    if (specularWorkflow != 0)
+        warn("USD specular workflow is unsupported; using metallic workflow");
+}
+
+void readLight(const pxr::UsdPrim& prim, float scale, const std::string& usdPath,
+               USDImportResult& result) {
+    USDLightInfo info;
+    info.primPath = prim.GetPath().GetString();
+    pxr::UsdLuxLightAPI api(prim);
+    const pxr::UsdLuxRectLight rect(prim);
+    const pxr::UsdLuxDomeLight dome(prim);
+    if (!rect && !dome) {
+        result.diagnostics.warnings.push_back("Unsupported USD light type: " + info.primPath);
+        return;
+    }
+    Scene::LightEmission* emission;
+    pxr::SdfAssetPath texture;
+    if (rect) {
+        info.type = Scene::LightType::Rect;
+        rect.GetWidthAttr().Get(&info.rect.width);
+        rect.GetHeightAttr().Get(&info.rect.height);
+        rect.GetTextureFileAttr().Get(&texture);
+        emission = &info.rect;
+    } else {
+        info.type = Scene::LightType::Dome;
+        dome.GetTextureFileAttr().Get(&texture);
+        pxr::TfToken textureFormat;
+        dome.GetTextureFormatAttr().Get(&textureFormat);
+        info.dome.textureFormat = textureFormat.GetString();
+        emission = &info.dome;
+    }
+    pxr::GfVec3f color(1);
+    api.GetColorAttr().Get(&color);
+    emission->color = glm::vec3(color[0], color[1], color[2]);
+    api.GetIntensityAttr().Get(&emission->intensity);
+    api.GetExposureAttr().Get(&emission->exposure);
+    api.GetNormalizeAttr().Get(&emission->normalize);
+    api.GetEnableColorTemperatureAttr().Get(&emission->enableColorTemperature);
+    api.GetColorTemperatureAttr().Get(&emission->colorTemperature);
+    api.GetDiffuseAttr().Get(&emission->diffuse);
+    api.GetSpecularAttr().Get(&emission->specular);
+    auto& texturePath = rect ? info.rect.texturePath : info.dome.texturePath;
+    texturePath = resolveUsdTexturePath(usdPath, assetPathString(texture));
+    if (!texturePath.empty())
+        result.diagnostics.warnings.push_back("USD light texture retained but not rendered: " + info.primPath);
+    if (prim.HasAPI<pxr::UsdLuxShapingAPI>())
+        result.diagnostics.warnings.push_back("USD light shaping is not rendered: " + info.primPath);
+    pxr::UsdGeomXformCache cache;
+    const auto matrix = cache.GetLocalToWorldTransform(prim);
+    // USD uses row vectors; GLM uses column vectors. Uniform import scale
+    // applies to the emitting rectangle as well as its translated position.
+    for (int column = 0; column < 4; ++column)
+        for (int row = 0; row < 4; ++row)
+            info.worldTransform[column][row] = static_cast<float>(matrix[column][row]) * (row < 3 ? scale : 1.0f);
+    const pxr::UsdGeomImageable imageable(prim);
+    const auto purpose = imageable.ComputePurpose();
+    info.visible = imageable.ComputeVisibility() != pxr::UsdGeomTokens->invisible &&
+        (purpose == pxr::UsdGeomTokens->default_ || purpose == pxr::UsdGeomTokens->render);
+    result.lights.push_back(std::move(info));
+}
+
+void readCamera(const pxr::UsdPrim& prim, float scale, USDImportResult& result) {
+    const pxr::UsdGeomCamera camera(prim);
+    // Ignore empty editor-camera placeholders with no authored lens.
+    if (!camera || !camera.GetFocalLengthAttr().HasAuthoredValueOpinion())
+        return;
+    pxr::TfToken projection;
+    camera.GetProjectionAttr().Get(&projection);
+    if (projection != pxr::UsdGeomTokens->perspective)
+        return;
+    float focalLength = 0, aperture = 0;
+    pxr::GfVec2f clipping;
+    camera.GetFocalLengthAttr().Get(&focalLength);
+    camera.GetVerticalApertureAttr().Get(&aperture);
+    camera.GetClippingRangeAttr().Get(&clipping);
+    if (focalLength <= 0 || aperture <= 0 || clipping[0] <= 0 || clipping[1] <= clipping[0]) {
+        result.diagnostics.warnings.push_back("Invalid USD camera lens/clipping: " + prim.GetPath().GetString());
+        return;
+    }
+    pxr::UsdGeomXformCache cache;
+    const auto transform = cache.GetLocalToWorldTransform(prim);
+    USDCameraInfo info;
+    info.primPath = prim.GetPath().GetString();
+    info.position = transformPoint(transform, pxr::GfVec3f(0)) * scale;
+    info.target = info.position + transformNormal(transform, pxr::GfVec3f(0, 0, -1)) * scale;
+    info.verticalFov = 2.0f * std::atan(aperture / (2.0f * focalLength)) * 180.0f / 3.14159265358979323846f;
+    info.nearPlane = clipping[0] * scale;
+    info.farPlane = clipping[1] * scale;
+    camera.GetExposureAttr().Get(&info.exposure);
+    camera.GetExposureTimeAttr().Get(&info.exposureTime);
+    camera.GetExposureIsoAttr().Get(&info.exposureIso);
+    camera.GetExposureFStopAttr().Get(&info.exposureFStop);
+    camera.GetExposureResponsivityAttr().Get(&info.exposureResponsivity);
+    info.linearExposureScale = camera.ComputeLinearExposureScale();
+    if (!std::isfinite(info.linearExposureScale) || info.linearExposureScale < 0)
+        throw std::runtime_error("Invalid USD camera exposure: " + info.primPath);
+    result.cameras.push_back(info);
 }
 #endif
 
@@ -344,6 +517,8 @@ USDImportResult USDLoader::parse(const std::string& usdPath, float scale) {
     throw std::runtime_error(
         "USD support not compiled. Rebuild with -DUSE_USD=ON");
 #else
+    if (!std::isfinite(scale) || scale <= 0)
+        throw std::runtime_error("USD mesh scale must be finite and positive");
     if (!std::filesystem::exists(usdPath)) {
         throw std::runtime_error("USD file does not exist: " + usdPath);
     }
@@ -353,8 +528,25 @@ USDImportResult USDLoader::parse(const std::string& usdPath, float scale) {
         throw std::runtime_error("Failed to load USD scene: " + usdPath);
     }
 
-    std::unordered_set<std::string> missingTextureWarnings;
-    for (const pxr::UsdPrim& prim : stage->Traverse()) {
+    result.upAxis = pxr::UsdGeomGetStageUpAxis(stage) == pxr::UsdGeomTokens->z ? UpAxis::Z : UpAxis::Y;
+    result.metersPerUnit = pxr::UsdGeomGetStageMetersPerUnit(stage);
+    std::unordered_set<std::string> inspectedMaterials;
+    for (const pxr::UsdPrim& prim : pxr::UsdPrimRange(stage->GetPseudoRoot(), pxr::UsdTraverseInstanceProxies())) {
+        if (prim.HasAPI<pxr::UsdLuxLightAPI>()) {
+            readLight(prim, scale, usdPath, result);
+            continue;
+        }
+        const pxr::UsdGeomImageable imageable(prim);
+        if (imageable) {
+            const auto purpose = imageable.ComputePurpose();
+            if (imageable.ComputeVisibility() == pxr::UsdGeomTokens->invisible ||
+                (purpose != pxr::UsdGeomTokens->default_ && purpose != pxr::UsdGeomTokens->render))
+                continue;
+        }
+        if (prim.IsA<pxr::UsdGeomCamera>()) {
+            readCamera(prim, scale, result);
+            continue;
+        }
         if (!prim.IsA<pxr::UsdGeomMesh>())
             continue;
 
@@ -390,12 +582,13 @@ USDImportResult USDLoader::parse(const std::string& usdPath, float scale) {
 
             applyScale(meshData, scale);
             USDMeshInfo info;
+            pxr::UsdGeomMesh(prim).GetDoubleSidedAttr().Get(&info.doubleSided);
             info.primPath = child.GetPath().GetString();
             info.name = primNameFromPath(primPath) + "_" +
                         primNameFromPath(info.primPath);
             info.meshData = std::move(meshData);
             assignMaterial(info, material, usdPath, result.diagnostics,
-                           missingTextureWarnings);
+                           inspectedMaterials);
             result.meshes.push_back(std::move(info));
             ++emittedSubsetCount;
         }
@@ -419,11 +612,12 @@ USDImportResult USDLoader::parse(const std::string& usdPath, float scale) {
 
             applyScale(meshData, scale);
             USDMeshInfo info;
+            pxr::UsdGeomMesh(prim).GetDoubleSidedAttr().Get(&info.doubleSided);
             info.primPath = primPath;
             info.name = primNameFromPath(primPath) + "_unbound";
             info.meshData = std::move(meshData);
             assignMaterial(info, boundMaterial(prim), usdPath,
-                           result.diagnostics, missingTextureWarnings);
+                           result.diagnostics, inspectedMaterials);
             result.meshes.push_back(std::move(info));
             continue;
         }
@@ -437,11 +631,12 @@ USDImportResult USDLoader::parse(const std::string& usdPath, float scale) {
 
         applyScale(meshData, scale);
         USDMeshInfo info;
+        pxr::UsdGeomMesh(prim).GetDoubleSidedAttr().Get(&info.doubleSided);
         info.primPath = primPath;
         info.name = primNameFromPath(primPath);
         info.meshData = std::move(meshData);
         assignMaterial(info, boundMaterial(prim), usdPath, result.diagnostics,
-                       missingTextureWarnings);
+                       inspectedMaterials);
         result.meshes.push_back(std::move(info));
     }
 

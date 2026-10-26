@@ -166,7 +166,7 @@ std::unique_ptr<Texture> WebGPUDevice::createTexture(const std::string, bool) {
 }
 
 std::unique_ptr<Texture> WebGPUDevice::createTexture(const std::string, bool,
-                                                     const SamplerDesc&) {
+                                                     const SamplerDesc&, bool) {
     throwNotImplemented("createTexture");
 }
 

@@ -111,14 +111,19 @@ material with a PBR material does not translate `diffuse` and `shininess` into
 ## Load and attach textures
 
 `App.load_texture()` loads a texture through `ke.render`, retains it for the
-application lifetime, and reuses it when the same normalized path is requested
-again.
+application lifetime, and reuses it for the same normalized path, `flip` and
+`srgb` settings.
+
+Use `srgb=True` for sRGB color images. Normal, roughness, metallic and other
+data maps use `srgb=False`, which is the default.
 
 Phong example:
 
 ```python
-diffuse = self.load_texture("assets/wood_base_color.png")
-normal = self.load_texture("assets/wood_normal.png")
+diffuse: ke.render.Texture = self.load_texture(
+    path="assets/wood_base_color.png", srgb=True,
+)
+normal: ke.render.Texture = self.load_texture(path="assets/wood_normal.png")
 
 material = self.create_phong_material(
     diffuse=ke.Vec3(1.0, 1.0, 1.0),
@@ -130,8 +135,10 @@ material = self.create_phong_material(
 PBR example:
 
 ```python
-base_color = self.load_texture("assets/metal_base_color.png")
-orm = self.load_texture("assets/metal_orm.png")
+base_color: ke.render.Texture = self.load_texture(
+    path="assets/metal_base_color.png", srgb=True,
+)
+orm: ke.render.Texture = self.load_texture(path="assets/metal_orm.png")
 
 material = self.create_pbr_material(
     base_color=ke.Vec4(1.0, 1.0, 1.0, 1.0),

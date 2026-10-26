@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "engine/scene/types/light_color.hpp"
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/types/camera.hpp"
@@ -122,6 +123,10 @@ const std::vector<SpotLight>& Renderer::spotLights() const {
 }
 
 void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
+    if (!_rasterizer)
+        return;
+    _rasterizer->setRectLights({});
+    _rasterizer->setDomeRadiance(glm::vec3(0));
     if (!scene || !scene->getRootPrim())
         return;
 
@@ -138,6 +143,8 @@ void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
     directionalLight.ambient = glm::vec3(0.0f);
     std::vector<PointLight> pointLights;
     std::vector<SpotLight> spotLights;
+    std::vector<RectLightInstance> rectLights;
+    glm::vec3 domeRadiance(0.0f);
     pointLights.reserve(MaxPointLights);
     spotLights.reserve(MaxSpotLights);
 
@@ -146,7 +153,7 @@ void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
             return;
 
         hasLightPrim = true;
-        if (!prim->isVisibleInHierarchy())
+        if (!prim->isActiveInHierarchy() || !prim->isVisibleInHierarchy())
             return;
 
         switch (prim->getLightType()) {
@@ -164,6 +171,14 @@ void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
             if (spotLights.size() < static_cast<size_t>(MaxSpotLights))
                 spotLights.push_back(prim->getSpotLight());
             break;
+        case Scene::LightType::Rect:
+            rectLights.push_back({prim->getRectLight(), prim->computeWorldMatrix()});
+            break;
+        case Scene::LightType::Dome: {
+            const auto light = prim->getDomeLight();
+            domeRadiance += Scene::emittedRadiance(light) * light.diffuse;
+            break;
+        }
         }
     });
 
@@ -173,6 +188,8 @@ void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
     setLight(directionalLight);
     setPointLights(std::move(pointLights));
     setSpotLights(std::move(spotLights));
+    _rasterizer->setRectLights(std::move(rectLights));
+    _rasterizer->setDomeRadiance(domeRadiance);
 }
 
 Backend::Framebuffer* Renderer::shadowFbo() {

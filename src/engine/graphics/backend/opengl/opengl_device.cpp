@@ -20,6 +20,19 @@ namespace Backend {
 
 namespace {
 
+void uploadImageTexture(GLenum target, GLenum format, const TextureDesc& desc) {
+    // stb images are tightly packed, including RGB images with odd widths.
+    GLint alignment = 4, rowLength = 0;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
+    glGetIntegerv(GL_UNPACK_ROW_LENGTH, &rowLength);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glTexImage2D(target, 0, desc.srgb ? GL_SRGB8_ALPHA8 : format,
+                desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.data);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, rowLength);
+}
+
 struct GLFramebufferColorFormat {
     GLenum internalFormat = GL_RGBA8;
     GLenum format = GL_RGBA;
@@ -429,7 +442,7 @@ void OpenGLShader::bind() { glUseProgram(_shaderProgram); }
 OpenGLTexture::OpenGLTexture(const TextureDesc& desc)
     : _width(desc.width), _height(desc.height), _channels(desc.channels),
       _format(desc.channels == 1 ? TextureFormat::R8Unorm
-                                 : TextureFormat::RGBA8Unorm),
+                                 : (desc.srgb ? TextureFormat::RGBA8UnormSrgb : TextureFormat::RGBA8Unorm)),
       _usage(TextureUsage::TextureBinding | TextureUsage::CopyDst) {
 
     glGenTextures(1, &_textureID);
@@ -451,8 +464,7 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc)
         format = GL_RGBA;
     }
 
-    glTexImage2D(_target, 0, format, _width, _height, 0, format,
-                 GL_UNSIGNED_BYTE, desc.data);
+    uploadImageTexture(_target, format, desc);
     glGenerateMipmap(_target);
 
     setWarpParam();
@@ -465,7 +477,7 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc,
                              const SamplerDesc& sampler)
     : _width(desc.width), _height(desc.height), _channels(desc.channels),
       _format(desc.channels == 1 ? TextureFormat::R8Unorm
-                                 : TextureFormat::RGBA8Unorm),
+                                 : (desc.srgb ? TextureFormat::RGBA8UnormSrgb : TextureFormat::RGBA8Unorm)),
       _usage(TextureUsage::TextureBinding | TextureUsage::CopyDst) {
 
     glGenTextures(1, &_textureID);
@@ -487,8 +499,7 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc,
         format = GL_RGBA;
     }
 
-    glTexImage2D(_target, 0, format, _width, _height, 0, format,
-                 GL_UNSIGNED_BYTE, desc.data);
+    uploadImageTexture(_target, format, desc);
     glGenerateMipmap(_target);
 
     setWrapParam(toGLTextureWrap(sampler.wrapU),
@@ -503,7 +514,7 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc, float warpParam,
                              float filterMinParam, float filterMaxParam)
     : _width(desc.width), _height(desc.height), _channels(desc.channels),
       _format(desc.channels == 1 ? TextureFormat::R8Unorm
-                                 : TextureFormat::RGBA8Unorm),
+                                 : (desc.srgb ? TextureFormat::RGBA8UnormSrgb : TextureFormat::RGBA8Unorm)),
       _usage(TextureUsage::TextureBinding | TextureUsage::CopyDst),
       _warpParam(warpParam), _filterMinParam(filterMinParam),
       _filterMaxParam(filterMaxParam) {
@@ -527,8 +538,7 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc, float warpParam,
         format = GL_RGBA;
     }
 
-    glTexImage2D(_target, 0, format, _width, _height, 0, format,
-                 GL_UNSIGNED_BYTE, desc.data);
+    uploadImageTexture(_target, format, desc);
     glGenerateMipmap(_target);
 
     setWarpParam((GLfloat)_warpParam);
@@ -2478,8 +2488,8 @@ std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path,
 
 std::unique_ptr<Texture>
 OpenGLDevice::createTexture(const std::string path, bool flip,
-                            const SamplerDesc& sampler) {
-    TextureDesc desc = loadImage(path, flip);
+                            const SamplerDesc& sampler, bool srgb) {
+    TextureDesc desc = loadImage(path, flip, srgb);
     auto texture = createTexture(desc, sampler);
     stbi_image_free((void*)desc.data); // release memory
     return texture;

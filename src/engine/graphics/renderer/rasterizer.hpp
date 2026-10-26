@@ -113,6 +113,8 @@ class Rasterizer : public RenderPipeline {
     DirectionalLight _light;
     std::vector<PointLight> _pointLights;
     std::vector<SpotLight> _spotLights;
+    std::vector<RectLightInstance> _rectLights;
+    glm::vec3 _domeRadiance{0.0f};
     bool _lightDirty = true;
 
     // =====================================================================
@@ -241,6 +243,8 @@ class Rasterizer : public RenderPipeline {
         _lightDirty = true;
     }
     const std::vector<SpotLight>& getSpotLights() const { return _spotLights; }
+    void setRectLights(std::vector<RectLightInstance> lights);
+    void setDomeRadiance(glm::vec3 radiance) { _domeRadiance = radiance; }
 
     // =====================================================================
     // Shadow Depth / CSM API
