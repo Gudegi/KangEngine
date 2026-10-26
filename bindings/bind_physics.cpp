@@ -22,6 +22,8 @@
 #include "physics/articulation.hpp"
 #include "physics/d6_joint.hpp"
 #include "physics/physics_material.hpp"
+#include "physics/mass_properties.hpp"
+#include "physics/material_utils.hpp"
 #include "physics/physics.hpp"
 #include <extensions/PxRigidBodyExt.h>
 #endif
@@ -30,6 +32,26 @@ namespace py = pybind11;
 
 #ifdef KANGENGINE_USE_PHYSX
 namespace {
+
+py::tuple collisionShapeLayoutToPy(
+    const std::vector<KE::Physics::CollisionShapeInfo>& shapes) {
+    std::vector<std::string> names;
+    std::vector<int> bodyIds, geomIds;
+    py::array_t<float> poses({static_cast<py::ssize_t>(shapes.size()), py::ssize_t(7)});
+    auto values = poses.mutable_unchecked<2>();
+    for (size_t shapeIdx = 0; shapeIdx < shapes.size(); ++shapeIdx) {
+        const auto& shape = shapes[shapeIdx];
+        names.push_back(shape.name);
+        bodyIds.push_back(shape.bodyIdx);
+        geomIds.push_back(shape.geomIdx);
+        const auto& pose = shape.localPose;
+        const float row[] = {pose.p.x, pose.p.y, pose.p.z,
+                             pose.q.x, pose.q.y, pose.q.z, pose.q.w};
+        for (int column = 0; column < 7; ++column)
+            values(shapeIdx, column) = row[column];
+    }
+    return py::make_tuple(names, bodyIds, geomIds, poses);
+}
 
 template <std::size_t N>
 std::array<float, N> fixedFloatValues(py::handle obj, const char* name) {
@@ -244,6 +266,12 @@ void bind_physics(py::module& m) {
                     config.collisionStackSize, config.maxNumPartitions);
         });
 
+    py::enum_<MaterialCombineMode>(physics, "MaterialCombineMode")
+        .value("AVERAGE", MaterialCombineMode::Average)
+        .value("MIN", MaterialCombineMode::Min)
+        .value("MULTIPLY", MaterialCombineMode::Multiply)
+        .value("MAX", MaterialCombineMode::Max);
+
     // PhysicsConfig
     py::class_<PhysicsConfig>(
         physics, "PhysicsConfig",
@@ -258,7 +286,9 @@ void bind_physics(py::module& m) {
                          float bounce_threshold_velocity,
                          float friction_offset_threshold,
                          float friction_correlation_distance,
-                         bool enable_stabilization) {
+                         bool enable_stabilization,
+                         MaterialCombineMode friction_combine_mode,
+                         MaterialCombineMode restitution_combine_mode) {
                  PhysicsConfig config;
                  config.dt = dt;
                  if (solver_type == 0) {
@@ -272,6 +302,8 @@ void bind_physics(py::module& m) {
                  config.friction[0] = static_friction;
                  config.friction[1] = dynamic_friction;
                  config.friction[2] = restitution;
+                 config.frictionCombineMode = friction_combine_mode;
+                 config.restitutionCombineMode = restitution_combine_mode;
                  config.enableGPU = enable_gpu;
                  config.gpuDynamics = gpu_dynamics;
                  config.enableContactReports = enable_contact_reports;
@@ -306,6 +338,8 @@ void bind_physics(py::module& m) {
                  PhysicsConfig{}.frictionCorrelationDistance,
              py::arg("enable_stabilization") =
                  PhysicsConfig{}.enableStabilization,
+             py::arg("friction_combine_mode") = MaterialCombineMode::Min,
+             py::arg("restitution_combine_mode") = MaterialCombineMode::Average,
              "Create physics configuration from keyword arguments.")
         .def_static("y_up", &PhysicsConfig::yUp,
                     "Create configuration for a Y-up world.")
@@ -313,6 +347,8 @@ void bind_physics(py::module& m) {
                     "Create configuration for a Z-up world.")
         .def_readwrite("dt", &PhysicsConfig::dt,
                        "Simulation timestep in seconds.")
+        .def_readwrite("friction_combine_mode", &PhysicsConfig::frictionCombineMode)
+        .def_readwrite("restitution_combine_mode", &PhysicsConfig::restitutionCombineMode)
         .def_property(
             "static_friction",
             [](const PhysicsConfig& c) { return c.friction[0]; },
@@ -380,7 +416,8 @@ void bind_physics(py::module& m) {
                            "bounce_threshold_velocity={:g}, "
                            "friction_offset_threshold={:g}, "
                            "friction_correlation_distance={:g}, "
-                           "enable_stabilization={!r})")
+                           "enable_stabilization={!r}, friction_combine_mode={!r}, "
+                           "restitution_combine_mode={!r})")
                 .attr("format")(
                     config.dt, solver_type, config.friction[0],
                     config.friction[1], config.friction[2], config.enableGPU,
@@ -389,15 +426,20 @@ void bind_physics(py::module& m) {
                     config.cpuDispatcherThreads, config.bounceThresholdVelocity,
                     config.frictionOffsetThreshold,
                     config.frictionCorrelationDistance,
-                    config.enableStabilization);
+                    config.enableStabilization, config.frictionCombineMode,
+                    config.restitutionCombineMode);
         });
 
     py::class_<PhysicsMaterialDesc>(
         physics, "PhysicsMaterialDesc",
         "PhysX material factors used by collision shapes.")
         .def(py::init<>(), "Create default material [1, 1, 0].")
-        .def(py::init<float, float, float>(), py::arg("static_friction") = 1.f,
+        .def(py::init<float, float, float, MaterialCombineMode, MaterialCombineMode>(),
+             py::arg("static_friction") = 1.f,
              py::arg("dynamic_friction") = 1.f, py::arg("restitution") = 0.f,
+             py::kw_only(),
+             py::arg("friction_combine_mode") = MaterialCombineMode::Min,
+             py::arg("restitution_combine_mode") = MaterialCombineMode::Average,
              "Create a material from scalar PhysX material factors.")
         .def(py::init([](py::handle values) {
                  return physicsMaterialFromPy(values, "PhysicsMaterialDesc");
@@ -412,6 +454,8 @@ void bind_physics(py::module& m) {
                        "PhysX dynamic friction coefficient.")
         .def_readwrite("restitution", &PhysicsMaterialDesc::restitution,
                        "PhysX restitution coefficient.")
+        .def_readwrite("friction_combine_mode", &PhysicsMaterialDesc::frictionCombineMode)
+        .def_readwrite("restitution_combine_mode", &PhysicsMaterialDesc::restitutionCombineMode)
         .def(
             "as_tuple",
             [](const PhysicsMaterialDesc& material) {
@@ -426,6 +470,10 @@ void bind_physics(py::module& m) {
                    ", dynamic_friction=" +
                    std::to_string(material.dynamicFriction) +
                    ", restitution=" + std::to_string(material.restitution) +
+                   ", friction_combine_mode=" +
+                   py::str(py::cast(material.frictionCombineMode)).cast<std::string>() +
+                   ", restitution_combine_mode=" +
+                   py::str(py::cast(material.restitutionCombineMode)).cast<std::string>() +
                    ")";
         });
 
@@ -599,6 +647,14 @@ void bind_physics(py::module& m) {
 
     py::class_<PxRigidDynamic, std::unique_ptr<PxRigidDynamic, py::nodelete>>(
         m, "RigidDynamic", "PhysX dynamic rigid body owned by a PhysicsWorld.")
+        .def("_collision_shape_layout", [](const PxRigidDynamic& self,
+                                           const Asset::RigidDesc& data) {
+            return collisionShapeLayoutToPy(
+                Physics::collisionShapes(self, 0, data.name, data.collisionGeoms));
+        })
+        .def("get_collision_materials", [](const PxRigidDynamic& self) {
+            return Physics::collisionMaterials(self);
+        }, "Return independent material descriptions in collision shape order.")
         .def(
             "get_root_position",
             [](const PxRigidDynamic& self) {
@@ -629,6 +685,28 @@ void bind_physics(py::module& m) {
             },
             "Return root angular velocity.")
         .def("get_mass", &PxRigidDynamic::getMass, "Return rigid body mass.")
+        .def("set_mass", [](PxRigidDynamic& self, float mass) {
+            KE::Physics::validateMass(mass);
+            self.setMass(mass);
+        }, py::arg("mass"), "Set mass in kg without changing inertia or waking the actor.")
+        .def("set_mass_space_inertia", [](PxRigidDynamic& self, py::handle inertia) {
+            const auto v = fixedFloatValues<3>(inertia, "inertia");
+            const PxVec3 value(v[0], v[1], v[2]);
+            KE::Physics::validateMassSpaceInertia(value);
+            self.setMassSpaceInertiaTensor(value);
+        }, py::arg("inertia"), "Set principal inertia in kg*m^2 in the COM frame.")
+        .def("get_local_com_pose", [](const PxRigidDynamic& self) {
+            const auto p = self.getCMassLocalPose();
+            return floatArrayFromVector({p.p.x, p.p.y, p.p.z,
+                                          p.q.x, p.q.y, p.q.z, p.q.w});
+        }, "Return actor-local [position xyz, rotation xyzw].")
+        .def("set_local_com_pose", [](PxRigidDynamic& self, py::handle pose) {
+            const auto p = fixedFloatValues<7>(pose, "pose");
+            const PxTransform value(PxVec3(p[0], p[1], p[2]),
+                                     PxQuat(p[3], p[4], p[5], p[6]));
+            KE::Physics::validateLocalCOMPose(value);
+            self.setCMassLocalPose(value);
+        }, py::arg("pose"), "Set actor-local [position xyz, rotation xyzw]; preserve actor pose.")
         .def("num_shapes", &PxRigidDynamic::getNbShapes,
              "Return the number of collision shapes attached to this body.")
         .def("get_convex_collision_meshes",
@@ -677,6 +755,24 @@ void bind_physics(py::module& m) {
             "Enable or disable kinematic rigid-body behavior.")
         .def("release", &PxRigidDynamic::release,
              "Release the underlying PhysX actor.")
+        .def(
+            "set_root_velocity",
+            [](PxRigidDynamic& self, const FloatArray& linear_velocity,
+               const FloatArray& angular_velocity) {
+                auto lv = vec3ArrayView(linear_velocity, "linear_velocity");
+                auto av = vec3ArrayView(angular_velocity, "angular_velocity");
+                if (lv.count != 1 || av.count != 1)
+                    throw py::value_error("root velocities must have shape [3]");
+                const PxVec3 linear(lv.data[0], lv.data[1], lv.data[2]);
+                const PxVec3 angular(av.data[0], av.data[1], av.data[2]);
+                if (!linear.isFinite() || !angular.isFinite())
+                    throw py::value_error("root velocities must be finite");
+                if (self.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)
+                    throw py::value_error("root velocity requires a non-kinematic rigid");
+                self.setLinearVelocity(linear);
+                self.setAngularVelocity(angular);
+            },
+            py::arg("linear_velocity"), py::arg("angular_velocity"))
         .def(
             "set_root_state",
             [](PxRigidDynamic& self, const FloatArray& pos,
@@ -791,6 +887,14 @@ void bind_physics(py::module& m) {
 
     py::class_<PxRigidStatic, std::unique_ptr<PxRigidStatic, py::nodelete>>(
         m, "RigidStatic", "PhysX static rigid body owned by a PhysicsWorld.")
+        .def("_collision_shape_layout", [](const PxRigidStatic& self,
+                                           const Asset::RigidDesc& data) {
+            return collisionShapeLayoutToPy(
+                Physics::collisionShapes(self, 0, data.name, data.collisionGeoms));
+        })
+        .def("get_collision_materials", [](const PxRigidStatic& self) {
+            return Physics::collisionMaterials(self);
+        }, "Return independent material descriptions in collision shape order.")
         .def("get_root_position",
              [](const PxRigidStatic& self) {
                  const PxTransform pose = self.getGlobalPose();
@@ -1163,15 +1267,29 @@ void bind_physics(py::module& m) {
             py::arg("rigid"),
             "Return net ground contact force on a rigid body.")
         .def("set_rigid_collision_material",
-             &PhysicsWorld::setRigidCollisionMaterial, py::arg("rigid"),
+             [](PhysicsWorld& self, PxRigidDynamic& rigid, const PhysicsMaterialDesc& material) {
+                 return self.setRigidCollisionMaterial(rigid, material);
+             }, py::arg("rigid"),
              py::arg("material"),
              "Replace all collision shape materials on an existing rigid body. "
              "Returns the number of updated shapes.")
         .def("set_rigid_collision_material_overrides",
-             &PhysicsWorld::setRigidCollisionMaterialOverrides,
+             [](PhysicsWorld& self, PxRigidDynamic& rigid, const Asset::RigidDesc& data,
+                const std::vector<CollisionMaterialOverride>& overrides) {
+                 return self.setRigidCollisionMaterialOverrides(rigid, data, overrides);
+             },
              py::arg("rigid"), py::arg("data"), py::arg("material_overrides"),
              "Apply named/indexed material overrides to an existing rigid body "
-             "created from a rigid description. Returns updated shape count.")
+             "created from a rigid description. Unmatched shapes are unchanged. Returns updated shape count.")
+        .def("set_rigid_collision_material",
+             [](PhysicsWorld& self, PxRigidStatic& rigid, const PhysicsMaterialDesc& material) {
+                 return self.setRigidCollisionMaterial(rigid, material);
+             }, py::arg("rigid"), py::arg("material"))
+        .def("set_rigid_collision_material_overrides",
+             [](PhysicsWorld& self, PxRigidStatic& rigid, const Asset::RigidDesc& data,
+                const std::vector<CollisionMaterialOverride>& overrides) {
+                 return self.setRigidCollisionMaterialOverrides(rigid, data, overrides);
+             }, py::arg("rigid"), py::arg("data"), py::arg("material_overrides"))
         .def(
             "create_dynamic_rigid",
             [](PhysicsWorld& self, const Asset::RigidDesc& data,
@@ -1665,6 +1783,39 @@ void bind_physics(py::module& m) {
                 return floatArrayFromVector(self.getLinkMasses());
             },
             "Return per-link masses.")
+        .def("get_link_mass_space_inertias", [](const Articulation& self) {
+            auto result = floatArrayFromVector(self.getLinkMassSpaceInertiasFlat());
+            result.resize({py::ssize_t(self.numLinks()), py::ssize_t(3)});
+            return result;
+        }, "Return principal inertia in kg*m^2, shape (B, 3).")
+        .def("get_link_local_com_poses", [](const Articulation& self) {
+            auto result = floatArrayFromVector(self.getLinkLocalCOMPosesFlat());
+            result.resize({py::ssize_t(self.numLinks()), py::ssize_t(7)});
+            return result;
+        }, "Return link-local [position xyz, rotation xyzw], shape (B, 7).")
+        .def("set_link_masses",
+             [](Articulation& self, const std::vector<int>& indices, const FloatArray& masses) {
+                 self.setLinkMasses(indices, floatVectorArray(masses, "masses"));
+             }, py::arg("link_indices"), py::arg("masses"),
+             "Set selected masses in kg; inertia is unchanged. Does not wake the articulation.")
+        .def("set_link_mass_space_inertias",
+             [](Articulation& self, const std::vector<int>& indices, const FloatArray& values) {
+                 const auto info = values.request();
+                 if (info.ndim != 2 || info.shape[1] != 3 ||
+                     info.shape[0] != static_cast<py::ssize_t>(indices.size()))
+                     throw py::value_error("inertias must have shape (selected_links, 3)");
+                 const auto* data = static_cast<const float*>(info.ptr);
+                 self.setLinkMassSpaceInertias(indices, {data, data + info.size});
+             }, py::arg("link_indices"), py::arg("inertias"))
+        .def("set_link_local_com_poses",
+             [](Articulation& self, const std::vector<int>& indices, const FloatArray& values) {
+                 const auto info = values.request();
+                 if (info.ndim != 2 || info.shape[1] != 7 ||
+                     info.shape[0] != static_cast<py::ssize_t>(indices.size()))
+                     throw py::value_error("poses must have shape (selected_links, 7)");
+                 const auto* data = static_cast<const float*>(info.ptr);
+                 self.setLinkLocalCOMPoses(indices, {data, data + info.size});
+             }, py::arg("link_indices"), py::arg("poses"))
         .def("calc_mass", &Articulation::calcMass,
              "Return total articulation mass.")
         .def(
@@ -1734,6 +1885,11 @@ void bind_physics(py::module& m) {
             py::arg("forces"), "Apply per-DOF joint forces.")
         .def("set_joint_forces", &Articulation::setJointForces,
              py::arg("forces"), "Apply per-DOF joint forces.")
+        .def("get_collision_materials", &Articulation::getCollisionMaterials,
+             "Return independent material descriptions indexed by link, then shape.")
+        .def("_collision_shape_layout", [](const Articulation& self) {
+            return collisionShapeLayoutToPy(self.getCollisionShapes());
+        })
         .def("set_collision_material", &Articulation::setCollisionMaterial,
              py::arg("physics"), py::arg("material"),
              "Replace all collision shape materials on this articulation at "
@@ -1742,7 +1898,7 @@ void bind_physics(py::module& m) {
              &Articulation::setCollisionMaterialOverrides, py::arg("physics"),
              py::arg("material_overrides"),
              "Apply named/indexed collision material overrides at runtime. "
-             "Returns the number of updated shapes.")
+             "Unmatched shapes are unchanged. Returns the number of updated shapes.")
         .def(
             "add_link_force",
             [](Articulation& self, int linkIndex, const FloatArray& force) {
@@ -1883,6 +2039,18 @@ void bind_physics(py::module& m) {
             py::arg("linear_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             py::arg("angular_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             "Set root pose and velocities from Python sequences.")
+        .def(
+            "set_root_velocity",
+            [](Articulation& self, const FloatArray& linear_velocity,
+               const FloatArray& angular_velocity) {
+                auto lv = vec3ArrayView(linear_velocity, "linear_velocity");
+                auto av = vec3ArrayView(angular_velocity, "angular_velocity");
+                if (lv.count != 1 || av.count != 1)
+                    throw py::value_error("root velocities must have shape [3]");
+                self.setRootVelocity(PxVec3(lv.data[0], lv.data[1], lv.data[2]),
+                                     PxVec3(av.data[0], av.data[1], av.data[2]));
+            },
+            py::arg("linear_velocity"), py::arg("angular_velocity"))
         .def(
             "set_dof_state",
             [](Articulation& self, const FloatArray& positions,

@@ -1731,6 +1731,15 @@ void PhysicsGpuSystem::clearContactData() {
 }
 
 void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView* indices) {
+    applyRigidState(indices, true);
+}
+
+void PhysicsGpuSystem::applyRigidVel(const Sim::GpuArrayView* indices) {
+    applyRigidState(indices, false);
+}
+
+void PhysicsGpuSystem::applyRigidState(const Sim::GpuArrayView* indices,
+                                      bool writePose) {
     checkInitialized();
 #ifdef KANGENGINE_USE_CUDA
     if (_rigidCount == 0)
@@ -1810,13 +1819,15 @@ void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView* indices) {
               "cudaEventRecord(apply rigid pack)");
 
     PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
-    if (!directGpuApi.setRigidDynamicData(
-            poseBuffer, gpuIndices, PxRigidDynamicGPUAPIWriteType::eGLOBAL_POSE,
-            applyCount, physxStartEvent, physxFinishEvent))
-        throw std::runtime_error(
-            "PxDirectGPUAPI::setRigidDynamicData(pose) failed");
-    checkCuda(cudaStreamWaitEvent(stream, readyEvent, 0),
-              "cudaStreamWaitEvent(apply pose)");
+    if (writePose) {
+        if (!directGpuApi.setRigidDynamicData(
+                poseBuffer, gpuIndices, PxRigidDynamicGPUAPIWriteType::eGLOBAL_POSE,
+                applyCount, physxStartEvent, physxFinishEvent))
+            throw std::runtime_error(
+                "PxDirectGPUAPI::setRigidDynamicData(pose) failed");
+        checkCuda(cudaStreamWaitEvent(stream, readyEvent, 0),
+                  "cudaStreamWaitEvent(apply pose)");
+    }
 
     if (!directGpuApi.setRigidDynamicData(
             linearVelocityBuffer, gpuIndices,

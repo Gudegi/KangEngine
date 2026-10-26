@@ -1,7 +1,9 @@
 #include "articulation.hpp"
+#include "material_utils.hpp"
 #include "d6_joint.hpp"
 #include "animation/skeleton_state.hpp"
 #include "collision_material_utils.hpp"
+#include "mass_properties.hpp"
 #include "physics/physx_compat.hpp"
 
 #include <Eigen/Geometry>
@@ -658,6 +660,86 @@ std::vector<float> Articulation::getLinkMasses() const {
     return out;
 }
 
+void Articulation::validatePropertyLinks(const std::vector<int>& linkIndices) const {
+    auto life = _worldLifetime.lock();
+    if (!_artic || !life || !*life)
+        throw std::runtime_error("mass properties require a live articulation");
+    for (int index : linkIndices)
+        if (index < 0 || index >= numLinks() || !_links[index])
+            throw std::out_of_range("mass property link index out of range");
+}
+
+std::vector<float> Articulation::getLinkMassSpaceInertiasFlat() const {
+    validatePropertyLinks({});
+    std::vector<float> out;
+    out.reserve(_links.size() * 3);
+    for (const auto* link : _links) {
+        const auto value = link->getMassSpaceInertiaTensor();
+        out.insert(out.end(), {value.x, value.y, value.z});
+    }
+    return out;
+}
+
+std::vector<float> Articulation::getLinkLocalCOMPosesFlat() const {
+    validatePropertyLinks({});
+    std::vector<float> out;
+    out.reserve(_links.size() * 7);
+    for (const auto* link : _links) {
+        const auto pose = link->getCMassLocalPose();
+        out.insert(out.end(), {pose.p.x, pose.p.y, pose.p.z,
+                               pose.q.x, pose.q.y, pose.q.z, pose.q.w});
+    }
+    return out;
+}
+
+void Articulation::setLinkMasses(const std::vector<int>& linkIndices,
+                                 const std::vector<float>& masses) {
+    validatePropertyLinks(linkIndices);
+    if (masses.size() != linkIndices.size())
+        throw std::invalid_argument("expected one mass per selected link");
+    for (float mass : masses)
+        Physics::validateMass(mass);
+
+    for (size_t i = 0; i < linkIndices.size(); ++i)
+        _links[linkIndices[i]]->setMass(masses[i]);
+}
+
+void Articulation::setLinkMassSpaceInertias(const std::vector<int>& linkIndices,
+                                           const std::vector<float>& inertias) {
+    validatePropertyLinks(linkIndices);
+    if (inertias.size() != linkIndices.size() * 3)
+        throw std::invalid_argument("expected three inertia values per selected link");
+    for (size_t i = 0; i < linkIndices.size(); ++i) {
+        const float* p = &inertias[i * 3];
+        Physics::validateMassSpaceInertia(PxVec3(p[0], p[1], p[2]));
+    }
+
+    for (size_t i = 0; i < linkIndices.size(); ++i) {
+        const float* p = &inertias[i * 3];
+        _links[linkIndices[i]]->setMassSpaceInertiaTensor(PxVec3(p[0], p[1], p[2]));
+    }
+}
+
+void Articulation::setLinkLocalCOMPoses(const std::vector<int>& linkIndices,
+                                       const std::vector<float>& poses) {
+    validatePropertyLinks(linkIndices);
+    if (poses.size() != linkIndices.size() * 7)
+        throw std::invalid_argument("expected seven COM pose values per selected link");
+
+    // Validate every pose before modifying any link. PhysX adjusts adjoining
+    // joint frames when the COM frame moves; actor poses remain unchanged.
+    std::vector<PxTransform> transforms;
+    transforms.reserve(linkIndices.size());
+    for (size_t i = 0; i < linkIndices.size(); ++i) {
+        const float* p = &poses[i * 7];
+        PxTransform pose(PxVec3(p[0], p[1], p[2]), PxQuat(p[3], p[4], p[5], p[6]));
+        Physics::validateLocalCOMPose(pose);
+        transforms.push_back(pose);
+    }
+    for (size_t i = 0; i < linkIndices.size(); ++i)
+        _links[linkIndices[i]]->setCMassLocalPose(transforms[i]);
+}
+
 float Articulation::calcMass() const {
     float total = 0.f;
     for (const auto* link : _links) {
@@ -1124,6 +1206,20 @@ void Articulation::setRootState(const PxTransform& pose,
                             PxArticulationKinematicFlag::eVELOCITY);
 }
 
+void Articulation::setRootVelocity(const PxVec3& linearVelocity,
+                                   const PxVec3& angularVelocity) {
+    if (!_artic)
+        throw std::runtime_error("setRootVelocity: articulation is released");
+    if (!linearVelocity.isFinite() || !angularVelocity.isFinite())
+        throw std::invalid_argument("root velocities must be finite");
+    if (_artic->getArticulationFlags() & PxArticulationFlag::eFIX_BASE)
+        throw std::invalid_argument("root velocity requires a floating-base articulation");
+
+    _artic->setRootLinearVelocity(linearVelocity);
+    _artic->setRootAngularVelocity(angularVelocity);
+    _artic->updateKinematic(PxArticulationKinematicFlag::eVELOCITY);
+}
+
 void Articulation::setDofState(const std::vector<float>& positions,
                                const std::vector<float>& velocities) {
     int n = numDofs();
@@ -1182,6 +1278,30 @@ void Articulation::setJointForces(const std::vector<float>& forces) {
         _artic->wakeUp();
 }
 
+std::vector<Physics::CollisionShapeInfo> Articulation::getCollisionShapes() const {
+    validatePropertyLinks({});
+    std::vector<Physics::CollisionShapeInfo> result;
+    const std::vector<Asset::CollisionGeomDesc> empty;
+    for (int bodyIdx = 0; bodyIdx < numLinks(); ++bodyIdx) {
+        const auto found = colGeoms().find(bodyIdx);
+        auto shapes = Physics::collisionShapes(
+            *_links[bodyIdx], bodyIdx, bodyName(bodyIdx),
+            found == colGeoms().end() ? empty : found->second);
+        result.insert(result.end(), shapes.begin(), shapes.end());
+    }
+    return result;
+}
+
+std::vector<std::vector<Physics::PhysicsMaterialDesc>>
+Articulation::getCollisionMaterials() const {
+    validatePropertyLinks({});
+    std::vector<std::vector<Physics::PhysicsMaterialDesc>> result;
+    result.reserve(_links.size());
+    for (const auto* link : _links)
+        result.push_back(Physics::collisionMaterials(*link));
+    return result;
+}
+
 int Articulation::setCollisionMaterial(
     PhysicsWorld& physics, const Physics::PhysicsMaterialDesc& material) {
     if (!physics.getPhysics() || !_artic)
@@ -1234,10 +1354,12 @@ int Articulation::setCollisionMaterialOverrides(
             auto* shape = shapes[i];
             if (!shape)
                 continue;
-            const auto material = resolveCollisionMaterial(
+            const auto* material = findCollisionMaterialOverride(
                 geoms[i], overrides, _template->_bodyNames, bodyIndex,
                 static_cast<int>(i));
-            PxMaterial* shapeMat = physics.getMaterialForDesc(material);
+            if (!material)
+                continue;
+            PxMaterial* shapeMat = physics.getMaterialForDesc(*material);
             shape->setMaterials(&shapeMat, 1);
             ++updated;
         }

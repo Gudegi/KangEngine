@@ -6,6 +6,7 @@
 #define _PHYSICS_HPP_
 
 #include "PxPhysicsAPI.h"
+#include "physics_material.hpp"
 #include <fmt/base.h>
 #include "utils/types.hpp"
 #include <cstdint>
@@ -73,6 +74,8 @@ struct PhysicsConfig {
     float dt = 1.0f / 60.0f;
     float gravity[3] = {0.0f, -9.81f, 0.0f};
     float friction[3] = {1.0f, 1.0f, 0.0f};
+    Physics::MaterialCombineMode frictionCombineMode = Physics::MaterialCombineMode::Min;
+    Physics::MaterialCombineMode restitutionCombineMode = Physics::MaterialCombineMode::Average;
     PxSimulationFilterShader filterShader = PxDefaultSimulationFilterShader;
     bool enableContactReports = true;
     bool enableBodyAccelerations = false;
@@ -115,11 +118,15 @@ class PhysicsWorld {
         int staticFriction = 0;
         int dynamicFriction = 0;
         int restitution = 0;
+        Physics::MaterialCombineMode frictionCombineMode;
+        Physics::MaterialCombineMode restitutionCombineMode;
 
         bool operator==(const MaterialKey& other) const {
             return staticFriction == other.staticFriction &&
                    dynamicFriction == other.dynamicFriction &&
-                   restitution == other.restitution;
+                   restitution == other.restitution &&
+                   frictionCombineMode == other.frictionCombineMode &&
+                   restitutionCombineMode == other.restitutionCombineMode;
         }
     };
 
@@ -128,7 +135,9 @@ class PhysicsWorld {
             const std::size_t a = static_cast<std::size_t>(key.staticFriction);
             const std::size_t b = static_cast<std::size_t>(key.dynamicFriction);
             const std::size_t c = static_cast<std::size_t>(key.restitution);
-            return a ^ (b + 0x9e3779b9u + (a << 6) + (a >> 2)) ^
+            return static_cast<std::size_t>(key.frictionCombineMode) ^
+                   (static_cast<std::size_t>(key.restitutionCombineMode) << 4) ^
+                   a ^ (b + 0x9e3779b9u + (a << 6) + (a >> 2)) ^
                    (c + 0x9e3779b9u + (b << 6) + (b >> 2));
         }
     };
@@ -280,11 +289,11 @@ class PhysicsWorld {
                       const std::vector<Physics::CollisionMaterialOverride>&
                           materialOverrides = {});
 
-    int setRigidCollisionMaterial(physx::PxRigidDynamic& rigid,
+    int setRigidCollisionMaterial(physx::PxRigidActor& rigid,
                                   const Physics::PhysicsMaterialDesc& material);
 
     int setRigidCollisionMaterialOverrides(
-        physx::PxRigidDynamic& rigid, const Asset::RigidDesc& data,
+        physx::PxRigidActor& rigid, const Asset::RigidDesc& data,
         const std::vector<Physics::CollisionMaterialOverride>& overrides);
 
     void fecthData();

@@ -81,6 +81,18 @@ inline Physics::PhysicsMaterialDesc resolveCollisionMaterial(
     return material;
 }
 
+inline const Physics::PhysicsMaterialDesc* findCollisionMaterialOverride(
+    const Asset::CollisionGeomDesc& geom,
+    const std::vector<Physics::CollisionMaterialOverride>& overrides,
+    const std::vector<std::string>& bodyNames, int bodyIndex, int geomIndex) {
+    for (auto it = overrides.rbegin(); it != overrides.rend(); ++it) {
+        if (collisionOverrideBodyMatches(*it, bodyNames, bodyIndex) &&
+            collisionOverrideGeomMatches(*it, geomIndex, geom))
+            return &it->material;
+    }
+    return nullptr;
+}
+
 } // namespace KE
 
 #endif

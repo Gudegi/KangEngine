@@ -1,4 +1,4 @@
-"""Rigid-object metadata helpers shared by state and visual paths."""
+"""Rigid-object metadata and local transforms for collision-based visuals."""
 
 from __future__ import annotations
 
@@ -39,9 +39,8 @@ class RigidShapeSpec:
 def rigid_shape_specs(data) -> list[RigidShapeSpec]:
     """Build shape metadata from a RigidDesc's collision geometry.
 
-    KangEngine represents MimicKit rigid objects as one PhysX rigid actor with
-    one or more attached shapes. The slots returned here are visual/body API
-    slots for those shapes, not separate simulated rigid bodies.
+    These slots describe collision-based visual parts. Physical body state has
+    one slot per actor; runtime collision queries read the actual PhysX shapes.
     """
 
     data = _as_rigid_desc(data)
@@ -64,7 +63,7 @@ def rigid_shape_specs(data) -> list[RigidShapeSpec]:
 
 
 def rigid_body_names(data) -> list[str]:
-    return [spec.name for spec in rigid_shape_specs(data)]
+    return [_as_rigid_desc(data).name]
 
 
 def expand_rigid_body_state(root_pos, root_quat_xyzw, local_pos, local_quat_xyzw):

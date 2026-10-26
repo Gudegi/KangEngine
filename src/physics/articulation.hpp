@@ -3,6 +3,7 @@
 
 #include "asset/articulation_desc.hpp"
 #include "physics.hpp"
+#include "collision_shape.hpp"
 #include <array>
 #include <memory>
 #include <string>
@@ -135,6 +136,7 @@ class Articulation {
     void refreshJointForceCache() const;
     void syncDriveParams();
     std::vector<int> getDofPhysxIndices() const;
+    void validatePropertyLinks(const std::vector<int>& linkIndices) const;
 
   public:
     Articulation() = default;
@@ -160,6 +162,8 @@ class Articulation {
     void setDriveTargets(const std::vector<float>& targets);
     void setDriveVelocityTargets(const std::vector<float>& targets);
     void resetRoot(const PxTransform& pose);
+    void setRootVelocity(const PxVec3& linearVelocity,
+                         const PxVec3& angularVelocity);
     void setRootState(const PxTransform& pose, const PxVec3& linearVelocity,
                       const PxVec3& angularVelocity);
     void setDofState(const std::vector<float>& positions,
@@ -168,6 +172,8 @@ class Articulation {
     void addLinkForce(int linkIndex, const PxVec3& force);
     void addLinkForceAtPosition(int linkIndex, const PxVec3& force,
                                 const PxVec3& position);
+    std::vector<std::vector<Physics::PhysicsMaterialDesc>> getCollisionMaterials() const;
+    std::vector<Physics::CollisionShapeInfo> getCollisionShapes() const;
     int setCollisionMaterial(PhysicsWorld& physics,
                              const Physics::PhysicsMaterialDesc& material);
     int setCollisionMaterialOverrides(
@@ -234,6 +240,16 @@ class Articulation {
     std::vector<std::array<float, 2>> getDofLimits() const;
     std::vector<float> getDofEffortLimits() const;
     std::vector<float> getLinkMasses() const;
+    std::vector<float> getLinkMassSpaceInertiasFlat() const;
+    std::vector<float> getLinkLocalCOMPosesFlat() const;
+    // Link-local COM poses use [position xyz, rotation xyzw]. Values are copied;
+    // changes affect instances, never the shared template. Set between steps.
+    void setLinkMasses(const std::vector<int>& linkIndices,
+                       const std::vector<float>& masses);
+    void setLinkMassSpaceInertias(const std::vector<int>& linkIndices,
+                                  const std::vector<float>& inertias);
+    void setLinkLocalCOMPoses(const std::vector<int>& linkIndices,
+                              const std::vector<float>& poses);
     float calcMass() const;
 };
 

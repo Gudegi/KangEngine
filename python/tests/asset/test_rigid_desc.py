@@ -296,7 +296,8 @@ def test_dynamic_collision_override_keeps_queries_on_authored_surface(world, col
 
     assert len(asset.collision_geoms) == len(colliders)
     assert all(record.source_data is asset for record in boxes.records)
-    assert boxes.num_bodies == (2 if compound else 1)
+    assert boxes.num_bodies == 1
+    assert boxes.num_collision_shapes == (2 if compound else 1)
 
     # Collision follows the authored box colliders, not the elevated visual plane.
     world.step(substeps=360, refresh=True)
@@ -374,10 +375,13 @@ def test_mesh_descriptor_accepts_sequence_local_pose(sequence):
     world = ke.sim.KangSimWorld(num_envs=1, state_device="cpu", add_ground=False)
     try:
         instance = world.add_rigid(descriptor, kinematic=True)
-        np.testing.assert_allclose(instance.data.body_pos[0], local_position, atol=1e-6)
+        np.testing.assert_allclose(instance.data.body_pos[0], (0, 0, 0), atol=1e-6)
         np.testing.assert_allclose(
-            instance.data.body_quat_xyzw[0], local_quaternion, atol=1e-6
+            instance.data.body_quat_xyzw[0], (0, 0, 0, 1), atol=1e-6
         )
+        pose = instance.get_collision_shape_pose()
+        np.testing.assert_allclose(pose[0, :3], local_position, atol=1e-6)
+        np.testing.assert_allclose(pose[0, 3:], local_quaternion, atol=1e-6)
     finally:
         world.release()
 

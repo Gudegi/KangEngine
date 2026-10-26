@@ -1,4 +1,5 @@
 #include "physics.hpp"
+#include "material_utils.hpp"
 #include "d6_joint.hpp"
 #include "PxBroadPhase.h"
 #include "PxSceneDesc.h"
@@ -309,6 +310,9 @@ class PhysicsWorld::ContactReportCallback : public PxSimulationEventCallback {
 };
 
 PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
+    Physics::validateMaterial({
+        config.friction[0], config.friction[1], config.friction[2],
+        config.frictionCombineMode, config.restitutionCombineMode});
     _dt = config.dt;
     _upAxis = config.upAxis;
     _gravity = PxVec3(config.gravity[0], config.gravity[1], config.gravity[2]);
@@ -405,7 +409,8 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
     _material = _physics->createMaterial(
         _friction[0], _friction[1],
         _friction[2]); // staticFriction, dynamicFriction, restitution
-    _material->setFrictionCombineMode(PxCombineMode::eMIN);
+    _material->setFrictionCombineMode(Physics::toPhysX(config.frictionCombineMode));
+    _material->setRestitutionCombineMode(Physics::toPhysX(config.restitutionCombineMode));
     fmt::print("PhysX is initialized.\n");
 }
 
@@ -466,19 +471,24 @@ PhysicsWorld::~PhysicsWorld() {
 
 PxMaterial*
 PhysicsWorld::materialForDesc(const Physics::PhysicsMaterialDesc& material) {
+    Physics::validateMaterial(material);
     if (!_physics)
         return _material;
     if (std::abs(material.staticFriction - _friction.x) <= 1e-6f &&
         std::abs(material.dynamicFriction - _friction.y) <= 1e-6f &&
-        std::abs(material.restitution - _friction.z) <= 1e-6f)
+        std::abs(material.restitution - _friction.z) <= 1e-6f &&
+        Physics::toPhysX(material.frictionCombineMode) == _material->getFrictionCombineMode() &&
+        Physics::toPhysX(material.restitutionCombineMode) == _material->getRestitutionCombineMode())
         return _material;
 
     auto quantize = [](float value) {
-        return static_cast<int>(std::round(value * 10000.0f));
+        return static_cast<int>(std::round(static_cast<double>(value) * 10000.0));
     };
     const MaterialKey key{quantize(material.staticFriction),
                           quantize(material.dynamicFriction),
-                          quantize(material.restitution)};
+                          quantize(material.restitution),
+                          material.frictionCombineMode,
+                          material.restitutionCombineMode};
     auto it = _materialCache.find(key);
     if (it != _materialCache.end())
         return it->second;
@@ -486,7 +496,10 @@ PhysicsWorld::materialForDesc(const Physics::PhysicsMaterialDesc& material) {
     PxMaterial* created = _physics->createMaterial(material.staticFriction,
                                                    material.dynamicFriction,
                                                    material.restitution);
-    created->setFrictionCombineMode(PxCombineMode::eMIN);
+    if (!created)
+        throw std::runtime_error("PhysX material creation failed");
+    created->setFrictionCombineMode(Physics::toPhysX(material.frictionCombineMode));
+    created->setRestitutionCombineMode(Physics::toPhysX(material.restitutionCombineMode));
     _materialCache.emplace(key, created);
     return created;
 }
@@ -1188,7 +1201,7 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
 }
 
 int PhysicsWorld::setRigidCollisionMaterial(
-    PxRigidDynamic& rigid, const Physics::PhysicsMaterialDesc& material) {
+    PxRigidActor& rigid, const Physics::PhysicsMaterialDesc& material) {
     if (!_physics)
         return 0;
 
@@ -1210,7 +1223,7 @@ int PhysicsWorld::setRigidCollisionMaterial(
 }
 
 int PhysicsWorld::setRigidCollisionMaterialOverrides(
-    PxRigidDynamic& rigid, const Asset::RigidDesc& data,
+    PxRigidActor& rigid, const Asset::RigidDesc& data,
     const std::vector<Physics::CollisionMaterialOverride>& overrides) {
     if (!_physics)
         return 0;
@@ -1229,12 +1242,14 @@ int PhysicsWorld::setRigidCollisionMaterialOverrides(
     if (!geoms) {
         Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
-        const auto material = resolveCollisionMaterial(
+        const auto* material = findCollisionMaterialOverride(
             fallbackGeom, overrides, bodyNames, 0, 0);
+        if (!material)
+            return 0;
         for (auto* shape : shapes) {
             if (!shape)
                 continue;
-            PxMaterial* shapeMat = materialForDesc(material);
+            PxMaterial* shapeMat = materialForDesc(*material);
             shape->setMaterials(&shapeMat, 1);
             ++updated;
         }
@@ -1247,10 +1262,12 @@ int PhysicsWorld::setRigidCollisionMaterialOverrides(
         auto* shape = shapes[i];
         if (!shape)
             continue;
-        const auto material =
-            resolveCollisionMaterial((*geoms)[i], overrides, bodyNames,
+        const auto* material =
+            findCollisionMaterialOverride((*geoms)[i], overrides, bodyNames,
                                      0, static_cast<int>(i));
-        PxMaterial* shapeMat = materialForDesc(material);
+        if (!material)
+            continue;
+        PxMaterial* shapeMat = materialForDesc(*material);
         shape->setMaterials(&shapeMat, 1);
         ++updated;
     }

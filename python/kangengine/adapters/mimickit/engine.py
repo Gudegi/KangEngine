@@ -19,7 +19,7 @@ import torch
 from ..._core import _ke
 from ...app import App
 from ...recording import VideoRecorder
-from ...rigid import expand_rigid_body_state, rigid_body_names, rigid_shape_specs
+from ...rigid import rigid_body_names
 from ...sim import ControlMode, KangSimWorld
 from ...utils.env_utils import EnvIdLike, env_id_list
 from ...utils.tensor import as_cpu_numpy, as_tensor, resolve_device
@@ -1732,23 +1732,7 @@ class KangEngineEngine(_BaseEngine):
         return torch.as_tensor(np.stack(values), device=self._device)
 
     def _static_body_pose_batch(self, obj_id, *, rotation):
-        specs = rigid_shape_specs(self._objects[0][obj_id].data)
-        local_pos = np.stack([spec.local_pos for spec in specs], axis=0)
-        local_rot = np.stack([spec.local_quat_xyzw for spec in specs], axis=0)
-        positions = []
-        rotations = []
-        for env_id in range(self._num_envs):
-            rigid = self._world.rigid(env_id, obj_id)
-            body_pos, body_rot = expand_rigid_body_state(
-                np.asarray(rigid.get_root_position(), dtype=np.float32),
-                np.asarray(rigid.get_root_quat_xyzw(), dtype=np.float32),
-                local_pos,
-                local_rot,
-            )
-            positions.append(body_pos)
-            rotations.append(body_rot)
-        values = rotations if rotation else positions
-        return torch.as_tensor(np.stack(values), device=self._device)
+        return self._static_root_batch(obj_id, rotation=rotation)[:, None, :]
 
     def _select_flat_batch_value(
         self,

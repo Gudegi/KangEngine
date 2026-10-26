@@ -108,6 +108,7 @@ class _NativeWrapper:
 PhysicsGpuDynamicsConfig = _export_native_type("PhysicsGpuDynamicsConfig")
 PhysicsConfig = _export_native_type("PhysicsConfig")
 PhysicsMaterialDesc = _export_native_type("PhysicsMaterialDesc")
+MaterialCombineMode = _export_native_type("MaterialCombineMode")
 CollisionMaterialOverride = _export_native_type("CollisionMaterialOverride")
 ContactPoint = _export_native_type("ContactPoint")
 ConvexMeshPart = _export_native_type("ConvexMeshPart")
@@ -392,13 +393,13 @@ class PhysicsWorld(_NativeWrapper):
         return self._native.get_rigid_ground_contact_force(unwrap_native(rigid))
 
     def set_rigid_collision_material(
-        self, rigid: RigidDynamic, material: PhysicsMaterialDesc
+        self, rigid: RigidDynamic | RigidStatic, material: PhysicsMaterialDesc
     ) -> int:
         return self._native.set_rigid_collision_material(unwrap_native(rigid), material)
 
     def set_rigid_collision_material_overrides(
         self,
-        rigid: RigidDynamic,
+        rigid: RigidDynamic | RigidStatic,
         data: Any,
         material_overrides: Sequence[CollisionMaterialOverride],
     ) -> int:
@@ -477,8 +478,38 @@ class Articulation(_NativeWrapper):
     def num_dofs(self) -> int:
         return self._native.num_dofs()
 
+    def get_link_masses(self):
+        """Masses in logical link order, shape ``(B,)``, kg."""
+        return self._native.get_link_masses()
+
+    def set_root_velocity(self, linear_velocity, angular_velocity) -> None:
+        """Set world linear (m/s) and angular (rad/s) velocities, each shape (3,)."""
+        self._native.set_root_velocity(linear_velocity, angular_velocity)
+
+    def get_link_mass_space_inertias(self):
+        """Principal inertia in each COM frame, shape ``(B, 3)``, kg*m²."""
+        return self._native.get_link_mass_space_inertias()
+
+    def get_link_local_com_poses(self):
+        """Link-local ``[position xyz, rotation xyzw]``, shape ``(B, 7)``."""
+        return self._native.get_link_local_com_poses()
+
+    def set_link_masses(self, link_indices: Sequence[int], masses) -> None:
+        """Set selected masses in kg; inertia remains unchanged."""
+        self._native.set_link_masses(link_indices, masses)
+
+    def set_link_mass_space_inertias(self, link_indices: Sequence[int], inertias) -> None:
+        self._native.set_link_mass_space_inertias(link_indices, inertias)
+
+    def set_link_local_com_poses(self, link_indices: Sequence[int], poses) -> None:
+        self._native.set_link_local_com_poses(link_indices, poses)
+
     def release(self) -> None:
         self._native.release()
+
+    def get_collision_materials(self) -> list[list[PhysicsMaterialDesc]]:
+        """Return copies of the collision materials, indexed by link then shape."""
+        return self._native.get_collision_materials()
 
     def set_collision_material(
         self, physics: PhysicsWorld | NativePhysicsWorld, material: PhysicsMaterialDesc
@@ -591,6 +622,7 @@ __all__ = [
         "PhysicsGpuDynamicsConfig",
         "PhysicsConfig",
         "PhysicsMaterialDesc",
+        "MaterialCombineMode",
         "CollisionMaterialOverride",
         "mjcf_friction_to_physx",
         "ContactPoint",

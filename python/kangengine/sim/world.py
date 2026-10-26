@@ -13,7 +13,6 @@ import torch
 
 from .._core import _ke
 from ..asset.rigid_asset import _as_rigid_desc
-from ..rigid import rigid_shape_specs
 from ..state import KangWorldState, SimObjectState
 from ..utils.env_utils import (
     EnvIdLike,
@@ -22,6 +21,7 @@ from ..utils.env_utils import (
     select_optional_env_value,
 )
 from .rigid_query import RigidQueryMixin
+from .collision_query import CollisionShapeMixin, CollisionShapeBatchMixin
 
 _TORCH = None
 
@@ -136,8 +136,21 @@ def _device_key(device):
     return device.type, device.index
 
 
+def _velocity_env_ids(view, env_ids):
+    if isinstance(env_ids, torch.Tensor) and env_ids.is_cuda:
+        allowed = view.env_ids if hasattr(view, "env_ids") else (view.env_id,)
+        if allowed == view.world._all_env_ids:
+            return env_ids
+        torch._assert_async(
+            torch.isin(env_ids, torch.tensor(allowed, device=env_ids.device)).all(),
+            "velocity environment IDs are outside this view",
+        )
+        return env_ids
+    return view._selected_env_ids(env_ids)
+
+
 @dataclass(slots=True)
-class SimArticulation:
+class SimArticulation(CollisionShapeMixin):
     """Simulation-facing view for one registered articulation.
 
     This is the lightweight public object users should grow into using. It
@@ -151,6 +164,38 @@ class SimArticulation:
     articulation: object
     world: KangSimWorld | None = None
     source_data: object | None = None
+    _collision_layout: tuple = field(default=(), init=False, repr=False)
+
+    def _collision_body_pose(self, selected):
+        if self.world.sim_device.type == "cuda":
+            view = self.world.state.gpu.articulation_link_data()
+            device = torch.device("cuda", view.device_id)
+            current = torch.cuda.current_stream(device)
+            producer = torch.cuda.ExternalStream(view.stream_handle, device=device)
+            current.wait_stream(producer)
+
+            rows = torch.tensor([
+                self.world.articulation_gpu_row(env_id, self.obj_id) for env_id in selected
+            ], dtype=torch.long, device=device)
+            links = torch.tensor([
+                self.world.get_articulation(env_id, self.obj_id).articulation.get_link_indices()
+                for env_id in selected
+            ], dtype=torch.long, device=device)
+            # Gather borrowed poses before another fetch overwrites the buffer.
+            poses = view.torch()[rows[:, None], links, :7]
+            producer.wait_stream(current)
+            return poses[..., :3], poses[..., 3:]
+
+        actors = [self.world.get_articulation(env_id, self.obj_id).articulation for env_id in selected]
+        positions = torch.as_tensor(
+            np.stack([actor.get_link_positions() for actor in actors]),
+            dtype=torch.float32, device=self.world.device,
+        ).reshape(len(selected), self.num_bodies, 3)
+        rotations = torch.as_tensor(
+            np.stack([actor.get_link_quats_xyzw() for actor in actors]),
+            dtype=torch.float32, device=self.world.device,
+        ).reshape(len(selected), self.num_bodies, 4)
+        return positions, rotations
 
     @property
     def key(self):
@@ -270,6 +315,15 @@ class SimArticulation:
         )
         return self
 
+    def set_root_velocity(
+        self, env_ids: EnvIdLike, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor,
+    ) -> Self:
+        """Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset."""
+        self._require_world().set_root_velocity(
+            _velocity_env_ids(self, env_ids), self.obj_id, linear_velocity, angular_velocity,
+        )
+        return self
+
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
@@ -340,6 +394,18 @@ class SimArticulation:
         )
         return self
 
+    def set_collision_material(self, material) -> int:
+        """Replace all collision shape materials on this articulation at runtime."""
+        world = self._require_world()
+        return self.articulation.set_collision_material(world.physics, material)
+
+    def set_collision_material_overrides(self, material_overrides) -> int:
+        """Change matched collision shapes, preserving unmatched materials."""
+        world = self._require_world()
+        return self.articulation.set_collision_material_overrides(
+            world.physics, material_overrides
+        )
+
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
         if env_ids is None:
             return self.env_id
@@ -357,7 +423,7 @@ class SimArticulation:
 
 
 @dataclass(slots=True)
-class SimRigid(RigidQueryMixin):
+class SimRigid(RigidQueryMixin, CollisionShapeMixin):
     """Simulation-facing view for one registered rigid object."""
 
     env_id: int
@@ -367,6 +433,11 @@ class SimRigid(RigidQueryMixin):
     world: KangSimWorld | None = None
     source_data: object | None = None
     _mesh_queries: dict = field(default_factory=dict, init=False, repr=False)
+    _collision_layout: tuple = field(default=(), init=False, repr=False)
+
+    def _collision_body_pose(self, selected):
+        positions, rotations = self._read_root_pose(selected)
+        return positions[:, None, :], rotations[:, None, :]
 
     @property
     def key(self):
@@ -413,32 +484,11 @@ class SimRigid(RigidQueryMixin):
 
     @property
     def num_bodies(self) -> int:
-        if (
-            self.world is not None
-            and self.key in getattr(self.world, "static_rigids", {})
-            and self.source_data is not None
-        ):
-            return len(rigid_shape_specs(self.source_data))
-        if self.world is not None:
-            return int(
-                self.world.state.record(self.env_id, self.obj_id).cache.num_bodies
-            )
         return 1
 
     @property
     def body_names(self) -> list[str]:
-        if (
-            self.world is not None
-            and self.key in getattr(self.world, "static_rigids", {})
-            and self.source_data is not None
-        ):
-            return [spec.name for spec in rigid_shape_specs(self.source_data)]
-        if self.world is None:
-            return [f"body_{i}" for i in range(self.num_bodies)]
-        cache = self.world.state.record(self.env_id, self.obj_id).cache
-        return list(
-            getattr(cache, "body_names", [f"body_{i}" for i in range(self.num_bodies)])
-        )
+        return [self.source_data.name]
 
     def get_body_id(self, name: str) -> int:
         return _find_name(self.body_names, name, "body")
@@ -452,6 +502,15 @@ class SimRigid(RigidQueryMixin):
         return self._require_world().add_force_sensor(
             self, body_ids=body_ids, name=name
         )
+
+    def set_root_velocity(
+        self, env_ids: EnvIdLike, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor,
+    ) -> Self:
+        """Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset."""
+        self._require_world().set_root_velocity(
+            _velocity_env_ids(self, env_ids), self.obj_id, linear_velocity, angular_velocity,
+        )
+        return self
 
     def set_root_state(
         self,
@@ -505,12 +564,12 @@ class SimRigid(RigidQueryMixin):
         return world.physics.set_rigid_collision_material(self.rigid, material)
 
     def set_collision_material_overrides(self, material_overrides, data=None):
-        """Apply named/indexed collision material overrides at runtime."""
+        """Change matched collision shapes, preserving unmatched materials."""
         world = self._require_world()
         source_data = self.source_data if data is None else data
         if source_data is None:
             raise RuntimeError(
-                "set_collision_material_overrides requires the ArticulationDesc used to create this rigid"
+                "set_collision_material_overrides requires the RigidDesc used to create this rigid"
             )
         return world.physics.set_rigid_collision_material_overrides(
             self.rigid, source_data, material_overrides
@@ -533,7 +592,7 @@ class SimRigid(RigidQueryMixin):
 
 
 @dataclass(slots=True)
-class SimArticulationBatch:
+class SimArticulationBatch(CollisionShapeBatchMixin):
     """Batched simulation-facing view for one logical articulation object."""
 
     world: KangSimWorld
@@ -663,6 +722,15 @@ class SimArticulationBatch:
         self.world.clear_cmd(self._selected_env_ids(env_ids), self.obj_id)
         return self
 
+    def set_root_velocity(
+        self, env_ids: EnvIdLike, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor,
+    ) -> Self:
+        """Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset."""
+        self.world.set_root_velocity(
+            _velocity_env_ids(self, env_ids), self.obj_id, linear_velocity, angular_velocity,
+        )
+        return self
+
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
@@ -733,6 +801,26 @@ class SimArticulationBatch:
         )
         return self
 
+    def set_collision_material(self, env_ids: EnvIdLike | None, material) -> int:
+        """Replace shape materials on selected articulation env instances."""
+        selected = self._selected_env_ids(env_ids)
+        updated = 0
+        for env_id in selected:
+            record = self.world.get_articulation(env_id=env_id, obj_id=self.obj_id)
+            updated += record.set_collision_material(material)
+        return updated
+
+    def set_collision_material_overrides(
+        self, env_ids: EnvIdLike | None, material_overrides
+    ) -> int:
+        """Change matched shapes on selected articulation env instances."""
+        selected = self._selected_env_ids(env_ids)
+        updated = 0
+        for env_id in selected:
+            record = self.world.get_articulation(env_id=env_id, obj_id=self.obj_id)
+            updated += record.set_collision_material_overrides(material_overrides)
+        return updated
+
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
         if env_ids is None:
             return self.env_ids
@@ -746,7 +834,7 @@ class SimArticulationBatch:
 
 
 @dataclass(slots=True)
-class SimRigidBatch(RigidQueryMixin):
+class SimRigidBatch(RigidQueryMixin, CollisionShapeBatchMixin):
     """Batched simulation-facing view for one logical rigid object."""
 
     world: KangSimWorld
@@ -826,6 +914,15 @@ class SimRigidBatch(RigidQueryMixin):
     def add_force_sensor(self, body_ids=None, *, name: str = ""):
         return self.world.add_force_sensor(self, body_ids=body_ids, name=name)
 
+    def set_root_velocity(
+        self, env_ids: EnvIdLike, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor,
+    ) -> Self:
+        """Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset."""
+        self.world.set_root_velocity(
+            _velocity_env_ids(self, env_ids), self.obj_id, linear_velocity, angular_velocity,
+        )
+        return self
+
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
@@ -873,25 +970,23 @@ class SimRigidBatch(RigidQueryMixin):
         return self
 
     def set_collision_material(self, env_ids: EnvIdLike | None, material):
-        """Replace collision shape materials for selected rigid env instances."""
+        """Replace shape materials on selected dynamic, kinematic, or static rigids."""
         selected = self._selected_env_ids(env_ids)
         updated = 0
         for env_id in selected:
-            updated += self.world.rigids[(env_id, self.obj_id)].set_collision_material(
-                material
-            )
+            record = self.world.get_rigid(env_id=env_id, obj_id=self.obj_id)
+            updated += record.set_collision_material(material)
         return updated
 
     def set_collision_material_overrides(
         self, env_ids: EnvIdLike | None, material_overrides, data=None
     ):
-        """Apply named/indexed material overrides to selected rigid env instances."""
+        """Change matched shapes on selected dynamic, kinematic, or static rigids."""
         selected = self._selected_env_ids(env_ids)
         updated = 0
         for env_id in selected:
-            updated += self.world.rigids[
-                (env_id, self.obj_id)
-            ].set_collision_material_overrides(material_overrides, data=data)
+            record = self.world.get_rigid(env_id=env_id, obj_id=self.obj_id)
+            updated += record.set_collision_material_overrides(material_overrides, data=data)
         return updated
 
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
@@ -1039,6 +1134,7 @@ class KangSimWorld:
         self.articulations: dict[tuple[int, int], SimArticulation] = {}
         self.rigids: dict[tuple[int, int], SimRigid] = {}
         self.static_rigids: dict[tuple[int, int], SimRigid] = {}
+        self._object_topologies: dict[int, tuple] = {}
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
         self.batch_commands: dict[int, BatchCommandBuffer] = {}
         self.resets: dict[tuple[int, int], ResetBuffer] = {}
@@ -1176,6 +1272,8 @@ class KangSimWorld:
         record = SimArticulation(
             key[0], key[1], str(name), articulation, self, source_data
         )
+        record._collision_layout = articulation._collision_shape_layout()
+        self._validate_object_topology(record, articulation)
         self.articulations[key] = record
         self.state.add_articulation(
             articulation, key[0], key[1], name, physics=self.physics
@@ -1255,11 +1353,9 @@ class KangSimWorld:
             kinematic=kinematic,
         )
 
-        shape_specs = rigid_shape_specs(data)
-        body_names = [spec.name for spec in shape_specs]
-        local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
-        local_quat_xyzw = np.stack([spec.local_quat_xyzw for spec in shape_specs], axis=0)
         record = SimRigid(key[0], key[1], str(name), rigid, self, data)
+        record._collision_layout = rigid._collision_shape_layout(data)
+        self._validate_object_topology(record, rigid)
         self.rigids[key] = record
         self.state.add_rigid(
             rigid,
@@ -1267,15 +1363,13 @@ class KangSimWorld:
             key[1],
             name,
             physics=self.physics,
-            body_names=body_names,
-            local_pos=local_pos,
-            local_quat_xyzw=local_quat_xyzw,
+            body_name=data.name,
         )
         self.commands[key] = CommandBuffer(ControlMode.NONE)
         self.resets[key] = ResetBuffer()
-        self.body_forces[key] = np.zeros((len(body_names), 3), dtype=np.float32)
+        self.body_forces[key] = np.zeros((1, 3), dtype=np.float32)
         self.body_force_positions[key] = np.full(
-            (len(body_names), 3), np.nan, dtype=np.float32
+            (1, 3), np.nan, dtype=np.float32
         )
         return record
 
@@ -1312,8 +1406,23 @@ class KangSimWorld:
             float(rest_offset),
         )
         record = SimRigid(key[0], key[1], str(name), rigid, self, data)
+        record._collision_layout = rigid._collision_shape_layout(data)
+        self._validate_object_topology(record, rigid)
         self.static_rigids[key] = record
         return record
+
+    def _validate_object_topology(self, record, actor):
+        actual = (type(record), record.num_bodies, record.num_collision_shapes,
+                  record.num_dofs if isinstance(record, SimArticulation) else 0)
+        expected = self._object_topologies.setdefault(record.obj_id, actual)
+        if actual != expected:
+            actor.release()
+            raise ValueError(
+                f"object topology mismatch for obj={record.obj_id}: expected "
+                f"{expected[1]} bodies/{expected[2]} collision shapes/{expected[3]} dofs "
+                f"of type {expected[0].__name__}, got {actual[1]} bodies/"
+                f"{actual[2]} collision shapes/{actual[3]} dofs of type {actual[0].__name__}"
+            )
 
     def add_mjcf_articulation(
         self,
@@ -1389,6 +1498,223 @@ class KangSimWorld:
         if name is None:
             name = records[(selected_env_ids[0], obj_id)].name
         return SimRigidBatch(self, obj_id, selected_env_ids, str(name))
+
+    def get_body_masses(
+        self, env_ids: EnvIdLike = None, obj_id: int = 0
+    ) -> torch.Tensor:
+        """Return CPU masses in kg, shape ``(N, B)``; a compound rigid has B=1."""
+        return self._get_body_property(
+            env_ids, obj_id, "get_link_masses", "get_mass", ()
+        )
+
+    def get_body_mass_space_inertias(
+        self, env_ids: EnvIdLike = None, obj_id: int = 0
+    ) -> torch.Tensor:
+        """Return CPU principal inertias in COM frames, ``(N, B, 3)``, kg*m²."""
+        return self._get_body_property(
+            env_ids, obj_id, "get_link_mass_space_inertias", "get_mass_space_inertia", (3,)
+        )
+
+    def get_body_local_com_poses(
+        self, env_ids: EnvIdLike = None, obj_id: int = 0
+    ) -> torch.Tensor:
+        """Return CPU actor/link-local poses ``(N, B, 7)``: metres XYZ, quaternion XYZW."""
+        return self._get_body_property(
+            env_ids, obj_id, "get_link_local_com_poses", "get_local_com_pose", (7,)
+        )
+
+    def set_body_masses(
+        self, env_ids: EnvIdLike, obj_id: int, masses, *, body_ids=None
+    ) -> None:
+        """Set CPU values ``(N, selected_bodies)`` in kg; inertia is unchanged.
+
+        Use between completed CPU/GPU steps. GPU changes upload on the next
+        actual physics step, not on refresh or a zero-substep flush. Body IDs
+        select articulation links; dynamic/kinematic rigids have only body 0.
+        The registered state metadata is refreshed. Actors are not woken.
+        """
+        self._set_body_property(
+            env_ids, obj_id, body_ids, masses, "set_link_masses", "set_mass", ()
+        )
+
+    def set_body_mass_space_inertias(
+        self, env_ids: EnvIdLike, obj_id: int, inertias, *, body_ids=None
+    ) -> None:
+        """Set CPU values ``(N, selected_bodies, 3)`` in kg*m², in each COM frame.
+
+        Call between completed CPU/GPU steps; mass is unchanged. GPU changes
+        upload on the next actual physics step, as with ``set_body_masses``.
+        """
+        self._set_body_property(
+            env_ids, obj_id, body_ids, inertias,
+            "set_link_mass_space_inertias", "set_mass_space_inertia", (3,),
+        )
+
+    def set_body_local_com_poses(
+        self, env_ids: EnvIdLike, obj_id: int, poses, *, body_ids=None
+    ) -> None:
+        """Set CPU local poses ``(N, selected_bodies, 7)``; actor poses stay fixed.
+
+        Rows contain metres XYZ followed by a unit XYZW quaternion. Inertia
+        values stay in the new COM frame. Call between completed CPU/GPU steps;
+        GPU changes upload on the next actual physics step. This does not
+        compensate velocity for a shifted COM.
+        """
+        self._set_body_property(
+            env_ids, obj_id, body_ids, poses,
+            "set_link_local_com_poses", "set_local_com_pose", (7,),
+        )
+
+    @staticmethod
+    def _require_cpu_property_input(value):
+        if torch.is_tensor(value) and value.device.type != "cpu":
+            raise ValueError("mass-property APIs require CPU values and indices")
+
+    def _body_property_targets(self, env_ids, obj_id):
+        self._require_cpu_property_input(env_ids)
+        articulated = any(oid == obj_id for _, oid in self.articulations)
+        records = self.articulations if articulated else self.rigids
+        if not any(oid == obj_id for _, oid in records):
+            raise ValueError("mass properties require an articulation or dynamic/kinematic rigid")
+        selected = self._object_env_ids(records, obj_id, env_ids)
+        first = next(record for (_, oid), record in records.items() if oid == obj_id)
+        count = first.num_bodies if articulated else 1
+        return selected, records, articulated, count
+
+    def set_root_velocity(
+        self, env_ids: EnvIdLike, obj_id: int,
+        linear_velocity: torch.Tensor, angular_velocity: torch.Tensor,
+    ) -> None:
+        """Set world velocities between steps without resetting other state.
+
+        Args:
+            env_ids: Selected environments in output row order; None selects
+                all environments containing this object. CUDA IDs require the
+                object to be registered in every environment.
+            obj_id: Simulation object identifier.
+            linear_velocity: World linear velocity in m/s, shape (3,) or (N, 3).
+            angular_velocity: World angular velocity in rad/s, same shapes.
+
+        CUDA simulation requires float32 CUDA velocity tensors. Pose, DOFs,
+        forces and control commands are preserved. Pending resets remain queued;
+        apply them first when setting a post-reset velocity. GPU snapshots need
+        an explicit refresh. Static/kinematic and fixed-base objects are excluded.
+        """
+        articulated = any(oid == obj_id for _, oid in self.articulations)
+        records = self.articulations if articulated else self.rigids
+        if not any(oid == obj_id for _, oid in records):
+            raise ValueError("root velocity requires a dynamic rigid or articulation")
+
+        cuda_ids = isinstance(env_ids, torch.Tensor) and env_ids.is_cuda
+        if cuda_ids:
+            if not self._uses_gpu_sim:
+                raise ValueError("CPU simulation requires CPU environment IDs")
+            if env_ids.ndim != 1 or env_ids.dtype not in (torch.int32, torch.int64):
+                raise ValueError("CUDA environment IDs must be a 1-D int32/int64 tensor")
+            selected = env_ids
+        else:
+            selected = self._object_env_ids(records, obj_id, env_ids)
+        if len(selected) == 0:
+            return
+
+        if self._uses_gpu_sim:
+            self._set_gpu_root_velocity(selected, obj_id, linear_velocity, angular_velocity, articulated)
+            return
+
+        for value in (linear_velocity, angular_velocity):
+            if isinstance(value, torch.Tensor) and value.is_cuda:
+                raise ValueError("CPU velocity writes do not download CUDA tensors")
+        for row, env_id in enumerate(selected):
+            record = records[(env_id, obj_id)]
+            actor = record.articulation if articulated else record.rigid
+            actor.set_root_velocity(
+                select_env_value(linear_velocity, row, len(selected), (3,)),
+                select_env_value(angular_velocity, row, len(selected), (3,)),
+            )
+            self.state.record(env_id, obj_id).cache.refresh_into(
+                self.state.object_state(env_id, obj_id)
+            )
+
+    def _set_gpu_root_velocity(self, env_ids, obj_id, linear, angular, articulated):
+        gpu = self.gpu_system
+        view = gpu.articulation_link_data() if articulated else gpu.rigid_data()
+        device = torch.device("cuda", view.device_id)
+        for value in (linear, angular):
+            if not isinstance(value, torch.Tensor) or value.device != device or value.dtype != torch.float32:
+                raise ValueError("GPU root velocities require float32 tensors on the simulation CUDA device")
+            if value.shape not in ((3,), (len(env_ids), 3)):
+                raise ValueError("root velocity must have shape (3,) or (N, 3)")
+        if isinstance(env_ids, torch.Tensor) and env_ids.device != device:
+            raise ValueError("CUDA environment IDs must be on the simulation device")
+
+        # Serialize borrowed mirror writes with PhysX on the caller's stream.
+        current = torch.cuda.current_stream(device)
+        previous_handle = gpu.cuda_stream()
+        producer = torch.cuda.ExternalStream(previous_handle, device=device)
+        current.wait_stream(producer)
+        gpu.set_cuda_stream(current.cuda_stream)
+        try:
+            if isinstance(env_ids, torch.Tensor):
+                rows = (self._articulation_gpu_rows_for_obj if articulated else self._rigid_gpu_rows_for_obj)(
+                    obj_id, env_ids, device=device,
+                )
+            else:
+                row_for = self.articulation_gpu_row if articulated else self.rigid_gpu_row
+                rows = torch.tensor([row_for(eid, obj_id) for eid in env_ids], device=device)
+            state = view.torch()
+            if articulated:
+                state[rows, 0, 7:10] = linear
+                state[rows, 0, 10:13] = angular
+            else:
+                state[rows, 7:10] = linear
+                state[rows, 10:13] = angular
+            indices = self._gpu_row_index_view(rows, "root_velocity_indices")
+            if articulated:
+                gpu.apply_articulation_root_vel(indices)
+                gpu.update_articulation_kinematics()
+            else:
+                gpu.apply_rigid_vel(indices)
+            self.state.gpu.invalidate_articulation_dynamics()
+            self.state.mark_stale()
+        finally:
+            producer.wait_stream(current)
+            gpu.set_cuda_stream(previous_handle)
+
+    def _get_body_property(self, env_ids, obj_id, link_getter, rigid_getter, tail):
+        selected, records, articulated, count = self._body_property_targets(env_ids, obj_id)
+        values = np.empty((len(selected), count, *tail), dtype=np.float32)
+        for row, env_id in enumerate(selected):
+            record = records[(env_id, obj_id)]
+            if articulated:
+                values[row] = getattr(record.articulation, link_getter)()
+            else:
+                values[row, 0] = getattr(record.rigid, rigid_getter)()
+        return torch.from_numpy(values)
+
+    def _set_body_property(
+        self, env_ids, obj_id, body_ids, values, link_setter, rigid_setter, tail
+    ):
+        # PhysX uploads host property changes at the next simulate, not on fetch.
+        self._require_cpu_property_input(values)
+        self._require_cpu_property_input(body_ids)
+        selected, records, articulated, count = self._body_property_targets(env_ids, obj_id)
+        indices = env_id_list(body_ids, count)
+        values = _as_cpu_numpy(values)
+        expected = (len(selected), len(indices), *tail)
+        if values.shape != expected:
+            raise ValueError(f"mass-property values must have shape {expected}, got {values.shape}")
+
+        for row, env_id in enumerate(selected):
+            record = records[(env_id, obj_id)]
+            if articulated:
+                getattr(record.articulation, link_setter)(indices, values[row])
+            else:
+                for column in range(len(indices)):
+                    getattr(record.rigid, rigid_setter)(values[row, column])
+            self.state.record(env_id, obj_id).cache.refresh_metadata()
+        if self._gpu_system is not None:
+            self.state.gpu.invalidate_articulation_dynamics()
+        self.state.mark_stale()
 
     def get_object_batch(
         self,
@@ -3499,6 +3825,7 @@ class KangSimWorld:
         self.articulations.clear()
         self.rigids.clear()
         self.static_rigids.clear()
+        self._object_topologies.clear()
         self.commands.clear()
         self.resets.clear()
         self.body_forces.clear()

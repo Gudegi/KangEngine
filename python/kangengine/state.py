@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from .rigid import expand_rigid_body_state
 from .utils.env_utils import (
     EnvIdLike,
     env_id_list,
@@ -226,43 +225,20 @@ class ArticulationStateCache:
 
 
 class RigidStateCache:
-    """State cache for one dynamic rigid body.
-
-    Compound rigid bodies expose one body slot per collision shape for
-    MimicKit-style body APIs, while PhysX still simulates one rigid actor.
-    """
+    """State cache for one physical actor, regardless of its collision shapes."""
 
     def __init__(
         self,
         rigid,
         physics=None,
-        body_names=None,
-        local_pos=None,
-        local_quat_xyzw=None,
+        body_name="rigid",
         device=None,
     ):
         self.rigid = rigid
         self.physics = physics
         self.device = resolve_device(device)
-        self.body_names = list(body_names) if body_names is not None else ["rigid"]
-        self.local_pos = (
-            np.zeros((len(self.body_names), 3), dtype=np.float32)
-            if local_pos is None
-            else np.asarray(local_pos, dtype=np.float32).reshape(-1, 3)
-        )
-        self.local_quat_xyzw = (
-            np.tile(
-                np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32),
-                (len(self.body_names), 1),
-            )
-            if local_quat_xyzw is None
-            else np.asarray(local_quat_xyzw, dtype=np.float32).reshape(-1, 4)
-        )
-        if len(self.body_names) != self.local_pos.shape[0]:
-            raise ValueError(
-                "rigid body names and local transforms must have matching lengths"
-            )
-        self.num_bodies = len(self.body_names)
+        self.body_names = [body_name]
+        self.num_bodies = 1
         self.num_dofs = 0
         self.refresh_metadata()
 
@@ -274,30 +250,24 @@ class RigidStateCache:
         self.dof_effort_limits = torch.zeros(
             (0,), dtype=torch.float32, device=self.device
         )
-        self.body_masses = torch.zeros(
-            (self.num_bodies,), dtype=torch.float32, device=self.device
+        self.body_masses = torch.tensor(
+            [self.rigid.get_mass()], dtype=torch.float32, device=self.device
         )
-        if self.num_bodies:
-            self.body_masses[0] = float(self.rigid.get_mass())
 
     def refresh_into(self, state: SimObjectState) -> SimObjectState:
         pos = as_cpu_numpy(self.rigid.get_root_position(), shape=(3,))
         rot = as_cpu_numpy(self.rigid.get_root_quat_xyzw(), shape=(4,))
         vel = as_cpu_numpy(self.rigid.get_root_linear_velocity(), shape=(3,))
         ang_vel = as_cpu_numpy(self.rigid.get_root_angular_velocity(), shape=(3,))
-        body_pos, body_quat_xyzw = expand_rigid_body_state(
-            pos, rot, self.local_pos, self.local_quat_xyzw
-        )
-        body_vel = np.repeat(vel.reshape(1, 3), self.num_bodies, axis=0)
-        body_ang_vel = np.repeat(ang_vel.reshape(1, 3), self.num_bodies, axis=0)
+
         state.root_pos.copy_(as_tensor(pos, device=self.device))
         state.root_quat_xyzw.copy_(as_tensor(rot, device=self.device))
         state.root_vel.copy_(as_tensor(vel, device=self.device))
         state.root_ang_vel.copy_(as_tensor(ang_vel, device=self.device))
-        state.body_pos.copy_(as_tensor(body_pos, device=self.device))
-        state.body_quat_xyzw.copy_(as_tensor(body_quat_xyzw, device=self.device))
-        state.body_vel.copy_(as_tensor(body_vel, device=self.device))
-        state.body_ang_vel.copy_(as_tensor(body_ang_vel, device=self.device))
+        state.body_pos[0].copy_(state.root_pos)
+        state.body_quat_xyzw[0].copy_(state.root_quat_xyzw)
+        state.body_vel[0].copy_(state.root_vel)
+        state.body_ang_vel[0].copy_(state.root_ang_vel)
         self._copy_contact_forces(state.body_contact_force, False)
         self._copy_contact_forces(state.body_ground_contact_force, True)
         return state
@@ -310,8 +280,7 @@ class RigidStateCache:
             values = self.physics.get_rigid_ground_contact_force(self.rigid)
         else:
             values = self.physics.get_rigid_contact_force(self.rigid)
-        if self.num_bodies:
-            out[0] = as_tensor(values, shape=(3,), device=self.device)
+        out[0] = as_tensor(values, shape=(3,), device=self.device)
 
     def set_root(self, pos, quat_xyzw, linear_velocity=None, angular_velocity=None):
         linear_velocity = (
@@ -450,9 +419,7 @@ class CPUStateBackend:
         obj_id: int = 0,
         name="",
         physics=None,
-        body_names=None,
-        local_pos=None,
-        local_quat_xyzw=None,
+        body_name="rigid",
     ):
         env_id = int(env_id)
         obj_id = int(obj_id)
@@ -466,9 +433,7 @@ class CPUStateBackend:
         cache = RigidStateCache(
             rigid,
             physics=physics,
-            body_names=body_names,
-            local_pos=local_pos,
-            local_quat_xyzw=local_quat_xyzw,
+            body_name=body_name,
             device=self.device,
         )
         record = ObjectRecord(env_id, obj_id, rigid, str(name), cache)

@@ -7,10 +7,14 @@
 namespace KE {
 namespace Physics {
 
+enum class MaterialCombineMode { Average, Min, Multiply, Max };
+
 struct PhysicsMaterialDesc {
     float staticFriction = 1.f;
     float dynamicFriction = 1.f;
     float restitution = 0.f;
+    MaterialCombineMode frictionCombineMode = MaterialCombineMode::Min;
+    MaterialCombineMode restitutionCombineMode = MaterialCombineMode::Average;
 };
 
 struct CollisionMaterialOverride {

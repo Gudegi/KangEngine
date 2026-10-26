@@ -244,6 +244,7 @@ class PhysicsGpuSystem {
     void clearContactData();
 
     void applyRigidData(const Sim::GpuArrayView* indices = nullptr);
+    void applyRigidVel(const Sim::GpuArrayView* indices = nullptr);
     void applyRigidForce(const Sim::GpuArrayView* indices = nullptr);
     void applyRigidTorque(const Sim::GpuArrayView* indices = nullptr);
     void applyArticulationRootPose(const Sim::GpuArrayView* indices = nullptr);
@@ -269,6 +270,7 @@ class PhysicsGpuSystem {
     PhysicsGpuStateViews& views() { return _views; }
 
   private:
+    void applyRigidState(const Sim::GpuArrayView* indices, bool writePose);
     [[noreturn]] void notImplemented(const char* functionName) const;
     void fetchArticulationDofBuffer(void* buffer, Sim::GpuArrayView& view,
                                     int readType, const char* dataName,

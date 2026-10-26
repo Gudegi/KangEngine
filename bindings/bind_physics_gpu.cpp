@@ -322,6 +322,8 @@ void bind_physics_gpu(py::module& m) {
         .def("clear_contact_data", &PhysicsGpuSystem::clearContactData)
         .def("apply_rigid_data", &PhysicsGpuSystem::applyRigidData,
              py::arg("indices") = nullptr)
+        .def("apply_rigid_vel", &PhysicsGpuSystem::applyRigidVel,
+             py::arg("indices") = nullptr)
         .def("apply_rigid_force", &PhysicsGpuSystem::applyRigidForce,
              py::arg("indices") = nullptr)
         .def("apply_rigid_torque", &PhysicsGpuSystem::applyRigidTorque,
