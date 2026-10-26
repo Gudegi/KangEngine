@@ -256,7 +256,7 @@ class CameraFrustumDebugApp : public App {
         getCamera().setFarPlane(500.0f);
 
         getRenderer().setLight(
-            DirectionalLight{glm::normalize(glm::vec3(0.35f, 0.85f, 0.45f)),
+            DirectionalLight{glm::normalize(glm::vec3(-0.35f, -0.85f, -0.45f)),
                              glm::vec3(1.0f), 0.75f, glm::vec3(0.14f)});
 
         getRenderer().settings().background.checkerColor1 =

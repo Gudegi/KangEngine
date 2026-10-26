@@ -159,17 +159,20 @@ void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
         switch (prim->getLightType()) {
         case Scene::LightType::Directional:
             if (!hasDirectionalLight) {
-                directionalLight = prim->getDirectionalLight();
+                directionalLight = evaluateWorldLight(prim->getDirectionalLight(),
+                                                       prim->computeWorldMatrix());
                 hasDirectionalLight = true;
             }
             break;
         case Scene::LightType::Point:
             if (pointLights.size() < static_cast<size_t>(MaxPointLights))
-                pointLights.push_back(prim->getPointLight());
+                pointLights.push_back(evaluateWorldLight(prim->getPointLight(),
+                                                         prim->computeWorldMatrix()));
             break;
         case Scene::LightType::Spot:
             if (spotLights.size() < static_cast<size_t>(MaxSpotLights))
-                spotLights.push_back(prim->getSpotLight());
+                spotLights.push_back(evaluateWorldLight(prim->getSpotLight(),
+                                                        prim->computeWorldMatrix()));
             break;
         case Scene::LightType::Rect:
             rectLights.push_back({prim->getRectLight(), prim->computeWorldMatrix()});

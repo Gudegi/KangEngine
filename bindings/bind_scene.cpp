@@ -81,7 +81,8 @@ void bind_scene(py::module& m) {
         scene, "DirectionalLight",
         "Infinite-distance light used as the scene's main sun light.")
         .def(py::init<>())
-        .def_readwrite("direction", &KE::Scene::DirectionalLight::direction)
+        .def_readwrite("direction", &KE::Scene::DirectionalLight::direction,
+                       "Local direction of emitted rays; (0, -1, 0) shines down in Y-up.")
         .def_readwrite("color", &KE::Scene::DirectionalLight::color)
         .def_readwrite("intensity", &KE::Scene::DirectionalLight::intensity)
         .def_readwrite("ambient", &KE::Scene::DirectionalLight::ambient);
@@ -89,7 +90,8 @@ void bind_scene(py::module& m) {
     py::class_<KE::Scene::PointLight>(scene, "PointLight",
                                       "Finite local scene light.")
         .def(py::init<>())
-        .def_readwrite("position", &KE::Scene::PointLight::position)
+        .def_readwrite("position", &KE::Scene::PointLight::position,
+                       "Owning prim's parent-relative translation, in scene units.")
         .def_readwrite("color", &KE::Scene::PointLight::color)
         .def_readwrite("intensity", &KE::Scene::PointLight::intensity)
         .def_readwrite("range", &KE::Scene::PointLight::range);
@@ -97,8 +99,10 @@ void bind_scene(py::module& m) {
     py::class_<KE::Scene::SpotLight>(scene, "SpotLight",
                                      "Finite cone-shaped scene light.")
         .def(py::init<>())
-        .def_readwrite("position", &KE::Scene::SpotLight::position)
-        .def_readwrite("direction", &KE::Scene::SpotLight::direction)
+        .def_readwrite("position", &KE::Scene::SpotLight::position,
+                       "Owning prim's parent-relative translation, in scene units.")
+        .def_readwrite("direction", &KE::Scene::SpotLight::direction,
+                       "Local direction of emitted rays.")
         .def_readwrite("color", &KE::Scene::SpotLight::color)
         .def_readwrite("intensity", &KE::Scene::SpotLight::intensity)
         .def_readwrite("range", &KE::Scene::SpotLight::range)
@@ -707,15 +711,15 @@ void bind_scene(py::module& m) {
              &KE::Scene::LightComponent::setDirectionalLight, py::arg("light"),
              "Set this component from directional light data.")
         .def("directional_light", &KE::Scene::LightComponent::directionalLight,
-             "Return directional light data in world space.")
+             "Return local directional light values; direction follows emitted rays.")
         .def("set_point_light", &KE::Scene::LightComponent::setPointLight,
              py::arg("light"), "Set this component from point light data.")
         .def("point_light", &KE::Scene::LightComponent::pointLight,
-             "Return point light data in world space.")
+             "Return point light values with parent-relative position.")
         .def("set_spot_light", &KE::Scene::LightComponent::setSpotLight,
              py::arg("light"), "Set this component from spot light data.")
         .def("spot_light", &KE::Scene::LightComponent::spotLight,
-             "Return spot light data in world space.")
+             "Return spot light values with parent-relative position and local ray direction.")
         .def("set_rect_light", &KE::Scene::LightComponent::setRectLight, py::arg("light"))
         .def("rect_light", &KE::Scene::LightComponent::rectLight,
              "Return authored rectangle dimensions and emission, without applying the prim transform.")
@@ -1169,15 +1173,15 @@ void bind_scene(py::module& m) {
         .def("set_dome_light", &KE::Scene::Prim::setDomeLight, py::arg("light"))
         .def("get_dome_light", &KE::Scene::Prim::getDomeLight)
         .def("get_directional_light", &KE::Scene::Prim::getDirectionalLight,
-             "Return directional light data from this Light prim.")
+             "Return local directional light values; direction follows emitted rays.")
         .def("set_point_light", &KE::Scene::Prim::setPointLight,
              py::arg("light"), "Attach point light data to this Light prim.")
         .def("get_point_light", &KE::Scene::Prim::getPointLight,
-             "Return point light data from this Light prim.")
+             "Return point light values with parent-relative position.")
         .def("set_spot_light", &KE::Scene::Prim::setSpotLight, py::arg("light"),
              "Attach spot light data to this Light prim.")
         .def("get_spot_light", &KE::Scene::Prim::getSpotLight,
-             "Return spot light data from this Light prim.")
+             "Return spot light values with parent-relative position and local ray direction.")
         // Model matrix
         .def("compute_model_matrix", &KE::Scene::Prim::computeModelMatrix,
              "Compute this prim's model matrix.")

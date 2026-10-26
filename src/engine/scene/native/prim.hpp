@@ -335,6 +335,7 @@ class Prim {
     }
 
     LightType getLightType(LightType defaultType = LightType::Point) const;
+    // Local authoring values. Direction follows emitted rays; position is parent-relative.
     void setDirectionalLight(const DirectionalLight& light);
     DirectionalLight getDirectionalLight();
     void setPointLight(const PointLight& light);

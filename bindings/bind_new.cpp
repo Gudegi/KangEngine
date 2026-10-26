@@ -1608,7 +1608,7 @@ py::class_<glm::vec3>(m, "Vec3")
         .def("clear_screen_text", &App::clearScreenText,
              "Remove every screen-text entry.")
         .def("set_light_direction", &App::setLightDirection,
-             py::arg("direction"), "Set the main directional light direction.")
+             py::arg("direction"), "Set the main light's local emitted-ray direction.")
         .def("set_light_color", &App::setLightColor, py::arg("color"),
              "Set the main light color.")
         .def("set_light_intensity", &App::setLightIntensity,

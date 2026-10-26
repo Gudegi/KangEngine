@@ -319,7 +319,7 @@ def _textured_dynamic(device):
         viewer = SimWorldVisualizer(app, world)
         try:
             app.set_camera_view(position=(0.0, -6.0, 3.0), target=(0.0, 0.0, 1.0))
-            app.set_light_direction(ke.Vec3(0.0, -1.0, 0.0))
+            app.set_light_direction(ke.Vec3(0.0, 1.0, 0.0))
             visual = viewer.add(batch, path="/prop")
             assert isinstance(
                 visual._backend,
@@ -549,7 +549,7 @@ def _textured_articulation(device):
         viewer = SimWorldVisualizer(app, world)
         try:
             app.set_camera_view(position=(0.0, -7.0, 3.5), target=(0.0, 0.0, 1.5))
-            app.set_light_direction(ke.Vec3(0.0, -1.0, 0.0))
+            app.set_light_direction(ke.Vec3(0.0, 1.0, 0.0))
             visual = viewer.add(batch, path="/articulation")
             assert len(visual.body_handles) == 4
             assert [
@@ -647,7 +647,7 @@ def _shared_pbr_material(device):
         viewer = SimWorldVisualizer(app, world)
         try:
             app.set_camera_view(position=(0.0, -6.0, 3.0), target=(0.0, 0.0, 1.0))
-            app.set_light_direction(ke.Vec3(0.0, -1.0, 0.3))
+            app.set_light_direction(ke.Vec3(0.0, 1.0, -0.3))
             tint = (1.0, 1.0, 1.0, 0.5)
             rigid_visual = viewer.add(rigid, path="/pbr_rigid", color=tint)
             articulated_visual = viewer.add(articulated, path="/pbr_artic", color=tint)

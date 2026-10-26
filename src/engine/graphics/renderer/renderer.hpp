@@ -120,6 +120,7 @@ class Renderer {
     const RendererSettings& settings() const { return _settings; }
     void applyBackgroundSettings();
 
+    // Evaluated world-space inputs. Directions follow emitted rays.
     void setLight(const DirectionalLight& light);
     const DirectionalLight& light() const;
     void setPointLights(std::vector<PointLight> lights);

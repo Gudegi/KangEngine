@@ -126,7 +126,7 @@ class FBXMeshViewer(ke.App):
         pass
 
     def _configure_lighting(self):
-        self.set_light_direction(ke.Vec3(-0.35, 0.82, -0.45))
+        self.set_light_direction(ke.Vec3(0.35, -0.82, 0.45))
         self.set_light_color(ke.Vec3(1.0, 0.94, 0.86))
         self.set_light_intensity(1.1)
         self.set_light_ambient(ke.Vec3(0.36, 0.35, 0.32))

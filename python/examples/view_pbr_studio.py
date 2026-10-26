@@ -63,7 +63,7 @@ class PBRStudioViewer(ke.App):
     def _configure_studio_lights(self):
         # Broad, neutral base illumination. Point/spot lights below provide
         # highlight shapes because rectangular area lights are not available.
-        self.set_light_direction(ke.Vec3(-0.38, 0.48, 0.79))
+        self.set_light_direction(ke.Vec3(0.38, -0.48, -0.79))
         self.set_light_color(ke.Vec3(1.0, 0.98, 0.95))
         self.set_light_intensity(0.65)
         self.set_light_ambient(ke.Vec3(0.035, 0.035, 0.035))

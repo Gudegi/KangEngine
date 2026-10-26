@@ -17,7 +17,7 @@ class PBRViewer(ke.App):
         self._add_emissive_sphere()
         self._configure_local_lights()
 
-        self.set_light_direction(ke.Vec3(-0.45, 0.55, 0.72))
+        self.set_light_direction(ke.Vec3(0.45, -0.55, -0.72))
         self.set_light_color(ke.Vec3(1.0, 0.96, 0.88))
         self.set_light_intensity(0.45)
         self.set_light_ambient(ke.Vec3(0.025, 0.028, 0.032))

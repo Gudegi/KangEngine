@@ -490,9 +490,7 @@ DirectionalLight Prim::getDirectionalLight() {
     DirectionalLight light;
     const glm::vec3 localDirection =
         getAttribute<glm::vec3>("light:direction", light.direction);
-    const glm::mat3 worldRotation(computeWorldMatrix());
-    light.direction =
-        safeDirection(worldRotation * localDirection, light.direction);
+    light.direction = safeDirection(localDirection, light.direction);
     light.color = getAttribute<glm::vec3>("light:color", light.color);
     light.intensity =
         std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
@@ -516,8 +514,7 @@ PointLight Prim::getPointLight() {
         return _lightComponent->pointLight();
 
     PointLight light;
-    const glm::mat4 world = computeWorldMatrix();
-    light.position = glm::vec3(world[3]);
+    light.position = getLocalTranslation();
     light.color = getAttribute<glm::vec3>("light:color", light.color);
     light.intensity =
         std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
@@ -547,12 +544,10 @@ SpotLight Prim::getSpotLight() {
         return _lightComponent->spotLight();
 
     SpotLight light;
-    const glm::mat4 world = computeWorldMatrix();
     const glm::vec3 localDirection =
         getAttribute<glm::vec3>("light:direction", light.direction);
-    light.position = glm::vec3(world[3]);
-    light.direction =
-        safeDirection(glm::mat3(world) * localDirection, light.direction);
+    light.position = getLocalTranslation();
+    light.direction = safeDirection(localDirection, light.direction);
     light.color = getAttribute<glm::vec3>("light:color", light.color);
     light.intensity =
         std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));

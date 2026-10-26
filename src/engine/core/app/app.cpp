@@ -340,8 +340,8 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
 
     DirectionalLight defaultLight;
     defaultLight.direction = (_upAxis == UpAxis::Z)
-                                 ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
-                                 : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f));
+                                 ? glm::normalize(glm::vec3(-0.2f, -0.5f, -1.0f))
+                                 : glm::normalize(glm::vec3(-0.5f, -1.0f, -0.2f));
     if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
         lightPrim->setDirectionalLight(defaultLight);
     else
@@ -2361,20 +2361,23 @@ void App::renderSelectedLightOverlay() {
 
     switch (component->type()) {
     case Scene::LightType::Directional: {
-        const Scene::DirectionalLight light = component->directionalLight();
+        const Scene::DirectionalLight light = evaluateWorldLight(
+            component->directionalLight(), prim->computeWorldMatrix());
         const glm::vec3 origin = glm::vec3(prim->computeWorldMatrix()[3]);
         Scene::DebugGeometry::appendDirectionArrowWire(starts, ends, origin,
                                                        light.direction, 2.0f);
         break;
     }
     case Scene::LightType::Point: {
-        const Scene::PointLight light = component->pointLight();
+        const Scene::PointLight light = evaluateWorldLight(
+            component->pointLight(), prim->computeWorldMatrix());
         Scene::DebugGeometry::appendSphereWire(starts, ends, light.position,
                                                light.range);
         break;
     }
     case Scene::LightType::Spot: {
-        const Scene::SpotLight light = component->spotLight();
+        const Scene::SpotLight light = evaluateWorldLight(
+            component->spotLight(), prim->computeWorldMatrix());
         Scene::DebugGeometry::appendConeWire(starts, ends, light.position,
                                              light.direction, light.range,
                                              light.outerConeAngle);

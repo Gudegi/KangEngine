@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <cmath>
 #include <glm/geometric.hpp>
-#include <glm/mat3x3.hpp>
-#include <glm/mat4x4.hpp>
 #include <stdexcept>
 
 namespace KE {
@@ -58,9 +56,7 @@ void LightComponent::setDirectionalLight(const DirectionalLight& light) {
 DirectionalLight LightComponent::directionalLight() const {
     requireAttached();
     DirectionalLight light;
-    const glm::mat3 worldRotation(_owner->computeWorldMatrix());
-    light.direction =
-        safeDirection(worldRotation * _direction, light.direction);
+    light.direction = _direction;
     light.color = _color;
     light.intensity = std::max(0.0f, _intensity);
     light.ambient = _ambient;
@@ -70,7 +66,9 @@ DirectionalLight LightComponent::directionalLight() const {
 void LightComponent::setPointLight(const PointLight& light) {
     requireAttached();
     _type = LightType::Point;
-    _owner->setLocalTranslation(light.position);
+    // Preserve existing matrix/xform ops when only emission values change.
+    if (light.position != _owner->getLocalTranslation())
+        _owner->setLocalTranslation(light.position);
     _color = light.color;
     _intensity = std::max(0.0f, light.intensity);
     _range = std::max(0.0f, light.range);
@@ -80,8 +78,7 @@ void LightComponent::setPointLight(const PointLight& light) {
 PointLight LightComponent::pointLight() const {
     requireAttached();
     PointLight light;
-    const glm::mat4 world = _owner->computeWorldMatrix();
-    light.position = glm::vec3(world[3]);
+    light.position = _owner->getLocalTranslation();
     light.color = _color;
     light.intensity = std::max(0.0f, _intensity);
     light.range = std::max(0.0f, _range);
@@ -91,7 +88,8 @@ PointLight LightComponent::pointLight() const {
 void LightComponent::setSpotLight(const SpotLight& light) {
     requireAttached();
     _type = LightType::Spot;
-    _owner->setLocalTranslation(light.position);
+    if (light.position != _owner->getLocalTranslation())
+        _owner->setLocalTranslation(light.position);
     _direction = safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f));
     _color = light.color;
     _intensity = std::max(0.0f, light.intensity);
@@ -104,10 +102,8 @@ void LightComponent::setSpotLight(const SpotLight& light) {
 SpotLight LightComponent::spotLight() const {
     requireAttached();
     SpotLight light;
-    const glm::mat4 world = _owner->computeWorldMatrix();
-    light.position = glm::vec3(world[3]);
-    light.direction =
-        safeDirection(glm::mat3(world) * _direction, light.direction);
+    light.position = _owner->getLocalTranslation();
+    light.direction = _direction;
     light.color = _color;
     light.intensity = std::max(0.0f, _intensity);
     light.range = std::max(0.0f, _range);

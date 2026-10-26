@@ -29,7 +29,7 @@ class PBRPresetViewer(ke.App):
         self.add_ground(material=self.standard_materials.ground, scale=12.0)
         self._build_preset_grid()
 
-        self.set_light_direction(ke.Vec3(-0.35, 0.45, 0.82))
+        self.set_light_direction(ke.Vec3(0.35, -0.45, -0.82))
         self.set_light_color(ke.Vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(0.8)
         self.set_light_ambient(ke.Vec3(0.55, 0.55, 0.55))

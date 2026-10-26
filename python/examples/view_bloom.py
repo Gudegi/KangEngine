@@ -32,7 +32,7 @@ class BloomViewer(ke.App):
             color = [0.24 + i * 0.02, 0.22, 0.28, 1.0]
             self._add_sphere(f"/beads/{i}", [x, 1.3, z], 0.08, color)
 
-        self.set_light_direction(ke.Vec3(-0.35, 0.65, 0.55))
+        self.set_light_direction(ke.Vec3(0.35, -0.65, -0.55))
         self.set_light_color(ke.Vec3(1.0, 0.94, 0.84))
         self.set_light_intensity(0.45)
         self.set_light_ambient(ke.Vec3(0.035, 0.04, 0.05))

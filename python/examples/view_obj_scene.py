@@ -89,7 +89,7 @@ class ObjSceneViewer(ke.App):
         self.show_ground = bool(show_ground)
         self.ground_size = None if ground_size is None else float(ground_size)
         self.ground_y = None if ground_y is None else float(ground_y)
-        self.light_direction = light_direction or ke.Vec3(-0.35, 0.82, -0.45)
+        self.light_direction = light_direction or ke.Vec3(0.35, -0.82, 0.45)
         self.light_color = light_color or ke.Vec3(1.0, 0.96, 0.9)
         self.light_intensity = float(light_intensity)
         self.light_ambient = light_ambient or ke.Vec3(0.32, 0.32, 0.32)
@@ -296,7 +296,7 @@ def main():
                 1200.0 * scale if args.ground_size is None else args.ground_size
             ),
             ground_y=(-4.0 * scale if args.ground_y is None else args.ground_y),
-            light_direction=ke.Vec3(-0.32, 0.93, -0.17),
+            light_direction=ke.Vec3(0.32, -0.93, 0.17),
             light_color=ke.Vec3(1.0, 0.94, 0.86),
             light_intensity=1.25,
             light_ambient=ke.Vec3(0.38, 0.36, 0.32),

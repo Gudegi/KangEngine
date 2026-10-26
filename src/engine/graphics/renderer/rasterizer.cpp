@@ -550,8 +550,9 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     _cameraUBO->setData(&view, sizeof(view));
     _cameraUBO->setData(&proj, sizeof(proj), sizeof(glm::mat4));
 
+    // Shaders consume surface-to-light vectors; public direction follows emitted rays.
     glm::vec4 viewDir =
-        glm::vec4(glm::normalize(glm::mat3(view) * _light.direction), 0.f);
+        glm::vec4(glm::normalize(glm::mat3(view) * -_light.direction), 0.f);
     _lightUBO->setData(&viewDir, sizeof(glm::vec4), 0 * sizeof(glm::vec4));
 
     // std140 layout keeps legacy fields first:
@@ -973,7 +974,7 @@ void Rasterizer::updateShadowUBO(float activeOrthoHalfSize) {
         static_cast<float>(csmActive ? _cascadeMapSizes[1] : _shadowMapWH),
         static_cast<float>(csmActive ? _cascadeMapSizes[2] : _shadowMapWH),
         static_cast<float>(csmActive ? _cascadeMapSizes[3] : _shadowMapWH)};
-    glm::vec4 shadowParams{_light.direction, _shadowRadius};
+    glm::vec4 shadowParams{-_light.direction, _shadowRadius};
     glm::vec4 shadowInfo{static_cast<float>(_shadowPcfSamples),
                          csmActive ? static_cast<float>(_cascadeCount) : 0.0f,
                          csmActive ? 1.0f : 0.0f, 0.0f};
@@ -1005,7 +1006,7 @@ void Rasterizer::updateShadowPassUBO(const glm::mat4& lightSpaceMatrix,
                                           0.0f};
     const glm::vec4 cascadeMapSizes{static_cast<float>(_shadowMapWH), 0.0f,
                                     0.0f, 0.0f};
-    glm::vec4 shadowParams{_light.direction, _shadowRadius};
+    glm::vec4 shadowParams{-_light.direction, _shadowRadius};
     glm::vec4 shadowInfo{static_cast<float>(_shadowPcfSamples), 0.0f, 0.0f,
                          0.0f};
 
@@ -1066,7 +1067,7 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
                                               const UpAxis upAxis,
                                               float shadowNear,
                                               float shadowFar) {
-    const glm::vec3& sunDir = glm::normalize(_light.direction);
+    const glm::vec3 sunDir = -glm::normalize(_light.direction);
     glm::vec3 up =
         (std::abs(sunDir.y) < 0.99f) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
     if (upAxis == UpAxis::Z)

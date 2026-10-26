@@ -481,7 +481,7 @@ class ScissorLiftApp : public App {
         addRenderable(&planeMaterial, planePrim);
 
         getRenderer().setLight(DirectionalLight{
-            .direction = glm::normalize(glm::vec3(0.5f, 1.f, 0.2f)),
+            .direction = glm::normalize(glm::vec3(-0.5f, -1.f, -0.2f)),
             .color = {1.f, 1.f, 1.f},
             .intensity = 1.f,
             .ambient = {0.15f, 0.15f, 0.15f}});

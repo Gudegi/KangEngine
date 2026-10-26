@@ -32,7 +32,7 @@ class PBROakWoodViewer(ke.App):
         )
         oak_view.prim.set_local_translation(ke.Vec3(0.0, 0.0, 0.02))
 
-        self.set_light_direction(ke.Vec3(-0.35, 0.45, 0.82))
+        self.set_light_direction(ke.Vec3(0.35, -0.45, -0.82))
         self.set_light_color(ke.Vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(1.2)
         self.set_light_ambient(ke.Vec3(0.22, 0.22, 0.22))

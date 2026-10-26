@@ -11,9 +11,9 @@ one meter. The USD example keeps the imported stage's axes and units.
 
 | Type | Typical use | Direction | Visible light limit | Shadows | Materials |
 | --- | --- | --- | --- | --- | --- |
-| Directional | Sun | `direction` points toward the source | 1 | Yes | common, Phong, PBR and ground |
+| Directional | Sun | `direction` follows emitted rays | 1 | Yes | common, Phong, PBR and ground |
 | Point | Bulb | All directions | 4 | No | PBR and PBR ground |
-| Spot | Flashlight or stage light | `direction` points toward the target | 2 | No | PBR and PBR ground |
+| Spot | Flashlight or stage light | `direction` follows emitted rays | 2 | No | PBR and PBR ground |
 | Rect | Ceiling panel | Emits along local -Z | 16 | No | PBR and PBR ground |
 | Dome | Uniform fill light | No direction | No limit (additive) | No | common, Phong, PBR and ground |
 
@@ -39,28 +39,35 @@ look up an existing one. An existing prim at the requested path is reused by
 
 | Type | Setter input and parent transforms | Getter result |
 | --- | --- | --- |
-| Directional | Local direction follows the prim transform; translation has no effect | World direction |
-| Point | `position` overwrites the prim's local translation; `range` stays in world scene units and does not scale | World position |
-| Spot | Same position/range rules as Point; local direction follows the prim transform | World position and direction |
+| Directional | Local direction follows the prim transform; translation has no effect | Local direction |
+| Point | `position` sets the prim's local translation; `range` stays in world scene units and does not scale | Parent-relative position |
+| Spot | Same position/range rules as Point; local direction follows the prim transform | Parent-relative position and local direction |
 | Rect | Local dimensions and local -Z follow the prim transform, including parent scale | Original dimensions and emission values |
 | Dome | Translation, rotation and scale have no effect on uniform illumination | Original emission values |
 
-All `get_*_light()` methods return copies. For Directional, Point and Spot,
-**do not pass a getter result straight back to the setter under transformed
-parents**: convert its world position/direction to local values first. Keeping
-your local light values for repeated updates avoids this conversion. Rect and
-Dome values can be edited and passed back directly. Changing a Point or Spot
-value with a setter also reapplies its `position`, replacing any intervening
-prim translation edit.
+All `get_*_light()` methods return copies of local values. Read a light, edit
+its properties and pass it back to the matching setter; no world-to-local
+conversion is needed, even under transformed parents. Directional and Spot
+`direction` both point along emitted rays. Point and Spot `position` reflects
+the prim's current local translation. Setting an older copy can overwrite a
+position edit made since that copy was read.
+
+For a world-space position, use the prim's `get_world_translation()` rather
+than the light getter.
 
 For the examples below, use these substitutions in a Z-up scene:
 
 | Setting | Y-up examples | Z-up equivalent |
 | --- | --- | --- |
 | Position at height `h` | `(0, h, 0)` | `(0, 0, h)` |
-| Overhead Directional | `(0, 1, 0)` | `(0, 0, 1)` |
+| Downward Directional | `(0, -1, 0)` | `(0, 0, -1)` |
 | Downward Spot | `(0, -1, 0)` | `(0, 0, -1)` |
 | Downward Rect | Rotate -90 degrees about local X | Identity rotation |
+
+When updating older code that used a source-facing Directional vector, negate
+that vector once, including values passed to `App.set_light_direction()`.
+Spot and Rect directions are unchanged. Remove world-to-local conversions
+previously applied to light getter results; those results are now local.
 
 ### Brightness
 
@@ -88,13 +95,13 @@ to change the default light:
 ```python
 sun: ke.scene.Prim = self.scene.get_prim_at_path(path="/lights/default_directional")
 light: ke.scene.DirectionalLight = ke.scene.DirectionalLight()
-light.direction = ke.Vec3(0.0, 1.0, 0.0)
+light.direction = ke.Vec3(0.0, -1.0, 0.0)
 light.intensity = 2.0
 light.ambient = ke.Vec3(0.1, 0.1, 0.1)
 sun.set_directional_light(light=light)
 ```
 
-`direction` points **toward the light source**. With an unrotated prim, the
+`direction` points **from the light toward the scene**. With an unrotated prim, the
 example lights upward-facing surfaces in a Y-up scene. Rotating the prim or
 its parents rotates this direction; translating the prim has no effect.
 `color` is a linear RGB multiplier and `intensity` scales the direct light.
@@ -126,6 +133,14 @@ then move it with `set_local_translation()`. Light fades with distance and
 reaches zero at `range`, measured in world scene units. Scaling the prim does
 not change `range`. `color` and `intensity` control the light's color and
 strength.
+
+To change intensity without moving the point light:
+
+```python
+light: ke.scene.PointLight = point.get_point_light()
+light.intensity = 3.0
+point.set_point_light(light=light)
+```
 
 ## Spot lights
 

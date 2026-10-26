@@ -18,17 +18,17 @@ enum class LightType {
 
 /// Scene-level directional light — infinite distance, no position.
 ///
-/// "direction" is the world-space vector pointing toward the light source
-/// (i.e. the "L" vector in Phong: dot(N, L) > 0 means lit).
-/// Example: (0, 0, 1) -> light comes from -Z (shines in +Z direction).
+/// "direction" points along emitted rays, in the owning prim's local frame.
+/// Renderer inputs use world space. Example: (0, -1, 0) shines down in Y-up.
 struct DirectionalLight {
-    glm::vec3 direction = glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f));
+    glm::vec3 direction = glm::normalize(glm::vec3(-0.2f, -0.5f, -1.0f));
     glm::vec3 color = {1.0f, 1.0f, 1.0f};
     float intensity = 2.0f;
     glm::vec3 ambient = {0.15f, 0.15f, 0.15f};
 };
 
 /// Scene-level point light — finite local light with distance falloff.
+/// Position is the owning prim's parent-relative translation; range is in world units.
 struct PointLight {
     glm::vec3 position = {0.0f, 0.0f, 0.0f};
     glm::vec3 color = {1.0f, 1.0f, 1.0f};
@@ -39,7 +39,8 @@ struct PointLight {
 /// Scene-level spot light — finite cone light with distance and angular
 /// falloff.
 ///
-/// "direction" points from the light toward the target. Cone angles are stored
+/// Position is parent-relative; direction is local and points along emitted rays.
+/// Renderer inputs use world space. Cone angles are stored
 /// in radians; innerConeAngle should be <= outerConeAngle.
 struct SpotLight {
     glm::vec3 position = {0.0f, 0.0f, 0.0f};

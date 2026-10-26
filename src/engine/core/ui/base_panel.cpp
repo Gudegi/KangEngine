@@ -274,7 +274,9 @@ Scene::Prim* addLightPrim(App* app, Scene::LightType type) {
 
     switch (type) {
     case Scene::LightType::Directional: {
-        Scene::DirectionalLight light = app->getLight();
+        Scene::Prim* defaultLight = app->getScene()->getPrimAtPath("/lights/default_directional");
+        Scene::DirectionalLight light = defaultLight
+            ? defaultLight->getDirectionalLight() : Scene::DirectionalLight{};
         prim->setDirectionalLight(light);
         break;
     }
@@ -391,7 +393,7 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
         glm::vec3 ambient = light.ambient;
         float color[3] = {light.color.r, light.color.g, light.color.b};
         bool lightChanged = false;
-        lightChanged |= ImGui::DragFloat3("Direction", &direction.x, 0.02f);
+        lightChanged |= ImGui::DragFloat3("Local ray direction", &direction.x, 0.02f);
         lightChanged |= ImGui::ColorEdit3("Color", color);
         lightChanged |=
             ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 5.0f);
@@ -410,7 +412,7 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
         Scene::PointLight light = component->pointLight();
         float color[3] = {light.color.r, light.color.g, light.color.b};
         bool lightChanged = false;
-        lightChanged |= ImGui::DragFloat3("Position", &light.position.x, 0.01f);
+        lightChanged |= ImGui::DragFloat3("Local position", &light.position.x, 0.01f);
         lightChanged |= ImGui::ColorEdit3("Color", color);
         lightChanged |=
             ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
@@ -430,8 +432,8 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
         float innerDegrees = glm::degrees(light.innerConeAngle);
         float outerDegrees = glm::degrees(light.outerConeAngle);
         bool lightChanged = false;
-        lightChanged |= ImGui::DragFloat3("Position", &light.position.x, 0.01f);
-        lightChanged |= ImGui::DragFloat3("Direction", &direction.x, 0.02f);
+        lightChanged |= ImGui::DragFloat3("Local position", &light.position.x, 0.01f);
+        lightChanged |= ImGui::DragFloat3("Local ray direction", &direction.x, 0.02f);
         lightChanged |= ImGui::ColorEdit3("Color", color);
         lightChanged |=
             ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
@@ -1548,13 +1550,16 @@ void RendererDebugPanel::buildPanel() {
         return;
     }
 
-    DirectionalLight light = _app->getRenderer().light();
+    Scene::Prim* defaultLight = _app->getScene()
+        ? _app->getScene()->getPrimAtPath("/lights/default_directional") : nullptr;
+    DirectionalLight light = defaultLight
+        ? defaultLight->getDirectionalLight() : _app->getRenderer().light();
     glm::vec3 direction = light.direction;
     float color[3] = {light.color.r, light.color.g, light.color.b};
     glm::vec3 ambient = light.ambient;
 
     if (ImGui::CollapsingHeader("Lighting", defaultOpen)) {
-        if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
+        if (ImGui::DragFloat3("Sun local ray direction", &direction.x,
                               0.02f)) {
             _app->setLightDirection(direction);
         }

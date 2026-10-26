@@ -185,9 +185,9 @@ class USDSceneViewer(ke.App):
             self._apply_exposure()
             return
         direction = (
-            (-0.35, -0.45, 0.82)
+            (0.35, 0.45, -0.82)
             if self.result.up_axis == ke.UpAxis.Z
-            else (-0.35, 0.82, -0.45)
+            else (0.35, -0.82, 0.45)
         )
         self.set_light_direction(ke.Vec3(*direction))
         self.set_light_color(ke.Vec3(1.0, 0.94, 0.86))

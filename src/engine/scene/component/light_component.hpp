@@ -9,6 +9,7 @@ namespace Scene {
 
 // Runtime light state attached to a Light prim. Prim owns
 // identity/path/transform; LightComponent owns renderer-independent light data.
+// Getters and setters use local values; direction always follows emitted rays.
 class LightComponent : public ComponentBase {
   public:
     LightType type() const;

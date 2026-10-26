@@ -26,7 +26,7 @@ class PrimShowcaseApp : public App {
     std::vector<ShapeEntry> entries;
 
     glm::vec3 defaultSunDirection() const {
-        return glm::normalize(upPos(0.35f, 0.45f, 0.82f));
+        return glm::normalize(upPos(-0.35f, -0.45f, -0.82f));
     }
 
     // ---------------------------------------------------------------------------

@@ -529,6 +529,7 @@ class App {
 
     // Debug Drawing Helpers
     // Lighting & Environment Controls
+    // Local direction of emitted rays on /lights/default_directional.
     void setLightDirection(const glm::vec3& dir);
     void setLightColor(const glm::vec3& color);
     void setLightIntensity(float intensity);

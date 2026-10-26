@@ -55,7 +55,7 @@ class RotationEncodingComparison(ke.App):
 
     def setup(self):
         self._panel_layout_initialized = False
-        self.set_light_direction(ke.Vec3(-0.35, 0.55, 0.76))
+        self.set_light_direction(ke.Vec3(0.35, -0.55, -0.76))
         self.set_light_intensity(2.0)
         self.set_light_ambient(ke.Vec3(0.18, 0.18, 0.2))
         self.set_camera_view([0.0, -10.5, 4.2], [0.0, 0.0, 1.1])

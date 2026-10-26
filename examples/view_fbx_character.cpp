@@ -81,10 +81,9 @@ class FbxCharacterCppApp : public App {
     void setup() override {
         getCamera().setCameraPos(glm::vec3(0.0f, 1.45f, 3.2f));
         getCamera().setTargetPos(glm::vec3(0.0f, 0.85f, 0.0f));
-        // DirectionalLight::direction is the Phong L vector pointing toward the
-        // light source, so Y-up scenes should use a positive Y component.
+        // Emitted rays travel downward in this Y-up scene.
         setLight(
-            DirectionalLight{glm::normalize(glm::vec3(0.25f, 0.75f, 0.55f)),
+            DirectionalLight{glm::normalize(glm::vec3(-0.25f, -0.75f, -0.55f)),
                              glm::vec3(1.0f), 0.85f, glm::vec3(0.12f)});
 
         getRenderer().settings().background.checkerColor1 =

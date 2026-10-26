@@ -51,7 +51,7 @@ class BvhCharacterCppApp : public App {
         getCamera().setCameraPos(glm::vec3(0.0f, 1.2f, 3.0f));
         getCamera().setTargetPos(glm::vec3(0.0f, 0.9f, 0.0f));
         getRenderer().setLight(
-            DirectionalLight{glm::normalize(glm::vec3(0.25f, 0.8f, 0.5f)),
+            DirectionalLight{glm::normalize(glm::vec3(-0.25f, -0.8f, -0.5f)),
                              glm::vec3(1.0f), 0.9f, glm::vec3(0.18f)});
 
         getRenderer().settings().background.checkerColor1 =

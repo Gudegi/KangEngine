@@ -54,7 +54,7 @@ class BrickwallNormalMapViewer(ke.App):
         )
         ground_view.prim.set_local_translation(ke.Vec3(0.0, -2.0, 0.0))
 
-        self.set_light_direction(ke.Vec3(-0.45, 0.35, 0.82))
+        self.set_light_direction(ke.Vec3(0.45, -0.35, -0.82))
         self.set_light_color(ke.Vec3(1.0, 0.96, 0.88))
         self.set_light_intensity(1.4)
         self.set_light_ambient(ke.Vec3(0.22, 0.22, 0.22))

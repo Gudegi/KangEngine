@@ -49,7 +49,7 @@ class RigidAssetViewer(ke.App):
         )
 
     def setup(self):
-        self.set_light_direction(ke.Vec3(-0.5, -0.7, 1.0))
+        self.set_light_direction(ke.Vec3(0.5, 0.7, -1.0))
         self.set_light_intensity(0.9)
         self.set_light_ambient(ke.Vec3(0.3, 0.3, 0.3))
 

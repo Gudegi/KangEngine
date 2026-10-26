@@ -83,7 +83,7 @@ class ConvexCollisionViewer(ke.App):
         self.reset_rng = np.random.default_rng()
 
     def setup(self):
-        self.set_light_direction(ke.Vec3(-0.35, 0.82, -0.45))
+        self.set_light_direction(ke.Vec3(0.35, -0.82, 0.45))
         self.set_light_intensity(1.25)
         self.set_light_ambient(ke.Vec3(0.3, 0.3, 0.3))
 

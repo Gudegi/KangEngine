@@ -97,7 +97,7 @@ class MjcfArticulationGalleryApp : public App {
     void setup() override {
         getCamera().setCameraPos(glm::vec3(4.5f, -8.0f, 3.0f));
         getRenderer().setLight(
-            DirectionalLight{glm::normalize(glm::vec3(0.35f, 0.45f, 0.82f)),
+            DirectionalLight{glm::normalize(glm::vec3(-0.35f, -0.45f, -0.82f)),
                              glm::vec3(1.0f), 0.75f, glm::vec3(0.10f)});
 
         auto white = ColorLibrary::get(KE::ColorType::WHITE);

@@ -11,7 +11,7 @@ class LightType(Enum):
     DOME: LightType
 
 class DirectionalLight:
-    """Infinite-distance light with an ambient contribution."""
+    """Infinite-distance light with a local emitted-ray direction and ambient fill."""
 
     def __init__(self) -> None: ...
     direction: Vec3
@@ -20,7 +20,7 @@ class DirectionalLight:
     ambient: Vec3
 
 class PointLight:
-    """Local light with position and range in scene units."""
+    """Parent-relative position in scene units; range is in world scene units."""
 
     def __init__(self) -> None: ...
     position: Vec3
@@ -29,7 +29,7 @@ class PointLight:
     range: float
 
 class SpotLight:
-    """Local cone light with cone half-angles in radians."""
+    """Parent-relative position, local emitted-ray direction, and half-angles in radians."""
 
     def __init__(self) -> None: ...
     position: Vec3
