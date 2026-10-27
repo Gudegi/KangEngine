@@ -48,6 +48,12 @@ robot = record.articulation
 For all three formats, choose `ArticulationConfig.free_base()` for a floating
 root or `ArticulationConfig.fixed_base()` for a fixed root.
 
+For a floating root, `record.set_root_velocity(env_ids, linear_velocity,
+angular_velocity)` changes world velocities without resetting pose, DOFs, or
+control commands. The same API is available on articulation batches. See
+[Change velocity without resetting](STATE_AND_RESET.md#change-velocity-without-resetting)
+for CPU/CUDA inputs and application order.
+
 The following visualization example uses an MJCF asset:
 
 Use the same `order` for loading and visualization.

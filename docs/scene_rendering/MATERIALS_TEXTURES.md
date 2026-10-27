@@ -121,7 +121,8 @@ Phong example:
 
 ```python
 diffuse: ke.render.Texture = self.load_texture(
-    path="assets/wood_base_color.png", srgb=True,
+    path="assets/wood_base_color.png",
+    srgb=True,
 )
 normal: ke.render.Texture = self.load_texture(path="assets/wood_normal.png")
 
@@ -136,7 +137,8 @@ PBR example:
 
 ```python
 base_color: ke.render.Texture = self.load_texture(
-    path="assets/metal_base_color.png", srgb=True,
+    path="assets/metal_base_color.png",
+    srgb=True,
 )
 orm: ke.render.Texture = self.load_texture(path="assets/metal_orm.png")
 
@@ -158,6 +160,45 @@ Set the mesh alpha mode to `MASK` or `BLEND` to enable transparency.
 OBJ/MTL imports create material subsets automatically and attach supported
 diffuse, specular, alpha, and normal textures. See
 [Load Assets](LOAD_ASSETS.md) for the import workflow.
+
+## Asset source materials
+
+Prepare source materials before creating instances. This optional example
+defines a visual part with texture filenames; the files are loaded through the
+App when the visual is created:
+
+```python
+import kangengine as ke
+
+paint: ke.material.PBRMaterial = ke.material.PBRMaterial()
+paint.base_color = ke.Vec4(1.0, 1.0, 1.0, 1.0)
+paint.metallic = 0.1
+paint.roughness = 0.45
+paint.texture_paths = {"base_color_texture": "textures/paint.png"}
+
+# The getter returns a copy; assign the updated dictionary back.
+paint.texture_paths = {
+    **paint.texture_paths,
+    "normal_texture": "textures/normal.png",
+}
+part: ke.asset.VisualGeomDesc = ke.asset.VisualGeomDesc(
+    mesh_data=ke.geometry.create_box_data(x_scale=1.0, y_scale=0.6, z_scale=0.8),
+    material=paint,
+)
+```
+
+Use your own filenames and set the containing `RigidDesc.asset_dir` to their
+base directory. Keys are material texture slot names: PBR supports base color,
+normal, metallic-roughness, metallic, roughness, AO, ORM, emissive, opacity slots;
+Phong supports `diffuse_map`, `specular_map`, `alpha_map`, and `normal_map`.
+See [Load and attach textures](#load-and-attach-textures) for App texture loading.
+
+`VisualGeomDesc` retains its material. Attached visuals create App-owned runtime
+materials and textures, so filename-based sources can be reused across Apps.
+Already loaded GPU textures remain tied to their owning App.
+
+The part's `rgba` tint defaults to white. Its alpha, PBR base-color alpha, and
+instance tint multiply once each. OBJ opacity is stored in the part tint.
 
 ## Mesh rendering options
 

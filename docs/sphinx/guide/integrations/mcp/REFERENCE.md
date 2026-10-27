@@ -225,7 +225,7 @@ Protocol/schema errors remain SDK errors. Read `message` for the specific cause.
 | `NOT_READY` | Wait for the first render or job completion. |
 | `BUSY` | Wait for pending work; finish the active job/recording or respect resource limits. |
 | `TIMEOUT` | Confirm the App is still producing frames. Check current state before retrying a mutation. |
-| `CANCELLED` | Request was cancelled; inspect current state before retrying. |
+| `CANCELLED` | Request was canceled; inspect current state before retrying. |
 | `CLOSED` | Start/connect to a running App session. |
 | `CAPTURE_FAILED` | Check rendering, destination permissions and the App's error output. |
 | `OUTPUT_TOO_LARGE` | Request fewer prims/frames/lines or reduce capture resolution. |

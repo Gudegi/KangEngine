@@ -8,6 +8,12 @@ that data is displayed.
 
 ## OBJ with materials
 
+The OBJ and FBX snippets run inside `App.setup()`, with
+`import kangengine as ke`. Set `obj_file` or `fbx_file` to your asset path
+and `scale` to its unit conversion factor (use `1.0` for meter-scale assets).
+The FBX snippet also uses a material created through the App; see
+[Materials and Textures](MATERIALS_TEXTURES.md).
+
 ```python
 result: ke.ObjImportView = self.scene.add_obj(
     path="/environment",
@@ -32,6 +38,54 @@ python ./python/examples/view_obj_scene.py --obj-file /path/to/model.obj
 ```
 
 </details>
+
+## Rigid body sources
+
+These loaders prepare descriptions for the [Rigid Bodies](../simulation/RIGID_BODIES.md)
+workflow. Construct the source first, then register or render instances.
+
+### OBJ files
+
+This optional example needs your own meter-scale, Z-up `chair.obj`. Keep the
+OBJ, MTL, and referenced textures together:
+
+```python
+import kangengine as ke
+
+obj_asset: ke.asset.RigidDesc = ke.asset.load_obj_rigid(obj_path="chair.obj")
+```
+
+Coordinates and scale are preserved. Material subsets, normals, and UVs are
+retained. The default triangle-mesh collider supports static or kinematic bodies.
+Dynamic triangle-mesh collision is unsupported by this rigid-body API.
+
+For a box-shaped OBJ, supply a primitive collider in the same local frame:
+
+```python
+import kangengine as ke
+
+box_collider: ke.asset.CollisionGeomDesc = ke.asset.CollisionGeomDesc(
+    type=ke.asset.CollisionGeomDescType.BOX,
+    size=[0.5, 0.3, 0.4],  # Half extents in meters; match your mesh.
+    position=[0.0, 0.0, 0.0],
+    quat_xyzw=[0.0, 0.0, 0.0, 1.0],
+)
+textured_box: ke.asset.RigidDesc = ke.asset.load_obj_rigid(
+    obj_path="textured_box.obj", collision_geoms=[box_collider]
+)
+```
+
+For a concave object such as a cup, supply several primitive or convex pieces in
+the same local frame as its visual mesh. The OBJ loader does not perform
+automatic convex decomposition. Prepare the pieces separately and supply them
+through `collision_geoms`.
+
+### Single-body imports
+
+As an alternative to building a description, pass a single-body MJCF returned
+by `world.load_mjcf(mjcf_path=...)` to `world.add_rigid()`.
+`ke.asset.RigidDesc.from_articulation(description)` is available when explicit
+conversion from a single-body `ArticulationDesc` is needed.
 
 ## FBX mesh
 
@@ -84,7 +138,11 @@ diagnostics. Color maps use sRGB decoding unless `sourceColorSpace` is `raw`; no
 maps remain linear. For manually loaded textures, see
 [Materials and Textures](MATERIALS_TEXTURES.md#load-and-attach-textures).
 
+The parsing snippet uses `usd_file`, the path to your root USD layer:
+
 ```python
+import kangengine as ke
+
 result: ke.asset.USDImportResult = ke.asset.USDLoader.parse(
     usd_path=usd_file,
     scale=1.0,

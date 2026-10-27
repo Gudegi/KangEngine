@@ -117,6 +117,11 @@ shape, strides, stream, ready event, version, and optional owner token.
 
 ## Writing root and DOF state
 
+For the shared CPU/CUDA reset input table, velocity-only writes, and ordering,
+see [State and Reset](../simulation/STATE_AND_RESET.md). Rigid ray and height
+query device rules are in
+[Procedural Terrain](../simulation/PROCEDURAL_TERRAIN.md#query-devices-and-environment-selection).
+
 CPU and GPU worlds use the same public setters:
 
 ```python

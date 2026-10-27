@@ -1,4 +1,4 @@
-:root {
+body {
   --kangengine-accent: #325546;
   --kangengine-accent-hover: #274237;
   --kangengine-accent-soft: rgba(50, 85, 70, 0.1);
@@ -24,7 +24,7 @@ body {
 
 article .sig-name,
 article .sig-prename {
-  color: #255a92;
+  color: var(--color-api-name);
 }
 
 .api-origin {
@@ -42,8 +42,8 @@ article .sig-prename {
 }
 
 .api-origin-native {
-  color: #255a92;
-  background: color-mix(in srgb, #255a92 10%, transparent);
+  color: var(--color-api-name);
+  background: color-mix(in srgb, var(--color-api-name) 10%, transparent);
 }
 
 .api-origin-python {
@@ -54,7 +54,39 @@ article .sig-prename {
 a,
 a:visited {
   color: var(--color-foreground-primary);
-  text-decoration-color: color-mix(in srgb, currentColor 32%, transparent);
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+article a.reference {
+  text-decoration-line: underline;
+}
+
+article code.literal {
+  color: var(--kangengine-accent);
+  background: var(--color-inline-code-background);
+  border-radius: 0.2rem;
+  padding: 0.1em 0.25em;
+}
+
+article a.reference code.literal {
+  color: inherit;
+}
+
+article div.highlight {
+  border: 1px solid var(--color-background-border);
+  border-radius: 0.3rem;
+}
+
+article h2 {
+  margin-top: 2.4rem;
+}
+
+.sidebar-tree .current-page>.reference,
+.toc-tree li.scroll-current>a.reference {
+  box-shadow: inset 3px 0 var(--kangengine-accent);
+  background: var(--kangengine-accent-soft);
+  font-weight: 600;
 }
 
 a:hover,
@@ -198,7 +230,7 @@ article dl.py.class dl.py.attribute>dt.sig {
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  body:not([data-theme="light"]) {
     --kangengine-accent: #9bc6b4;
     --kangengine-accent-hover: #b8d8cb;
     --kangengine-accent-soft: rgba(127, 179, 156, 0.14);
@@ -208,5 +240,21 @@ article dl.py.class dl.py.attribute>dt.sig {
     --color-link--visited: var(--color-foreground-primary);
     --color-link--hover: #b8d8cb;
     --color-inline-code-background: rgba(127, 179, 156, 0.16);
+    --color-api-name: #91bce8;
+    --color-api-pre-name: #91bce8;
   }
+}
+
+body[data-theme="dark"] {
+  --kangengine-accent: #9bc6b4;
+  --kangengine-accent-hover: #b8d8cb;
+  --kangengine-accent-soft: rgba(127, 179, 156, 0.14);
+  --color-brand-primary: #7fb39c;
+  --color-brand-content: #9bc6b4;
+  --color-link: var(--color-foreground-primary);
+  --color-link--visited: var(--color-foreground-primary);
+  --color-link--hover: #b8d8cb;
+  --color-inline-code-background: rgba(127, 179, 156, 0.16);
+  --color-api-name: #91bce8;
+  --color-api-pre-name: #91bce8;
 }

@@ -267,6 +267,15 @@ def process_object_description(app, domain, objtype, contentnode):
     )
 
 
+def resolve_example_guide_links(app, relative_path, parent_docname, content):
+    if relative_path != Path("../examples/INDEX.md"):
+        return
+
+    # The Sphinx examples page sits outside guide/, unlike the included source.
+    for section in ("simulation", "animation"):
+        content[0] = content[0].replace(f"](../{section}/", f"](../guide/{section}/")
+
+
 def setup(app):
     app.add_config_value(
         "stub_docstrings_fingerprint", stub_docstrings_fingerprint, "env"
@@ -278,6 +287,7 @@ def setup(app):
     # authority for facade signatures instead of partial runtime annotations.
     app.connect("autodoc-process-signature", process_signature, priority=900)
     app.connect("autodoc-process-bases", process_bases)
+    app.connect("include-read", resolve_example_guide_links)
     app.connect("object-description-transform", process_object_description)
     # Run before Napoleon so Google-style Args/Returns sections sourced from
     # stubs are converted exactly like runtime Python and native docstrings.

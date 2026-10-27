@@ -7,6 +7,8 @@ skeletons or skinned characters, and provides a motion sequencer panel.
 - [Articulation Motion](ARTICULATION_MOTION.md)
 - [Pose Visualization](VISUALS.md)
 - [Motion Retargeting](RETARGETING.md)
+- [Motion Matching](MOTION_MATCHING.md)
+- [Foot Contact](FOOT_CONTACT.md)
 - [SMPL Models](SMPL.md)
 
 All supported motion sources produce the same `ke.animation.SkeletonMotion`

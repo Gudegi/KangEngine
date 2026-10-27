@@ -3,6 +3,12 @@
 Contact sensors attach to a rigid or articulation simulation view. The current
 GPU sensor reports contact count, contact mask, and accumulated normal impulse.
 
+The following snippet assumes a CUDA `world` with rigid bodies registered
+under `obj_id=0` and the GPU runtime initialized. See
+[GPU initialization](../advanced/PHYSX_GPU.md#initialization-and-device-rules)
+for setup and [Object identifiers](INDEX.md#object-identifiers) for the
+environment, object, and body identifiers. These sensors require CUDA simulation.
+
 ```python
 rigids = world.get_rigid_batch(obj_id=0)
 contact = rigids.add_contact_sensor(body_ids=[0], name="contact")
