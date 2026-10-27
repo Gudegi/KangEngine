@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/geometry.html">ke.geometry</a></li>
@@ -344,7 +358,7 @@
 <p><code class="docutils literal notranslate"><span class="pre">ke.Quat</span></code> objects consistently use <code class="docutils literal notranslate"><span class="pre">wxyz</span></code> ordering, including construction
 from Python or NumPy values and conversion with <code class="docutils literal notranslate"><span class="pre">np.asarray(q)</span></code>. Use
 <code class="docutils literal notranslate"><span class="pre">ke.Quat.from_xyzw(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">q.to_xyzw()</span></code> at APIs that explicitly use
-<code class="docutils literal notranslate"><span class="pre">rot_xyzw</span></code> arrays. Physics and simulation state arrays retain their documented
+<code class="docutils literal notranslate"><span class="pre">quat_xyzw</span></code> arrays. Physics and simulation state arrays retain their documented
 <code class="docutils literal notranslate"><span class="pre">xyzw</span></code> ordering.</p>
 <p>KangEngine’s Python API is organized by task and domain. Start with the user
 guide for runnable workflows; use the API Reference for exact signatures.</p>

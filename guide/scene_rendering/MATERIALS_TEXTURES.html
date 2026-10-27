@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Load Assets" href="LOAD_ASSETS.html"><link rel="prev" title="Scene and Rendering" href="INDEX.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Scene Lighting" href="LIGHTING.html"><link rel="prev" title="Scene and Rendering" href="INDEX.html">
         <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/scene_rendering/MATERIALS_TEXTURES.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -470,11 +484,16 @@ material with a PBR material does not translate <code class="docutils literal no
 <section id="load-and-attach-textures">
 <h2>Load and attach textures<a class="headerlink" href="#load-and-attach-textures" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">App.load_texture()</span></code> loads a texture through <code class="docutils literal notranslate"><span class="pre">ke.render</span></code>, retains it for the
-application lifetime, and reuses it when the same normalized path is requested
-again.</p>
+application lifetime, and reuses it for the same normalized path, <code class="docutils literal notranslate"><span class="pre">flip</span></code> and
+<code class="docutils literal notranslate"><span class="pre">srgb</span></code> settings.</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">srgb=True</span></code> for sRGB color images. Normal, roughness, metallic and other
+data maps use <code class="docutils literal notranslate"><span class="pre">srgb=False</span></code>, which is the default.</p>
 <p>Phong example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">diffuse</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/wood_base_color.png&quot;</span><span class="p">)</span>
-<span class="n">normal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/wood_normal.png&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">diffuse</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">Texture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;assets/wood_base_color.png&quot;</span><span class="p">,</span>
+    <span class="n">srgb</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">normal</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">Texture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;assets/wood_normal.png&quot;</span><span class="p">)</span>
 
 <span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_phong_material</span><span class="p">(</span>
     <span class="n">diffuse</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
@@ -484,8 +503,11 @@ again.</p>
 </pre></div>
 </div>
 <p>PBR example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">base_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/metal_base_color.png&quot;</span><span class="p">)</span>
-<span class="n">orm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/metal_orm.png&quot;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">base_color</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">Texture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;assets/metal_base_color.png&quot;</span><span class="p">,</span>
+    <span class="n">srgb</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">orm</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">Texture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;assets/metal_orm.png&quot;</span><span class="p">)</span>
 
 <span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_pbr_material</span><span class="p">(</span>
     <span class="n">base_color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
@@ -496,9 +518,48 @@ again.</p>
 </div>
 <p>Material color factors multiply their corresponding textures. Use a white
 factor when the texture should appear without an additional tint.</p>
+<p>For a separate PBR transparency mask, pass <code class="docutils literal notranslate"><span class="pre">opacity_texture</span></code> to
+<code class="docutils literal notranslate"><span class="pre">create_pbr_material()</span></code>. Load it with <code class="docutils literal notranslate"><span class="pre">srgb=False</span></code>; its red channel replaces
+the base-color texture alpha and is multiplied by the base-color alpha factor.
+Set the mesh alpha mode to <code class="docutils literal notranslate"><span class="pre">MASK</span></code> or <code class="docutils literal notranslate"><span class="pre">BLEND</span></code> to enable transparency.</p>
 <p>OBJ/MTL imports create material subsets automatically and attach supported
 diffuse, specular, alpha, and normal textures. See
 <a class="reference internal" href="LOAD_ASSETS.html"><span class="std std-doc">Load Assets</span></a> for the import workflow.</p>
+</section>
+<section id="asset-source-materials">
+<h2>Asset source materials<a class="headerlink" href="#asset-source-materials" title="Link to this heading">¶</a></h2>
+<p>Prepare source materials before creating instances. This optional example
+defines a visual part with texture filenames; the files are loaded through the
+App when the visual is created:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">paint</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">PBRMaterial</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">PBRMaterial</span><span class="p">()</span>
+<span class="n">paint</span><span class="o">.</span><span class="n">base_color</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="n">paint</span><span class="o">.</span><span class="n">metallic</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">paint</span><span class="o">.</span><span class="n">roughness</span> <span class="o">=</span> <span class="mf">0.45</span>
+<span class="n">paint</span><span class="o">.</span><span class="n">texture_paths</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;base_color_texture&quot;</span><span class="p">:</span> <span class="s2">&quot;textures/paint.png&quot;</span><span class="p">}</span>
+
+<span class="c1"># The getter returns a copy; assign the updated dictionary back.</span>
+<span class="n">paint</span><span class="o">.</span><span class="n">texture_paths</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">**</span><span class="n">paint</span><span class="o">.</span><span class="n">texture_paths</span><span class="p">,</span>
+    <span class="s2">&quot;normal_texture&quot;</span><span class="p">:</span> <span class="s2">&quot;textures/normal.png&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">part</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">VisualGeomDesc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">VisualGeomDesc</span><span class="p">(</span>
+    <span class="n">mesh_data</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_box_data</span><span class="p">(</span><span class="n">x_scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">y_scale</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">z_scale</span><span class="o">=</span><span class="mf">0.8</span><span class="p">),</span>
+    <span class="n">material</span><span class="o">=</span><span class="n">paint</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Use your own filenames and set the containing <code class="docutils literal notranslate"><span class="pre">RigidDesc.asset_dir</span></code> to their
+base directory. Keys are material texture slot names: PBR supports base color,
+normal, metallic-roughness, metallic, roughness, AO, ORM, emissive, opacity slots;
+Phong supports <code class="docutils literal notranslate"><span class="pre">diffuse_map</span></code>, <code class="docutils literal notranslate"><span class="pre">specular_map</span></code>, <code class="docutils literal notranslate"><span class="pre">alpha_map</span></code>, and <code class="docutils literal notranslate"><span class="pre">normal_map</span></code>.
+See <a class="reference internal" href="#load-and-attach-textures">Load and attach textures</a> for App texture loading.</p>
+<p><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code> retains its material. Attached visuals create App-owned runtime
+materials and textures, so filename-based sources can be reused across Apps.
+Already loaded GPU textures remain tied to their owning App.</p>
+<p>The part’s <code class="docutils literal notranslate"><span class="pre">rgba</span></code> tint defaults to white. Its alpha, PBR base-color alpha, and
+instance tint multiply once each. OBJ opacity is stored in the part tint.</p>
 </section>
 <section id="mesh-rendering-options">
 <h2>Mesh rendering options<a class="headerlink" href="#mesh-rendering-options" title="Link to this heading">¶</a></h2>
@@ -570,12 +631,12 @@ triangle example.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="LOAD_ASSETS.html">
+          <a class="next-page" href="LIGHTING.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Load Assets</div>
+                <div class="title">Scene Lighting</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -626,6 +687,7 @@ triangle example.</p>
 <li><a class="reference internal" href="#create-a-phong-material">Create a Phong material</a></li>
 <li><a class="reference internal" href="#create-a-pbr-material">Create a PBR material</a></li>
 <li><a class="reference internal" href="#load-and-attach-textures">Load and attach textures</a></li>
+<li><a class="reference internal" href="#asset-source-materials">Asset source materials</a></li>
 <li><a class="reference internal" href="#mesh-rendering-options">Mesh rendering options</a></li>
 <li><a class="reference internal" href="#vertex-color-styles">Vertex-color styles</a></li>
 <li><a class="reference internal" href="#shader-and-pipeline-sharing">Shader and pipeline sharing</a></li>

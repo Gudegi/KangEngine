@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -716,6 +730,33 @@ debug drawing.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="kangengine.utils.math.quat_wxyz_to_matrix_numpy">
+<span class="sig-prename descclassname"><span class="pre">kangengine.utils.math.</span></span><span class="sig-name descname"><span class="pre">quat_wxyz_to_matrix_numpy</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.utils.math.quat_wxyz_to_matrix_numpy" title="Link to this definition">¶</a></dt>
+<dd><p>Convert NumPy wxyz quaternion arrays to float32 rotation matrices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>quat</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArrayLike</span></code></span>) – Shape (…, 4), in wxyz order. Each quaternion is normalized internally.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GenericAlias</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float32</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Shape (…, 3, 3), preserving batch dimensions. Matrices act on column vectors.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – The final dimension is not 4, or any float32 squared norm
+    is non-finite or at most 1e-12.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="kangengine.utils.math.quat_wxyz_twist_angle">
 <span class="sig-prename descclassname"><span class="pre">kangengine.utils.math.</span></span><span class="sig-name descname"><span class="pre">quat_wxyz_twist_angle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.utils.math.quat_wxyz_twist_angle" title="Link to this definition">¶</a></dt>
 <dd><p>Return the signed local-axis twist angle from a wxyz quaternion.</p>
@@ -966,6 +1007,7 @@ debug drawing.</p>
 <li><a class="reference internal" href="#kangengine.utils.math.quat_xyzw_rotate"><code class="docutils literal notranslate"><span class="pre">quat_xyzw_rotate()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.utils.math.quat_xyzw_from_two_vectors"><code class="docutils literal notranslate"><span class="pre">quat_xyzw_from_two_vectors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.utils.math.quat_wxyz_to_xyzw"><code class="docutils literal notranslate"><span class="pre">quat_wxyz_to_xyzw()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.utils.math.quat_wxyz_to_matrix_numpy"><code class="docutils literal notranslate"><span class="pre">quat_wxyz_to_matrix_numpy()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.utils.math.quat_wxyz_twist_angle"><code class="docutils literal notranslate"><span class="pre">quat_wxyz_twist_angle()</span></code></a></li>
 </ul>
 </li>

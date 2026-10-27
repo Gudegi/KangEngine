@@ -1,0 +1,1127 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Foot Contact" href="FOOT_CONTACT.html"><link rel="prev" title="Motion Retargeting" href="RETARGETING.html">
+        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/animation/MOTION_MATCHING.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+
+<title>Motion Matching — KangEngine</title>
+
+<link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style>
+
+
+</head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">KangEngine</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">KangEngine</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../API_OVERVIEW.html">API Overview</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input aria-label="Toggle navigation of Getting Started" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/INSTALLATION.html">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/VERIFY_INSTALLATION.html">Verify Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/HELLO_APP.html">Hello App</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/FIRST_SCENE.html">First Scene</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/FIRST_SIMULATION.html">First Simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LIGHTING.html">Scene Lighting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION.html">Articulations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/DOF_CONTROL.html">Control DOFs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="LOAD_MOTION.html">Load and Play Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ARTICULATION_MOTION.html">Articulation Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="FOOT_CONTACT.html">Foot Contact</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SMPL.html">SMPL Models</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/asset.html">ke.asset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/animation.html">ke.animation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/exports.html">ke.exports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/motion.html">ke.motion_module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/material.html">ke.material</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/rendering.html">ke.render</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/physics.html">ke.physics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/simulation.html">ke.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/terrain.html">ke.terrain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/visual.html">ke.visual</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/utils.html">ke.utils</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/index.html">Examples</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page github-repository-link">
+  <a
+    class="muted-link"
+    href="https://github.com/Gudegi/KangEngine"
+    target="_blank"
+    rel="noopener noreferrer"
+    title="KangEngine on GitHub"
+    aria-label="KangEngine on GitHub"
+  >
+    <svg viewBox="-1 -1 26 26" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58l-.02-2.26c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18a4.64 4.64 0 0 1 1.24 3.22c0 4.61-2.81 5.62-5.48 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
+      />
+    </svg>
+    <span class="visually-hidden">KangEngine on GitHub</span>
+  </a>
+</div>
+<div class="view-this-page">
+  <a class="muted-link" href="../../_sources/guide/animation/MOTION_MATCHING.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="motion-matching">
+<h1>Motion Matching<a class="headerlink" href="#motion-matching" title="Link to this heading">¶</a></h1>
+<p>Motion Matching selects a frame from a motion database using the current pose
+and desired trajectory, then plays the selected clip with root alignment and
+optional transition smoothing.</p>
+<p>The examples play kinematic root motion. Requested speed and direction
+are approximate; physics tracking, collision checks, foot locking,
+Motion Graph, and learned matching are not included.</p>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h2>
+<p>The example scripts require a repository checkout and an OpenGL graphical
+session. Install the motion-matching extra, then prepare either dataset below.
+Datasets are downloaded separately.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;kangengine[motion-matching]&#39;</span>
+</pre></div>
+</div>
+<section id="lafan-geno-setup">
+<h3>LAFAN / Geno setup<a class="headerlink" href="#lafan-geno-setup" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p>Download <strong>BVH Data</strong> from <a class="reference external" href="https://github.com/orangeduck/lafan1-resolved#download">lafan1-resolved</a>.
+Extract it and set <code class="docutils literal notranslate"><span class="pre">LAFAN_DIR</span></code> to the directory directly containing
+<code class="docutils literal notranslate"><span class="pre">pushAndStumble1_subject5.bvh</span></code>, <code class="docutils literal notranslate"><span class="pre">run1_subject5.bvh</span></code>, and <code class="docutils literal notranslate"><span class="pre">walk1_subject5.bvh</span></code>.</p></li>
+<li><p>Download <a class="reference external" href="https://github.com/orangeduck/lafan1-resolved/blob/main/Geno_bind.fbx">Geno_bind.fbx</a>
+into <code class="docutils literal notranslate"><span class="pre">assets/external/Geno/</span></code> (create the directory if needed).</p></li>
+<li><p>From the repository root, run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/examples/animation/motion_matching_lafan.py<span class="w"> </span>--dataset<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LAFAN_DIR</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>The first run builds
+<code class="docutils literal notranslate"><span class="pre">output/motion_matching_lafan/database.npz</span></code> and its readable summary.
+Delete this NPZ when changing the dataset or feature settings.</p>
+</li>
+</ol>
+</section>
+<section id="g1-seed-setup">
+<h3>G1 / SEED setup<a class="headerlink" href="#g1-seed-setup" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p>Obtain access to <a class="reference external" href="https://huggingface.co/datasets/bones-studio/seed">BONES-SEED</a>
+through its dataset page, then download <code class="docutils literal notranslate"><span class="pre">g1.tar.gz</span></code> from <strong>Files and versions</strong>.
+The SOMA archives are not needed.</p></li>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">SEED_DIR</span></code> to your extraction directory and extract the archive there:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tar<span class="w"> </span>-xzf<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SEED_DIR</span><span class="s2">/g1.tar.gz&quot;</span><span class="w"> </span>-C<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SEED_DIR</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>The resulting layout is <code class="docutils literal notranslate"><span class="pre">g1/csv/{date}/{motion_name}.csv</span></code>. Preserve the CSV
+headers and subdirectories; the example searches recursively.</p>
+</li>
+<li><p>From the repository root, run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/examples/animation/motion_matching_g1.py<span class="w"> </span>--dataset<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SEED_DIR</span><span class="s2">/g1/csv&quot;</span>
+</pre></div>
+</div>
+<p>It uses the repository’s
+<code class="docutils literal notranslate"><span class="pre">assets/characters/g1/g1_29dof.xml</span></code> and builds the DB on each run.
+<code class="docutils literal notranslate"><span class="pre">CLIP_PREFIXES</span></code> selects locomotion families; up to three original takes per
+family and their available <code class="docutils literal notranslate"><span class="pre">_M</span></code> mirrors are included.</p>
+</li>
+</ol>
+</section>
+<section id="control-playback">
+<h3>Control playback<a class="headerlink" href="#control-playback" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">LAFAN_DIR</span></code> and <code class="docutils literal notranslate"><span class="pre">SEED_DIR</span></code> are your chosen extraction directories. Use WASD or
+the gamepad left stick to move, Shift or the right bumper to run, Space to
+pause, and R to reset. Append <code class="docutils literal notranslate"><span class="pre">--benchmark-search</span></code> for a headless search check.</p>
+</section>
+</section>
+<section id="build-a-database">
+<h2>Build a database<a class="headerlink" href="#build-a-database" title="Link to this heading">¶</a></h2>
+<p>Prepare <code class="docutils literal notranslate"><span class="pre">motions</span></code>, a list of loaded <code class="docutils literal notranslate"><span class="pre">ke.animation.SkeletonMotion</span></code> clips,
+using <a class="reference internal" href="LOAD_MOTION.html"><span class="std std-doc">Load and Play Motion</span></a>. For example, collect compatible
+loaded clips with <code class="docutils literal notranslate"><span class="pre">motions</span> <span class="pre">=</span> <span class="pre">[walk_motion,</span> <span class="pre">run_motion]</span></code> before the snippet below.
+Clips must share joint names, hierarchy, and bind transforms; their FPS may differ. Convert
+positions to meters during import. Rotations use WXYZ quaternions.</p>
+<p>This configuration uses LAFAN joint names with Y-up and Z-forward:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">config</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingConfig</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingConfig</span><span class="p">(</span>
+    <span class="n">position_joints</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;LeftToeBase&quot;</span><span class="p">,</span> <span class="s2">&quot;RightToeBase&quot;</span><span class="p">),</span>
+    <span class="n">velocity_joints</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;LeftToeBase&quot;</span><span class="p">,</span> <span class="s2">&quot;RightToeBase&quot;</span><span class="p">,</span> <span class="s2">&quot;Hips&quot;</span><span class="p">),</span>
+    <span class="n">trajectory_times</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="n">up_axis</span><span class="o">=</span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>
+    <span class="n">forward_axis</span><span class="o">=</span><span class="s2">&quot;Z&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">database</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingDatabase</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingDatabase</span><span class="o">.</span><span class="n">from_motions</span><span class="p">(</span><span class="n">motions</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Walking features combine joint positions, joint velocities, future planar
+positions, and future headings in the current reference frame. Only frames
+with a complete future horizon are searchable; playback can reach the clip end.</p>
+</section>
+<section id="playback-and-trajectory">
+<h2>Playback and trajectory<a class="headerlink" href="#playback-and-trajectory" title="Link to this heading">¶</a></h2>
+<p>Multiple controllers can share one database while keeping independent playback
+and smoothing state. Search runs in C++ by default; <code class="docutils literal notranslate"><span class="pre">search_backend=&quot;python&quot;</span></code>
+selects the NumPy reference implementation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.animation.matching</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_walking_query</span>
+
+<span class="n">controller</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingController</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingController</span><span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="n">transition_half_life</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">state</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">SkeletonState</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">step_with_query</span><span class="p">(</span>
+    <span class="n">dt</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">60</span><span class="p">,</span>
+    <span class="n">query_provider</span><span class="o">=</span><span class="k">lambda</span> <span class="n">current</span><span class="p">:</span> <span class="n">make_walking_query</span><span class="p">(</span>
+        <span class="n">current</span><span class="p">,</span>
+        <span class="n">desired_velocity</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">),</span>
+        <span class="n">facing_angle</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">half_life</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Velocity is a world-space planar vector in m/s. Facing is radians about
+<code class="docutils literal notranslate"><span class="pre">up_axis</span></code>, measured from <code class="docutils literal notranslate"><span class="pre">forward_axis</span></code>. The returned state can be passed to a
+compatible visual’s <code class="docutils literal notranslate"><span class="pre">apply_state(state=state)</span></code>.</p>
+<p>For constant-velocity goals without trajectory springs, use
+<code class="docutils literal notranslate"><span class="pre">controller.step(dt=dt,</span> <span class="pre">desired_velocity=velocity)</span></code>.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Controls</p></th>
+<th class="head"><p>Meaning of zero</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">transition_half_life</span></code></p></td>
+<td><p>Decay of pose offsets after a clip switch; larger values smooth longer</p></td>
+<td><p>Disable pose smoothing</p></td>
+</tr>
+<tr class="row-odd"><td><p>Trajectory <code class="docutils literal notranslate"><span class="pre">half_life</span></code></p></td>
+<td><p>Predicted velocity/facing response to goals; larger values respond more gradually</p></td>
+<td><p>Snap future velocity and facing to goals</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dt</span></code></p></td>
+<td><p>Elapsed playback time for this step, e.g. <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">/</span> <span class="pre">60</span></code> at 60 Hz</p></td>
+<td><p>Do not advance or search</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>All three use seconds. See the query and playback reference below for callback
+inputs, pose history, and search timing.</p>
+</section>
+<section id="save-and-load">
+<h2>Save and load<a class="headerlink" href="#save-and-load" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">database</span><span class="o">.</span><span class="n">save_npz</span><span class="p">(</span><span class="s2">&quot;output/walking.npz&quot;</span><span class="p">,</span> <span class="n">write_summary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">restored</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingDatabase</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingDatabase</span><span class="o">.</span><span class="n">from_npz</span><span class="p">(</span><span class="s2">&quot;output/walking.npz&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>NPZ stores source motions, features, normalization, and reference tracks.
+Loading rebuilds the search index without extracting features or running
+filters. The optional <code class="docutils literal notranslate"><span class="pre">.summary.json</span></code> lists clip names, frame counts, and FPS
+for inspection; it is not used during loading.</p>
+</section>
+<section id="query-and-playback-reference">
+<h2>Query and playback reference<a class="headerlink" href="#query-and-playback-reference" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">MotionMatchingDatabase</span></code> builds, normalizes, stores, and searches features.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MotionMatchingController</span></code> schedules searches and owns independent playback.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WalkingFeatures</span></code> supplies ground-plane features; custom builders can replace it.</p></li>
+</ul>
+<pre  class="mermaid">
+        flowchart LR
+    Clips[&quot;SkeletonMotion clips&quot;] --&gt;|Feature construction| DB[&quot;MotionMatchingDatabase&quot;]
+    Input[&quot;Movement goals&quot;] --&gt;|Trajectory prediction + encoding| Query[&quot;Query features&quot;]
+    subgraph Controller[&quot;MotionMatchingController: search scheduling + playback&quot;]
+        Query --&gt;|At search boundaries| Search[&quot;Database search&quot;]
+        Search --&gt; Match[&quot;MotionMatch&quot;]
+        Match --&gt; Player[&quot;SkeletonMotionPlayer&quot;]
+        Player --&gt;|Clip sampling + root alignment + smoothing| Pose[&quot;SkeletonState&quot;]
+        Pose --&gt;|Current pose + velocities| Query
+    end
+    DB --&gt; Search
+    </pre><section id="query-inputs">
+<h3>Query inputs<a class="headerlink" href="#query-inputs" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">query_provider(current)</span></code> receives this controller at the current playback time
+and must return normalized, weighted query features with shape <code class="docutils literal notranslate"><span class="pre">[D]</span></code>.
+<code class="docutils literal notranslate"><span class="pre">make_walking_query()</span></code> uses the current smoothed output positions and finite-difference velocities,
+with a predicted trajectory from movement goals. <code class="docutils literal notranslate"><span class="pre">controller.make_query(...)</span></code>
+uses the same current pose with caller-supplied trajectory features. External
+physics or IK results are not read automatically; pass world-space
+<code class="docutils literal notranslate"><span class="pre">joint_positions</span></code>, <code class="docutils literal notranslate"><span class="pre">joint_velocities</span></code> (both <code class="docutils literal notranslate"><span class="pre">[J,3]</span></code> in skeleton order),
+<code class="docutils literal notranslate"><span class="pre">skeleton_tree</span></code>, and <code class="docutils literal notranslate"><span class="pre">reference_position</span></code>/<code class="docutils literal notranslate"><span class="pre">reference_rotation_wxyz</span></code> to
+<code class="docutils literal notranslate"><span class="pre">database.make_query(...)</span></code> to use them. Without <code class="docutils literal notranslate"><span class="pre">joint_positions</span></code>, the database
+method samples cached source-clip features.
+The callback must not mutate or re-enter the controller.</p>
+</section>
+<section id="pose-history">
+<h3>Pose history<a class="headerlink" href="#pose-history" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">MotionMatchingController(...,</span> <span class="pre">history_size=10)</span></code> retains output poses in
+<code class="docutils literal notranslate"><span class="pre">controller.history</span></code>, oldest first. The size must be at least 2. Each positive
+step appends one pose; reset clears the history and stores the initial pose.
+Clip switches preserve it, and <code class="docutils literal notranslate"><span class="pre">dt=0</span></code> adds nothing. No timestamps are stored.
+Query velocities use only the previous output and current joint positions
+divided by their elapsed <code class="docutils literal notranslate"><span class="pre">dt</span></code>; they are zero immediately after reset. Internal
+search boundaries use partial-step time without adding history entries.
+Changing step sizes changes the difference interval and can change search results.
+Smoother and trajectory spring velocities retain their existing calculation.</p>
+</section>
+<section id="search-scheduling">
+<h3>Search scheduling<a class="headerlink" href="#search-scheduling" title="Link to this heading">¶</a></h3>
+<p>A search boundary occurs on the first positive step after reset, every
+<code class="docutils literal notranslate"><span class="pre">search_interval</span></code> seconds (default <code class="docutils literal notranslate"><span class="pre">0.15</span></code>), or when the active clip ends.
+<code class="docutils literal notranslate"><span class="pre">step_with_query()</span></code> splits <code class="docutils literal notranslate"><span class="pre">dt</span></code> at those boundaries: the callback can run zero,
+one, or several times in one step. Between searches, the selected clip advances.
+With <code class="docutils literal notranslate"><span class="pre">dt=0</span></code>, playback is sampled without advancing or calling the provider.</p>
+</section>
+<section id="trajectory-prediction">
+<h3>Trajectory prediction<a class="headerlink" href="#trajectory-prediction" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">predict_walking_trajectory()</span></code> accepts the same goal inputs and returns world
+positions and directions with shape <code class="docutils literal notranslate"><span class="pre">(1</span> <span class="pre">+</span> <span class="pre">len(trajectory_times),</span> <span class="pre">3)</span></code>. The first
+sample is the current reference; the remaining samples are future predictions.
+It does not advance playback.</p>
+<p>Low-level <code class="docutils literal notranslate"><span class="pre">trajectory_spring_position/rotation(dt=...)</span></code> also accept an array of
+independent future time horizons; these are offsets from the supplied state,
+not successive frame steps.</p>
+</section>
+</section>
+<section id="reference-filtering">
+<h2>Reference filtering<a class="headerlink" href="#reference-filtering" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">WalkingFeatures()</span></code> leaves filtering off. To reduce gait-related sway in the
+reference trajectory, pass a filtered builder during database construction:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">features</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">WalkingFeatures</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">WalkingFeatures</span><span class="p">(</span>
+    <span class="n">position_filter_window</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">rotation_filter_window</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">database</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionMatchingDatabase</span><span class="o">.</span><span class="n">from_motions</span><span class="p">(</span>
+    <span class="n">motions</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span> <span class="n">feature_builder</span><span class="o">=</span><span class="n">features</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Reference filtering uses SciPy’s Savitzky-Golay function. Set a filter window to
+<code class="docutils literal notranslate"><span class="pre">0</span></code> to disable it. Both examples enable filtering. The motion-matching extra
+installs SciPy.</p>
+<p>The filter creates a ground-plane reference track without changing the source
+Hips motion, skeleton, or skin binding. Playback aligns this track across clip
+switches; no additional Simulation joint is introduced. Reference position and
+heading are continuous at a switch, but their velocities can change.</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">controller.reference_position</span></code>, <code class="docutils literal notranslate"><span class="pre">reference_rotation_wxyz</span></code>,
+<code class="docutils literal notranslate"><span class="pre">reference_linear_velocity</span></code>, and <code class="docutils literal notranslate"><span class="pre">reference_angular_velocity</span></code> for trajectory
+queries. The <code class="docutils literal notranslate"><span class="pre">root_*</span></code> properties describe the actual output root. Without an
+explicit reference track, reference properties fall back to the output root
+and its heading. Runtime prediction does not rerun the offline filter.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<p>Use the explicit <code class="docutils literal notranslate"><span class="pre">--dataset</span></code> paths in Quick Start on any machine.
+<code class="docutils literal notranslate"><span class="pre">--benchmark-search</span></code> compares native and NumPy search results and warmed timings
+without opening a viewer; database construction and playback are not timed.
+Character, clip selection, and filter settings are constants in each example.</p>
+<p>Enable <strong>Show foot contacts</strong> to visualize <a class="reference internal" href="FOOT_CONTACT.html"><span class="std std-doc">kinematic contact estimates</span></a>.</p>
+<section id="lafan-and-geno">
+<h3>LAFAN and Geno<a class="headerlink" href="#lafan-and-geno" title="Link to this heading">¶</a></h3>
+<p>The selected ranges and mirrored copies follow
+<a class="reference external" href="https://github.com/orangeduck/GenoViewPython-MotionMatching">GenoViewPython-MotionMatching</a>.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Frame range (zero-based, end excluded)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pushAndStumble1_subject5.bvh</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[397:706]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">run1_subject5.bvh</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[172:14136]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">walk1_subject5.bvh</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[160:15518]</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Each range is sampled at 60 FPS and included with a left/right mirrored copy.
+Positions are converted from centimeters to meters. The long clips provide
+walking, running, stopping, and turn coverage.</p>
+<p>Geno is loaded through <code class="docutils literal notranslate"><span class="pre">SkinVisual.from_fbx(...,</span> <span class="pre">skeleton_tree=...)</span></code>, using
+the database skeleton and matching bones by name. This requires compatible bone
+frames and proportions; it does not perform retargeting. The FBX loader handles
+bind-space conversion, so the example does not transform mesh vertices again.</p>
+<p>The reference track uses projected Hips motion. Fixed non-root offsets
+approximate small BVH translation variations; the example does not reproduce
+the reference application’s Simulation-joint playback exactly.</p>
+</section>
+<section id="g1">
+<h3>G1<a class="headerlink" href="#g1" title="Link to this heading">¶</a></h3>
+<p>G1 converts SEED CSV data to <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code>, then to <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>
+for matching: native 120 FPS, Z-up, root positions in cm -&gt; m, and joint angles
+in degrees -&gt; radians. Its final output is projected onto the robot’s joint limits.
+See <a class="reference internal" href="ARTICULATION_MOTION.html"><span class="std std-doc">Articulation Motion</span></a> for the conversion API.</p>
+</section>
+</section>
+<section id="custom-features">
+<h2>Custom features<a class="headerlink" href="#custom-features" title="Link to this heading">¶</a></h2>
+<p>A builder implements <code class="docutils literal notranslate"><span class="pre">describe(config)</span></code>, <code class="docutils literal notranslate"><span class="pre">build_clip(...)</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">make_query(...)</span></code>. It owns feature coordinates and query inputs; the database
+handles normalization and search. Use <code class="docutils literal notranslate"><span class="pre">step_with_query()</span></code> for a custom movement
+model. By default, root placement aligns the reference track, or the source
+root when no reference track exists. A custom
+<code class="docutils literal notranslate"><span class="pre">root_placement(source_state,</span> <span class="pre">current_state)</span></code> callback returns a rigid
+<code class="docutils literal notranslate"><span class="pre">(rotation_wxyz,</span> <span class="pre">translation)</span></code> mapping source poses into world space;
+translation is in meters. It runs on reset and transitions, with
+<code class="docutils literal notranslate"><span class="pre">current_state=None</span></code> on reset. Its transform is held until the next transition;
+it is not a per-frame root override.</p>
+<p><code class="docutils literal notranslate"><span class="pre">python/examples/animation/motion_matching_custom.py</span></code> adds a root-height feature
+to the LAFAN database. Run the LAFAN example first to create its NPZ. The custom
+example rebuilds features in memory and runs without a viewer.</p>
+<p>When loading a custom database, pass its builder to <code class="docutils literal notranslate"><span class="pre">from_npz(feature_builder=...)</span></code>
+with matching schema metadata. Keep builder settings unchanged after creation.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="FOOT_CONTACT.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Foot Contact</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="RETARGETING.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Motion Retargeting</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, KangEngine contributors
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Motion Matching</a><ul>
+<li><a class="reference internal" href="#quick-start">Quick Start</a><ul>
+<li><a class="reference internal" href="#lafan-geno-setup">LAFAN / Geno setup</a></li>
+<li><a class="reference internal" href="#g1-seed-setup">G1 / SEED setup</a></li>
+<li><a class="reference internal" href="#control-playback">Control playback</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#build-a-database">Build a database</a></li>
+<li><a class="reference internal" href="#playback-and-trajectory">Playback and trajectory</a></li>
+<li><a class="reference internal" href="#save-and-load">Save and load</a></li>
+<li><a class="reference internal" href="#query-and-playback-reference">Query and playback reference</a><ul>
+<li><a class="reference internal" href="#query-inputs">Query inputs</a></li>
+<li><a class="reference internal" href="#pose-history">Pose history</a></li>
+<li><a class="reference internal" href="#search-scheduling">Search scheduling</a></li>
+<li><a class="reference internal" href="#trajectory-prediction">Trajectory prediction</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#reference-filtering">Reference filtering</a></li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#lafan-and-geno">LAFAN and Geno</a></li>
+<li><a class="reference internal" href="#g1">G1</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#custom-features">Custom features</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=fd10adb8"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = "pre.mermaid {\n    /* Same as .mermaid-container > pre */\n    display: block;\n    width: 100%;\n}\n\npre.mermaid > svg {\n    /* Same as .mermaid-container > pre > svg */\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}";
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = ".mermaid-container {\n    position: relative;\n    display: flex;\n    flex-direction: row;\n    width: 100%;\n}\n\n.mermaid-container > pre {\n    display: block;\n    width: 100%;\n}\n\n.mermaid-container > pre > svg {\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}\n\n.mermaid-fullscreen-btn {\n    position: absolute;\n    width: 28px;\n    height: 28px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    border-radius: 4px;\n    cursor: pointer;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    transition: all 0.2s;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);\n    font-size: 14px;\n    line-height: 1;\n    padding: 0;\n    color: #333;\n}\n\n.mermaid-fullscreen-btn:hover {\n    opacity: 100% !important;\n    background: rgba(255, 255, 255, 1);\n    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-btn.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.3);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-btn.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal {\n    display: none;\n    position: fixed !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 95vw;\n    height: 100vh;\n    background: rgba(255, 255, 255, 0.98);\n    z-index: 9999;\n    padding: 20px;\n    overflow: auto;\n}\n\n.mermaid-fullscreen-modal.dark-theme {\n    background: rgba(0, 0, 0, 0.98);\n}\n\n.mermaid-fullscreen-modal.active {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen {\n    position: relative;\n    width: 95vw;\n    height: 90vh;\n    max-width: 95vw;\n    max-height: 90vh;\n    background: white;\n    border-radius: 8px;\n    padding: 20px;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n    overflow: auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen.dark-theme {\n    background: #1a1a1a;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);\n}\n\n.mermaid-container-fullscreen pre.mermaid {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen .mermaid svg {\n    height: 100% !important;\n    width: 100% !important;\n    cursor: grab;\n}\n\n.mermaid-fullscreen-close {\n    position: fixed !important;\n    top: 20px !important;\n    right: 20px !important;\n    width: 40px;\n    height: 40px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 50%;\n    cursor: pointer;\n    z-index: 10000;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n    font-size: 24px;\n    line-height: 1;\n    color: #333;\n}\n\n.mermaid-fullscreen-close:hover {\n    background: white;\n    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-close.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.2);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-close.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal .mermaid-fullscreen-btn {\n    display: none !important;\n}";
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+let _lazyObserver = null;
+let _renderQueue = Promise.resolve();
+let closeModal = () => {};
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.classList.contains('active')) {
+        closeModal();
+    }
+});
+
+// Apply d3 zoom to each SVG. Idempotent: an SVG already wrapped is skipped,
+// so this is safe to call both for the initial batch and for diagrams that
+// render lazily once they become visible.
+const addZoomToSvgs = (svgs) => {
+    svgs.each(function() {
+        if (this.getAttribute('data-zoom-applied') === 'true') return;
+        var svg = d3.select(this);
+        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+        var inner = svg.select("g");
+        var zoom = d3.zoom().on("zoom", function(event) {
+            inner.attr("transform", event.transform);
+        });
+        svg.call(zoom);
+        this.setAttribute('data-zoom-applied', 'true');
+    });
+};
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        // Disconnect any previous lazy rendering observer
+        if (_lazyObserver) {
+            _lazyObserver.disconnect();
+            _lazyObserver = null;
+        }
+
+        all_mermaids.forEach((el) => {
+            el.removeAttribute('data-mermaid-deferred');
+            el.removeAttribute('data-mermaid-render-failed');
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+
+        // Separate visible and hidden elements. Mermaid's layout engine measures
+        // text dimensions via the DOM, which fails for elements hidden by a parent
+        // (e.g., Reveal.js non-active slides, sphinx-design unopened tabs),
+        // producing broken SVGs. Render visible elements now, defer hidden ones.
+        const visible = [];
+        const hidden = [];
+        all_mermaids.forEach((el) => {
+            // offsetParent is null for display:none ancestors.
+            // getClientRects().length > 0 catches position:fixed elements
+            // (which also have null offsetParent but are still visible).
+            if (el.offsetParent !== null || el.getClientRects().length > 0) {
+                visible.push(el);
+            } else {
+                hidden.push(el);
+                el.setAttribute('data-mermaid-deferred', 'true');
+            }
+        });
+
+        if (visible.length > 0) {
+            try {
+                await mermaid.run({ nodes: visible });
+            } catch (e) {
+                console.error("Mermaid rendering failed:", e);
+            }
+        }
+
+        // Lazily render hidden elements when they become visible.
+        // Uses a promise chain (_renderQueue) to serialize rendering,
+        // since IntersectionObserver may report multiple entries at once
+        // and mermaid.run() is not safe to call concurrently.
+        if (hidden.length > 0) {
+            if (typeof IntersectionObserver === 'undefined') {
+                console.warn("IntersectionObserver not available; hidden mermaid diagrams will not render.");
+            } else {
+                _renderQueue = Promise.resolve();
+                _lazyObserver = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.isIntersecting && entry.target.getAttribute("data-processed") !== "true") {
+                            _lazyObserver.unobserve(entry.target);
+                            const el = entry.target;
+                            _renderQueue = _renderQueue.then(async () => {
+                                try {
+                                    await mermaid.run({ nodes: [el] });
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    // Apply zoom to the now-rendered diagram, matching
+                                    // the decoration visible diagrams receive.
+                                    if (false) {
+                                        addZoomToSvgs(d3.selectAll("").select(function() {
+                                            return this.querySelector("svg");
+                                        }));
+                                    }
+                                } catch (e) {
+                                    console.error("Mermaid deferred rendering failed:", e);
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    el.setAttribute('data-mermaid-render-failed', 'true');
+                                }
+                            });
+                        }
+                    }
+                });
+                hidden.forEach((el) => _lazyObserver.observe(el));
+            }
+        }
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    // Exclude deferred (hidden) and render-failed elements from completion checks
+    const mermaids_active = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])");
+    const mermaids_processed = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])[data-processed='true']");
+
+    if (false) {
+        const mermaids_to_add_zoom = 0 === -1 ? mermaids_active.length : 0;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("").select(function() {
+                return this.querySelector("svg");
+            });
+            // Wait until every active (visible) diagram has rendered. Deferred
+            // diagrams are excluded, so a fixed d3_node_count that counts a
+            // hidden diagram no longer loops forever waiting for its SVG.
+            if(mermaids_active.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            }
+            addZoomToSvgs(svgs);
+        }
+    } else if(mermaids_active.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if (!true) return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = "\u26f6";
+        fullscreenBtn.style.opacity = "50%";
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scrollX, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.display = 'block';
+
+                if (false) {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+
+
+const load = async () => {
+    initStyles();
+
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...{"startOnLoad": false},
+                ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...{"startOnLoad": false},
+    ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+    }
+);
+
+window.addEventListener("load", load);
+window.runMermaid = runMermaid;</script>
+    <script src="../../_static/kangengine-toc.js?v=32ef2ebd"></script>
+    </body>
+</html>

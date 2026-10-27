@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Camera and Viewer" href="CAMERA_VIEWER.html"><link rel="prev" title="Materials and Textures" href="MATERIALS_TEXTURES.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Camera and Viewer" href="CAMERA_VIEWER.html"><link rel="prev" title="Scene Lighting" href="LIGHTING.html">
         <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/scene_rendering/LOAD_ASSETS.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -345,6 +359,11 @@
 that data is displayed.</p>
 <section id="obj-with-materials">
 <h2>OBJ with materials<a class="headerlink" href="#obj-with-materials" title="Link to this heading">¶</a></h2>
+<p>The OBJ and FBX snippets run inside <code class="docutils literal notranslate"><span class="pre">App.setup()</span></code>, with
+<code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">kangengine</span> <span class="pre">as</span> <span class="pre">ke</span></code>. Set <code class="docutils literal notranslate"><span class="pre">obj_file</span></code> or <code class="docutils literal notranslate"><span class="pre">fbx_file</span></code> to your asset path
+and <code class="docutils literal notranslate"><span class="pre">scale</span></code> to its unit conversion factor (use <code class="docutils literal notranslate"><span class="pre">1.0</span></code> for meter-scale assets).
+The FBX snippet also uses a material created through the App; see
+<a class="reference internal" href="MATERIALS_TEXTURES.html"><span class="std std-doc">Materials and Textures</span></a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">ObjImportView</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_obj</span><span class="p">(</span>
     <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/environment&quot;</span><span class="p">,</span>
     <span class="n">obj_path</span><span class="o">=</span><span class="n">obj_file</span><span class="p">,</span>
@@ -450,7 +469,7 @@ that data is displayed.</p>
 <span class="linenos"> 89</span>        <span class="bp">self</span><span class="o">.</span><span class="n">show_ground</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">show_ground</span><span class="p">)</span>
 <span class="linenos"> 90</span>        <span class="bp">self</span><span class="o">.</span><span class="n">ground_size</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">ground_size</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">ground_size</span><span class="p">)</span>
 <span class="linenos"> 91</span>        <span class="bp">self</span><span class="o">.</span><span class="n">ground_y</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">ground_y</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">ground_y</span><span class="p">)</span>
-<span class="linenos"> 92</span>        <span class="bp">self</span><span class="o">.</span><span class="n">light_direction</span> <span class="o">=</span> <span class="n">light_direction</span> <span class="ow">or</span> <span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="o">-</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.82</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.45</span><span class="p">)</span>
+<span class="linenos"> 92</span>        <span class="bp">self</span><span class="o">.</span><span class="n">light_direction</span> <span class="o">=</span> <span class="n">light_direction</span> <span class="ow">or</span> <span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.35</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.82</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">)</span>
 <span class="linenos"> 93</span>        <span class="bp">self</span><span class="o">.</span><span class="n">light_color</span> <span class="o">=</span> <span class="n">light_color</span> <span class="ow">or</span> <span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.96</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">)</span>
 <span class="linenos"> 94</span>        <span class="bp">self</span><span class="o">.</span><span class="n">light_intensity</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">light_intensity</span><span class="p">)</span>
 <span class="linenos"> 95</span>        <span class="bp">self</span><span class="o">.</span><span class="n">light_ambient</span> <span class="o">=</span> <span class="n">light_ambient</span> <span class="ow">or</span> <span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.32</span><span class="p">,</span> <span class="mf">0.32</span><span class="p">,</span> <span class="mf">0.32</span><span class="p">)</span>
@@ -657,7 +676,7 @@ that data is displayed.</p>
 <span class="linenos">296</span>                <span class="mf">1200.0</span> <span class="o">*</span> <span class="n">scale</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">ground_size</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">args</span><span class="o">.</span><span class="n">ground_size</span>
 <span class="linenos">297</span>            <span class="p">),</span>
 <span class="linenos">298</span>            <span class="n">ground_y</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">scale</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">ground_y</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">args</span><span class="o">.</span><span class="n">ground_y</span><span class="p">),</span>
-<span class="linenos">299</span>            <span class="n">light_direction</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="o">-</span><span class="mf">0.32</span><span class="p">,</span> <span class="mf">0.93</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.17</span><span class="p">),</span>
+<span class="linenos">299</span>            <span class="n">light_direction</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.32</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.93</span><span class="p">,</span> <span class="mf">0.17</span><span class="p">),</span>
 <span class="linenos">300</span>            <span class="n">light_color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.94</span><span class="p">,</span> <span class="mf">0.86</span><span class="p">),</span>
 <span class="linenos">301</span>            <span class="n">light_intensity</span><span class="o">=</span><span class="mf">1.25</span><span class="p">,</span>
 <span class="linenos">302</span>            <span class="n">light_ambient</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.38</span><span class="p">,</span> <span class="mf">0.36</span><span class="p">,</span> <span class="mf">0.32</span><span class="p">),</span>
@@ -686,6 +705,49 @@ that data is displayed.</p>
 </div>
 </details>
 </section>
+<section id="rigid-body-sources">
+<h2>Rigid body sources<a class="headerlink" href="#rigid-body-sources" title="Link to this heading">¶</a></h2>
+<p>These loaders prepare descriptions for the <a class="reference internal" href="../simulation/RIGID_BODIES.html"><span class="std std-doc">Rigid Bodies</span></a>
+workflow. Construct the source first, then register or render instances.</p>
+<section id="obj-files">
+<h3>OBJ files<a class="headerlink" href="#obj-files" title="Link to this heading">¶</a></h3>
+<p>This optional example needs your own meter-scale, Z-up <code class="docutils literal notranslate"><span class="pre">chair.obj</span></code>. Keep the
+OBJ, MTL, and referenced textures together:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">obj_asset</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">RigidDesc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">load_obj_rigid</span><span class="p">(</span><span class="n">obj_path</span><span class="o">=</span><span class="s2">&quot;chair.obj&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Coordinates and scale are preserved. Material subsets, normals, and UVs are
+retained. The default triangle-mesh collider supports static or kinematic bodies.
+Dynamic triangle-mesh collision is unsupported by this rigid-body API.</p>
+<p>For a box-shaped OBJ, supply a primitive collider in the same local frame:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">box_collider</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">CollisionGeomDesc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">CollisionGeomDesc</span><span class="p">(</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">CollisionGeomDescType</span><span class="o">.</span><span class="n">BOX</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">],</span>  <span class="c1"># Half extents in meters; match your mesh.</span>
+    <span class="n">position</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+    <span class="n">quat_xyzw</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">textured_box</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">RigidDesc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">load_obj_rigid</span><span class="p">(</span>
+    <span class="n">obj_path</span><span class="o">=</span><span class="s2">&quot;textured_box.obj&quot;</span><span class="p">,</span> <span class="n">collision_geoms</span><span class="o">=</span><span class="p">[</span><span class="n">box_collider</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>For a concave object such as a cup, supply several primitive or convex pieces in
+the same local frame as its visual mesh. The OBJ loader does not perform
+automatic convex decomposition. Prepare the pieces separately and supply them
+through <code class="docutils literal notranslate"><span class="pre">collision_geoms</span></code>.</p>
+</section>
+<section id="single-body-imports">
+<h3>Single-body imports<a class="headerlink" href="#single-body-imports" title="Link to this heading">¶</a></h3>
+<p>As an alternative to building a description, pass a single-body MJCF returned
+by <code class="docutils literal notranslate"><span class="pre">world.load_mjcf(mjcf_path=...)</span></code> to <code class="docutils literal notranslate"><span class="pre">world.add_rigid()</span></code>.
+<code class="docutils literal notranslate"><span class="pre">ke.asset.RigidDesc.from_articulation(description)</span></code> is available when explicit
+conversion from a single-body <code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code> is needed.</p>
+</section>
+</section>
 <section id="fbx-mesh">
 <h2>FBX mesh<a class="headerlink" href="#fbx-mesh" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">meshes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXMeshInfo</span><span class="p">]</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXLoader</span><span class="o">.</span><span class="n">load_meshes</span><span class="p">(</span>
@@ -700,6 +762,56 @@ that data is displayed.</p>
     <span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="usd-scenes">
+<h2>USD scenes<a class="headerlink" href="#usd-scenes" title="Link to this heading">¶</a></h2>
+<p>Build with USD support (<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_usd_python</span></code>), then open the scene’s root
+layer. Referenced layers and textures must remain in their original relative
+locations:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/examples/view_usd_scene.py<span class="w"> </span>/path/to/scene.usda
+</pre></div>
+</div>
+<p>The viewer uses the stage’s Y-up or Z-up axis and starts at its first authored
+perspective camera. Use <strong>Reset camera</strong> to return there or <strong>Frame scene</strong> to
+see the whole scene. Hold the right mouse button to look around; <strong>WASD</strong> moves
+parallel to the floor, <strong>Q/E</strong> moves down/up, and <strong>Shift</strong> increases speed.
+Movement is free of collision constraints. Physics and articulation loading
+are separate from this viewer.</p>
+<p>USD RectLight and DomeLight objects are created as scene lights, with the
+source camera’s exposure and ACES tone mapping. The <strong>Exposure compensation</strong>
+control changes viewing exposure without modifying the source light values.
+See <a class="reference internal" href="LIGHTING.html"><span class="std std-doc">Scene Lighting</span></a> for the supported controls and rendering limits.</p>
+<p>The loader includes visible meshes with effective <code class="docutils literal notranslate"><span class="pre">default</span></code> or <code class="docutils literal notranslate"><span class="pre">render</span></code>
+purpose, including native USD instances and material subsets. It respects
+inherited visibility and purpose. A mesh with collision properties is still
+displayed if it is also visible render geometry.</p>
+<p><code class="docutils literal notranslate"><span class="pre">UsdPreviewSurface</span></code> materials retain base color/opacity, metallic, roughness,
+emission, normal maps and double-sided state. Texture connections can pass through
+<code class="docutils literal notranslate"><span class="pre">NodeGraph</span></code> outputs. Supported <code class="docutils literal notranslate"><span class="pre">UsdUVTexture</span></code> maps include RGB colors, R-channel
+scalar maps, RGB scalar maps (sampled from red), separate R/RGB opacity masks,
+and packed G-roughness / B-metallic maps. Unsupported shader connections produce
+diagnostics. Color maps use sRGB decoding unless <code class="docutils literal notranslate"><span class="pre">sourceColorSpace</span></code> is <code class="docutils literal notranslate"><span class="pre">raw</span></code>; normal and scalar
+maps remain linear. For manually loaded textures, see
+<a class="reference internal" href="MATERIALS_TEXTURES.html#load-and-attach-textures"><span class="std std-ref">Materials and Textures</span></a>.</p>
+<p>The parsing snippet uses <code class="docutils literal notranslate"><span class="pre">usd_file</span></code>, the path to your root USD layer:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">result</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">USDImportResult</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">USDLoader</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+    <span class="n">usd_path</span><span class="o">=</span><span class="n">usd_file</span><span class="p">,</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">meshes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">USDMeshInfo</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">meshes</span>
+</pre></div>
+</div>
+<p>Mesh vertices, bounds and camera positions use authored scene units multiplied
+by <code class="docutils literal notranslate"><span class="pre">scale</span></code>; axes are not rotated. <code class="docutils literal notranslate"><span class="pre">result.meters_per_unit</span></code> reports the original
+stage unit. Camera vertical FOV is in degrees.</p>
+<p>The returned meshes have transforms baked into their vertices. The result is
+for static display, not editing and saving the original USD scene; keep the
+source USD for that purpose. <code class="docutils literal notranslate"><span class="pre">prim_path</span></code> and <code class="docutils literal notranslate"><span class="pre">material_path</span></code> identify the source
+objects. The viewer uses fallback lighting when no supported USD lights were
+imported. MDL/MaterialX networks, arbitrary texture transforms and camera roll
+are not reproduced.</p>
 </section>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
@@ -727,14 +839,14 @@ that data is displayed.</p>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="MATERIALS_TEXTURES.html">
+          <a class="prev-page" href="LIGHTING.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Materials and Textures</div>
+                <div class="title">Scene Lighting</div>
                 
               </div>
             </a>
@@ -770,7 +882,13 @@ that data is displayed.</p>
             <ul>
 <li><a class="reference internal" href="#">Load Assets</a><ul>
 <li><a class="reference internal" href="#obj-with-materials">OBJ with materials</a></li>
+<li><a class="reference internal" href="#rigid-body-sources">Rigid body sources</a><ul>
+<li><a class="reference internal" href="#obj-files">OBJ files</a></li>
+<li><a class="reference internal" href="#single-body-imports">Single-body imports</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#fbx-mesh">FBX mesh</a></li>
+<li><a class="reference internal" href="#usd-scenes">USD scenes</a></li>
 <li><a class="reference internal" href="#examples">Examples</a></li>
 </ul>
 </li>

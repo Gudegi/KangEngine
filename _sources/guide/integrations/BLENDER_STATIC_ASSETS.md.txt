@@ -1,0 +1,148 @@
+# Blender static asset pipeline
+
+Author a terrain, building, room, or static prop in Blender once and consume the
+same package in KangEngine viewers, physics worlds, or task code. There is no
+G1/KELab dependency. Runtime loading does not require Blender or its Python.
+
+## Author and export
+
+1. Install `python/tools/blender/kangengine_static_export.py` through Blender's
+   **Preferences > Add-ons > Install from Disk**, then enable **KangEngine Static
+   Asset Pipeline**. Alternatively run the script in Blender's Text Editor for
+   the current session.
+2. Use the **KangEngine** tab in the 3D View sidebar to tag selected objects.
+3. Export through **File > Export > KangEngine Static Asset (.keasset)**, or use
+   the sidebar's export button. A `.keasset` is a portable directory.
+4. Keep the `.blend` as the editable source. Re-export the package after edits.
+   Existing packages require the explicit overwrite option; failed exports leave
+   the previous package intact.
+
+| `ke_role` | Runtime use |
+|---|---|
+| `BOTH` | Visible geometry and static triangle-mesh collision |
+| `VISUAL` | Display only: labels, paint, decorations |
+| `COLLISION` | Invisible collision proxy |
+| `MARKER` | Named 4×4 transform: attachment, reference, spawn candidate, etc. |
+| `IGNORE` | Excluded |
+
+Untagged geometry defaults to `VISUAL`, not collision. Untagged Empty objects
+default to `MARKER`. Legacy `collider=True` maps to `BOTH`, and
+`collider=False` maps to `VISUAL`; an explicit `ke_role` takes precedence.
+Set an object's or collection's custom property `ke_export=False` to exclude
+it. Hidden state does not control export, so hidden collision proxies work.
+Objects linked into several included/excluded collections are exported if any
+included collection reaches them. Cameras and lights are always excluded.
+Set `ke_marker` on a marker to override its exported name; names must be unique.
+
+Use a separate low-detail `COLLISION` proxy when visual bevels, tiny decorations,
+or dense sculpted topology should not affect contact. Collision proxies must be
+authored in the same coordinates as their visual meshes. Export a collection
+to package only one asset. Collection names and object names remain in metadata.
+
+Parent transforms, modifiers, rotation, nonuniform and negative scale are baked
+from the evaluated frame. Mirrored meshes get corrected triangle winding and
+inverse-transpose normals. Blender's scene unit scale is converted to meters;
+unit system `NONE` means one Blender unit is one meter. Z remains up. The origin
+is the Blender world origin; position a reusable prop around it before export.
+Mesh, curve, surface, and text geometry are supported. Make collection instances
+real and realize Geometry Nodes instances before export. Animation is a static
+snapshot, reported in the export warnings; it is not an animation pipeline.
+
+Version 1 exports opaque Principled base color, roughness, metallic, active UVs,
+and direct PNG/JPEG base-color image textures, including packed images. Textures
+are copied into the package. Bake procedural/mixed base colors first. Linked
+normal/roughness/metallic/alpha inputs, non-repeat texture transforms, and
+non-Principled shaders fail with a diagnostic instead of silently changing the
+asset. Auxiliary Principled channels are outside this material contract.
+
+Batch export from the repository root:
+
+```bash
+blender -b my_scene.blend --python-exit-code 1 \
+  --python python/tools/blender/kangengine_static_export.py -- \
+  --scene "Scene" --collection "Environment" \
+  --output /absolute/path/environment.keasset
+```
+
+The output contains `asset.json`, `geometry.npz`, and optional `textures/`.
+Versioned metadata records the source frame, material batches, object roles,
+markers, warnings, and a geometry checksum. NumPy arrays use `float32` vertices,
+normals and UVs, and `int32` triangle indices; no pickle or executable content.
+Visual geometry is batched by material. Collision and graphics remain separate.
+
+## Load in KangEngine
+
+```python
+import kangengine as ke
+
+asset: ke.asset.StaticAsset = ke.asset.StaticAsset.from_directory(
+    "/absolute/path/environment.keasset"
+)
+# world is an initialized ke.physics.PhysicsWorld; app is an initialized ke.App.
+instance: ke.asset.StaticAssetInstance = asset.create(
+    world, position=(0.0, 0.0, 0.0)
+)
+visual: ke.asset.StaticAssetVisual = instance.add_visual(app, "/environment")
+
+# Remove attachments before closing their world/application.
+instance.remove()
+```
+
+For display without physics, use `asset.add_visual(app, "/environment")` and
+call the returned visual's `remove()` when finished. For training without a
+viewer, create collision only. A visual-only asset can be viewed but raises a
+clear error if asked to create collision. Rendering uses the normal App material
+and texture lifetime management and SceneResourceManager registration paths.
+
+Instances support translation. Author rotation and scale in Blender for this
+version; changing only a render transform would desynchronize collision and
+markers. Reuse the **same loaded asset** to share cooked collision between
+instances. Do not create a fresh package object for every simulated environment.
+Height queries require the existing `kangengine[terrain]` optional dependency;
+physics cooking and display do not require Warp.
+
+```bash
+python python/examples/view_static_asset.py \
+  /absolute/path/environment.keasset
+```
+
+## Consumers own environment semantics
+
+If the package contains a marker named `entry`, read its world transform with
+`instance.marker_transform("entry")`. For height queries, pass your world-space
+float32 Torch positions to `instance.sample_height(positions)` before removing
+the instance. Marker lookup and height queries are optional loading steps.
+
+`asset.terrain_mesh` exposes the same `TerrainMesh` type used by procedural
+terrain. This is the integration seam for KELab or another consumer. Static
+collision and height queries follow the existing engine backend capabilities.
+The package does **not** include rewards, robot reset rules, tile curricula, or
+the `origins[rows, cols, 3]` convention of a particular training task. Consumers
+can derive those from markers or separate task configuration.
+
+Downward height queries return the first surface below the ray origin, which can
+be an overhead rail. They are not a multi-layer occupancy sensor. Set a suitable
+`ray_start_height`, or use a different observation representation for climbing,
+overhangs, or indoor navigation. Mesh collision retains those shapes regardless.
+This version handles static assets only; dynamic/convex rigid bodies, skeletal
+animation, and USD round-tripping use other engine pipelines.
+
+## Validate changes
+
+```bash
+blender -b --factory-startup --python-exit-code 1 \
+  --python python/tools/blender/validate_static_export.py -- \
+  --output /tmp/ke-blender-fixture
+KANGENGINE_BLENDER_FIXTURE=/tmp/ke-blender-fixture/fixture.keasset \
+  PYTHONPATH=python python/.venv/bin/python -m pytest \
+  python/tests/asset/test_static_asset.py -q
+PYTHONPATH=python python/.venv/bin/python \
+  python/examples/smoke/static_asset_visual_smoke.py \
+  /tmp/ke-blender-fixture/fixture.keasset
+```
+
+The fixture exercises centimeters, parent rotation, mirrored scale, hidden
+collision proxies, exclusion, packed textures, relocation, markers, safe
+overwrite, mesh queries, PhysX settling, and shared cooking. The graphics smoke
+checks resource registration, placement, duplicate-path protection, and repeated
+attachment. It needs an OpenGL context, including when its window is hidden.

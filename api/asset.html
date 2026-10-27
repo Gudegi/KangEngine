@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -377,7 +391,7 @@ SMPL, SMPL-H, and SMPL-X.</p>
 <td><p>Imported body-local inertial properties.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.VisualGeomDesc" title="kangengine.asset.VisualGeomDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code></a></p></td>
-<td><p>Visual mesh description imported from a character asset.</p></td>
+<td><p>Source mesh, material, and body-local pose in metres; scale precedes pose.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc" title="kangengine.asset.CollisionGeomDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CollisionGeomDesc</span></code></a></p></td>
 <td><p>Imported body-local collision geometry description.</p></td>
@@ -689,47 +703,59 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">VisualGeomDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Visual mesh description imported from a character asset.</p>
+<dd><p>Source mesh, material, and body-local pose in metres; scale precedes pose.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.body_index">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_index</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.body_index" title="Link to this definition">¶</a></dt>
-<dd><p>Owning body index.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.body_name">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_name</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.body_name" title="Link to this definition">¶</a></dt>
-<dd><p>Owning body name.</p>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.material">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">material</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.material" title="Link to this definition">¶</a></dt>
+<dd><p>Shared renderer material; accepts a public wrapper or native material.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.mesh_data">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mesh_data</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.mesh_data" title="Link to this definition">¶</a></dt>
+<dd><p>Shared source mesh; treat it as immutable after creating instances.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.mesh_file">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mesh_file</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.mesh_file" title="Link to this definition">¶</a></dt>
-<dd><p>Mesh file path.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.pos">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">pos</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.pos" title="Link to this definition">¶</a></dt>
-<dd><p>Local mesh position.</p>
+<dd><p>Body-local translation in metres.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.quat">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">quat</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.quat" title="Link to this definition">¶</a></dt>
-<dd><p>Local mesh orientation.</p>
-</dd></dl>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.quat_xyzw">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">quat_xyzw</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.rgba">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rgba</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.rgba" title="Link to this definition">¶</a></dt>
-<dd><p>Mesh display color.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.scale">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">scale</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.scale" title="Link to this definition">¶</a></dt>
-<dd><p>Scale applied to mesh-local vertices before the visual pose.</p>
+<dd><p>Scale applied before the body-local visual pose.</p>
 </dd></dl>
 
 </dd></dl>
@@ -777,13 +803,13 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.mesh_data">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mesh_data</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.mesh_data" title="Link to this definition">¶</a></dt>
-<dd><p>Imported mesh payload used for convex cooking.</p>
+<dd><p>Shared source mesh; treat it as immutable after creating instances.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.mesh_file">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mesh_file</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.mesh_file" title="Link to this definition">¶</a></dt>
-<dd><p>Source mesh file for convex mesh collision geoms.</p>
+<dd><p>Source mesh file for collision geoms.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1056,10 +1082,12 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skinned_meshes" title="Link to this definition">¶</a></dt>
-<dd><p>Load skinned meshes without animation data.</p>
+<dd><p>Load bind-world meshes; optionally map bones to an existing skeleton.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1560,10 +1588,20 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult" title="Link to this definition">¶</a></dt>
 <dd><p>Parsed USD meshes plus diagnostics.</p>
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDImportResult.cameras">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cameras</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult.cameras" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDImportResult.diagnostics">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diagnostics</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult.diagnostics" title="Link to this definition">¶</a></dt>
 <dd><p>Importer diagnostics.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDImportResult.lights">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">lights</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult.lights" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDImportResult.meshes">
@@ -1571,17 +1609,63 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dd><p>Meshes imported from the USD scene.</p>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDImportResult.meters_per_unit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">meters_per_unit</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult.meters_per_unit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDImportResult.up_axis">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">up_axis</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult.up_axis" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDMeshInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Mesh payload imported from a USD scene.</p>
+<dd><p>Visible render mesh with world-baked geometry and Preview Surface factors.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.base_color">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">base_color</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.base_color" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.bounds">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">bounds</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.bounds" title="Link to this definition">¶</a></dt>
+<dd><p>Axis-aligned bounds in scaled scene coordinates.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.diffuse_texture_path">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diffuse_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.diffuse_texture_path" title="Link to this definition">¶</a></dt>
 <dd><p>Resolved diffuse texture path.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.diffuse_texture_srgb">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diffuse_texture_srgb</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.diffuse_texture_srgb" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.double_sided">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">double_sided</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.double_sided" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.emissive_color">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">emissive_color</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.emissive_color" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.emissive_texture_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">emissive_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.emissive_texture_path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.emissive_texture_srgb">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">emissive_texture_srgb</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.emissive_texture_srgb" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.index_count">
@@ -1600,6 +1684,21 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dd></dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.metallic">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metallic</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.metallic" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.metallic_roughness_texture_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metallic_roughness_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.metallic_roughness_texture_path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.metallic_texture_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metallic_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.metallic_texture_path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.name">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.name" title="Link to this definition">¶</a></dt>
 <dd><p>Mesh name.</p>
@@ -1612,10 +1711,30 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.opacity_texture_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">opacity_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.opacity_texture_path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.opacity_threshold">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">opacity_threshold</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.opacity_threshold" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.prim_path">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">prim_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.prim_path" title="Link to this definition">¶</a></dt>
 <dd><p>USD prim path.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.roughness">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">roughness</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.roughness" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.roughness_texture_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">roughness_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.roughness_texture_path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.vertex_count">
@@ -2048,9 +2167,12 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.body_index"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.body_index</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.body_name"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.body_name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.material"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.material</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.mesh_data"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.mesh_data</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.mesh_file"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.mesh_file</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.pos"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.pos</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.quat"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.quat</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.quat_xyzw"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.quat_xyzw</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.rgba"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.rgba</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.scale"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.scale</span></code></a></li>
 </ul>
@@ -2209,18 +2331,36 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.USDImportResult"><code class="docutils literal notranslate"><span class="pre">USDImportResult</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.USDImportResult.cameras"><code class="docutils literal notranslate"><span class="pre">USDImportResult.cameras</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDImportResult.diagnostics"><code class="docutils literal notranslate"><span class="pre">USDImportResult.diagnostics</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDImportResult.lights"><code class="docutils literal notranslate"><span class="pre">USDImportResult.lights</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDImportResult.meshes"><code class="docutils literal notranslate"><span class="pre">USDImportResult.meshes</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDImportResult.meters_per_unit"><code class="docutils literal notranslate"><span class="pre">USDImportResult.meters_per_unit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDImportResult.up_axis"><code class="docutils literal notranslate"><span class="pre">USDImportResult.up_axis</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.base_color"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.base_color</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.bounds"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.bounds</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.diffuse_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.diffuse_texture_path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.diffuse_texture_srgb"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.diffuse_texture_srgb</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.double_sided"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.double_sided</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.emissive_color"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.emissive_color</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.emissive_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.emissive_texture_path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.emissive_texture_srgb"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.emissive_texture_srgb</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.index_count"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.index_count</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.material_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.material_path</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.mesh_data"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.mesh_data</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.metallic"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.metallic</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.metallic_roughness_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.metallic_roughness_texture_path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.metallic_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.metallic_texture_path</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.name"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.name</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.normal_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.normal_texture_path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.opacity_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.opacity_texture_path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.opacity_threshold"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.opacity_threshold</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.prim_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.prim_path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.roughness"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.roughness</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.roughness_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.roughness_texture_path</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.vertex_count"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.vertex_count</span></code></a></li>
 </ul>
 </li>

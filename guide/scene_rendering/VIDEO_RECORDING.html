@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -344,11 +358,12 @@ the rendered scene, while the red <code class="docutils literal notranslate"><sp
 included in the output.</p>
 <p>By default, recordings use <code class="docutils literal notranslate"><span class="pre">libx264</span></code> through <code class="docutils literal notranslate"><span class="pre">imageio-ffmpeg</span></code>, are written to
 <code class="docutils literal notranslate"><span class="pre">tmp/recordings</span></code>, and are capped at <code class="docutils literal notranslate"><span class="pre">1920x1080</span></code>. Larger framebuffers are scaled
-before capture, while smaller framebuffers are not enlarged.</p>
+before capture, while smaller framebuffers are not enlarged.
+<code class="docutils literal notranslate"><span class="pre">imageio</span></code> and <code class="docutils literal notranslate"><span class="pre">imageio-ffmpeg</span></code> are included in the package dependencies.</p>
 <section id="viewer-shortcuts">
 <h2>Viewer shortcuts<a class="headerlink" href="#viewer-shortcuts" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">T</span></code>: save one screenshot.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T</span></code>: save a PNG screenshot with a frame index and timestamp under <code class="docutils literal notranslate"><span class="pre">./tmp</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Shift+T</span></code>: start or stop video recording.</p></li>
 </ul>
 </section>
@@ -358,16 +373,39 @@ before capture, while smaller framebuffers are not enlarged.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
 
 
-<span class="n">app</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
+<span class="n">app</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">App</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
 <span class="n">app</span><span class="o">.</span><span class="n">set_video_recording_dir</span><span class="p">(</span><span class="s2">&quot;captures&quot;</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">set_video_recording_fps</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">set_video_recording_resolution</span><span class="p">(</span><span class="mi">1920</span><span class="p">,</span> <span class="mi">1080</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>The resolution is a maximum size, not an exact output size. Images are scaled
+down proportionally to fit. With a cap enabled, each dimension is rounded down
+to an even number even when no downscaling is needed.
+With the recording cap set to <code class="docutils literal notranslate"><span class="pre">1920x1080</span></code>:</p>
+<ul class="simple">
+<li><p>Original framebuffer <code class="docutils literal notranslate"><span class="pre">1280x720</span></code> → video <code class="docutils literal notranslate"><span class="pre">1280x720</span></code></p></li>
+<li><p>Original framebuffer <code class="docutils literal notranslate"><span class="pre">1281x721</span></code> → video <code class="docutils literal notranslate"><span class="pre">1280x720</span></code></p></li>
+<li><p>Original framebuffer <code class="docutils literal notranslate"><span class="pre">1920x1080</span></code> → video <code class="docutils literal notranslate"><span class="pre">1920x1080</span></code></p></li>
+<li><p>Original framebuffer <code class="docutils literal notranslate"><span class="pre">2560x1600</span></code> → video <code class="docutils literal notranslate"><span class="pre">1728x1080</span></code></p></li>
+</ul>
+<p>The original framebuffer size is unchanged.</p>
 <p>Pass <code class="docutils literal notranslate"><span class="pre">None</span></code> to record at the native framebuffer resolution:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">set_video_recording_resolution</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">None</span></code> also disables even-dimension adjustment. Use an even-sized framebuffer
+with the default codec; odd dimensions may cause an encoding error.</p>
+<p>App recording selects video FPS in this order, using the first available value:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">app.start_video_recording(...,</span> <span class="pre">fps=...)</span></code> for this recording.</p></li>
+<li><p>The value set by <code class="docutils literal notranslate"><span class="pre">app.set_video_recording_fps(...)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.fixed_update_hz</span></code>, for offscreen recording with a
+timing configuration.</p></li>
+<li><p><strong>60 FPS</strong> otherwise.</p></li>
+</ol>
+<p>Video FPS controls playback timing. Neither <code class="docutils literal notranslate"><span class="pre">render_hz</span></code> nor <code class="docutils literal notranslate"><span class="pre">physics_hz</span></code>
+directly sets video FPS, and setting video FPS does not change those rates.</p>
 </section>
 <section id="programmatic-recording">
 <h2>Programmatic recording<a class="headerlink" href="#programmatic-recording" title="Link to this heading">¶</a></h2>
@@ -379,15 +417,29 @@ before capture, while smaller framebuffers are not enlarged.</p>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">stop_video_recording()</span></code> finalizes the encoder and returns the output path.
-Closing an <code class="docutils literal notranslate"><span class="pre">App</span></code> also finalizes an active recording.</p>
+Closing an <code class="docutils literal notranslate"><span class="pre">App</span></code> also finalizes an active recording.
+Calling <code class="docutils literal notranslate"><span class="pre">start_video_recording()</span></code> while recording raises <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code>;
+stop the current recording before starting another one.</p>
+<p>An explicit output path is used as given, relative to the working directory
+unless absolute. It is not appended to the configured recording directory.
+Omitting the path creates a timestamped filename in that directory. Parent
+directories are created automatically; an existing video at the chosen path is
+overwritten. The recording directory does not affect screenshots.</p>
 <p>Interactive recording follows wall-clock time. Frames are selected or repeated
 as needed so that the video duration matches the elapsed recording time,
 independently of the viewer render rate.</p>
 </section>
 <section id="offscreen-recording">
 <h2>Offscreen recording<a class="headerlink" href="#offscreen-recording" title="Link to this heading">¶</a></h2>
-<p>An App initialized with <code class="docutils literal notranslate"><span class="pre">headless=True</span></code> uses offscreen rendering:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
+<p><code class="docutils literal notranslate"><span class="pre">app.initialize(...,</span> <span class="pre">headless=True)</span></code> creates a renderer without a visible window.
+<code class="docutils literal notranslate"><span class="pre">SimulationRunConfig(mode=&quot;headless_fast&quot;)</span></code> is a separate run policy: applying
+it with <code class="docutils literal notranslate"><span class="pre">app.configure_run()</span></code> makes video recording start raise <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code>;
+it does not remove the renderer or block explicit drawing. See
+<a class="reference internal" href="../simulation/RUN_MODES.html"><span class="std std-doc">Run modes</span></a>.</p>
+<section id="record-600-rendered-frames">
+<h3>Record 600 rendered frames<a class="headerlink" href="#record-600-rendered-frames" title="Link to this heading">¶</a></h3>
+<p>Render and capture 600 frames:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">App</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
 <span class="n">app</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="mi">1280</span><span class="p">,</span> <span class="mi">720</span><span class="p">,</span> <span class="n">hide_ui</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">headless</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">app</span><span class="o">.</span><span class="n">configure_timing</span><span class="p">(</span>
     <span class="n">ke</span><span class="o">.</span><span class="n">SimulationTimingConfig</span><span class="p">(</span>
@@ -399,19 +451,52 @@ independently of the viewer render rate.</p>
 <span class="n">app</span><span class="o">.</span><span class="n">start_video_recording</span><span class="p">(</span><span class="s2">&quot;captures/offscreen.mp4&quot;</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">600</span><span class="p">):</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">render_frame_once</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">update_and_draw</span><span class="p">()</span>
 
 <span class="n">app</span><span class="o">.</span><span class="n">stop_video_recording</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Offscreen recording writes one video frame for each rendered frame and uses
-<code class="docutils literal notranslate"><span class="pre">fixed_update_hz</span></code> as its default video FPS. <code class="docutils literal notranslate"><span class="pre">HEADLESS_FAST</span></code> creates no renderer
-and therefore cannot record video.</p>
+<p><code class="docutils literal notranslate"><span class="pre">render_hz=0</span></code> disables App render-rate limiting; it is unrelated to resolution.
+This manual loop does not use the rate limiting provided by <code class="docutils literal notranslate"><span class="pre">app.start()</span></code>.</p>
+<p>Offscreen recording writes one video frame per rendered frame:
+<strong>video duration = recorded frame count / video FPS</strong>. The loop above
+therefore produces 600 frames at 60 FPS, or 10 seconds of video. Simulation
+updates follow elapsed wall time, so this does not guarantee 600 simulation
+steps or 10 seconds of simulated motion. Playback may be faster or slower than
+the simulation’s intended speed.</p>
+</section>
+<section id="record-600-simulation-steps">
+<h3>Record 600 simulation steps<a class="headerlink" href="#record-600-simulation-steps" title="Link to this heading">¶</a></h3>
+<p>For explicit stepping, use a <code class="docutils literal notranslate"><span class="pre">ke.sim.KangSimWorld</span></code> named <code class="docutils literal notranslate"><span class="pre">world</span></code> configured with
+<code class="docutils literal notranslate"><span class="pre">sim_dt=1.0</span> <span class="pre">/</span> <span class="pre">120.0</span></code>, and a <code class="docutils literal notranslate"><span class="pre">ke.visual.sim.SimWorldVisualizer</span></code> named <code class="docutils literal notranslate"><span class="pre">visual</span></code>
+attached to the headless App above, with simulation objects already registered.
+See <a class="reference internal" href="../simulation/RIGID_BODIES.html"><span class="std std-doc">Rigid bodies</span></a> and
+<a class="reference internal" href="../simulation/VISUALIZATION.html"><span class="std std-doc">Visualization</span></a> for setup.
+Here, <code class="docutils literal notranslate"><span class="pre">world.sim_dt</span></code> sets the physics timestep; the App timing configuration
+does not schedule these explicit steps.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">set_video_recording_fps</span><span class="p">(</span><span class="mi">120</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">start_video_recording</span><span class="p">(</span><span class="s2">&quot;captures/simulation_steps.mp4&quot;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">600</span><span class="p">):</span>
+    <span class="n">world</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">substeps</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">process_events</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">draw_frame</span><span class="p">()</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">stop_video_recording</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This records 600 physics steps and 600 frames: 5 seconds of simulation and
+5 seconds of video, regardless of how long rendering takes. <code class="docutils literal notranslate"><span class="pre">process_events()</span></code>
+handles window events and input. <code class="docutils literal notranslate"><span class="pre">draw_frame()</span></code> renders and records without
+running App update callbacks.</p>
+</section>
 </section>
 <section id="record-rgb-frames-directly">
 <h2>Record RGB frames directly<a class="headerlink" href="#record-rgb-frames-directly" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">VideoRecorder</span></code> can also encode <code class="docutils literal notranslate"><span class="pre">uint8</span></code> RGB arrays shaped
-<code class="docutils literal notranslate"><span class="pre">[height,</span> <span class="pre">width,</span> <span class="pre">3]</span></code> without an <code class="docutils literal notranslate"><span class="pre">App</span></code>:</p>
+<code class="docutils literal notranslate"><span class="pre">[height,</span> <span class="pre">width,</span> <span class="pre">3]</span></code> without an <code class="docutils literal notranslate"><span class="pre">App</span></code>. Its constructor’s <code class="docutils literal notranslate"><span class="pre">fps</span></code> sets playback FPS
+and defaults to <strong>30 FPS</strong>, independently of App settings:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">recorder</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">recording</span><span class="o">.</span><span class="n">VideoRecorder</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">recording</span><span class="o">.</span><span class="n">VideoRecorder</span><span class="p">(</span>
     <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;output.mp4&quot;</span><span class="p">,</span>
     <span class="n">fps</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
@@ -421,7 +506,11 @@ and therefore cannot record video.</p>
     <span class="n">recorder</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">frame</span><span class="o">=</span><span class="n">rgb_frame</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Pass <code class="docutils literal notranslate"><span class="pre">codec</span></code> to <code class="docutils literal notranslate"><span class="pre">VideoRecorder</span></code> to select another available encoder.
+<p>Pass an FFmpeg encoder name as <code class="docutils literal notranslate"><span class="pre">codec</span></code> to <code class="docutils literal notranslate"><span class="pre">VideoRecorder</span></code> (default: <code class="docutils literal notranslate"><span class="pre">libx264</span></code>).
+Available encoders depend on the FFmpeg binary used by <code class="docutils literal notranslate"><span class="pre">imageio-ffmpeg</span></code>.
+<code class="docutils literal notranslate"><span class="pre">VideoRecorder</span></code> passes input dimensions to the encoder unchanged; the App’s
+resolution cap and even-dimension adjustment do not apply. Use even widths and
+heights with the default codec; odd dimensions may cause an encoding error.
 All frames in one recording must have the same resolution.</p>
 </section>
 </section>
@@ -485,7 +574,11 @@ All frames in one recording must have the same resolution.</p>
 <li><a class="reference internal" href="#viewer-shortcuts">Viewer shortcuts</a></li>
 <li><a class="reference internal" href="#configure-recording">Configure recording</a></li>
 <li><a class="reference internal" href="#programmatic-recording">Programmatic recording</a></li>
-<li><a class="reference internal" href="#offscreen-recording">Offscreen recording</a></li>
+<li><a class="reference internal" href="#offscreen-recording">Offscreen recording</a><ul>
+<li><a class="reference internal" href="#record-600-rendered-frames">Record 600 rendered frames</a></li>
+<li><a class="reference internal" href="#record-600-simulation-steps">Record 600 simulation steps</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#record-rgb-frames-directly">Record RGB frames directly</a></li>
 </ul>
 </li>

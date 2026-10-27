@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -508,20 +522,6 @@
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.scene.ResourceComponent" title="kangengine.scene.ResourceComponent"><span class="pre">ResourceComponent</span></a></span></span><a class="headerlink" href="#kangengine.scene.Prim.add_resource_component" title="Link to this definition">¶</a></dt>
 <dd><p>Attach and return this Resource prim’s resource component.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.Prim.add_rotate_quaternion_op">
-<span class="sig-name descname"><span class="pre">add_rotate_quaternion_op</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.add_rotate_quaternion_op" title="Link to this definition">¶</a></dt>
-<dd><p>Compatibility alias for local quaternion rotation.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -806,7 +806,7 @@
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.scene.DirectionalLight" title="kangengine.scene.DirectionalLight"><span class="pre">DirectionalLight</span></a></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_directional_light" title="Link to this definition">¶</a></dt>
-<dd><p>Return directional light data from this Light prim.</p>
+<dd><p>Return local directional light values; direction follows emitted rays.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -834,6 +834,11 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.scene.Prim.get_dome_light">
+<span class="sig-name descname"><span class="pre">get_dome_light</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.scene.DomeLight</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_dome_light" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.scene.Prim.get_light_component">
 <span class="sig-name descname"><span class="pre">get_light_component</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.scene.LightComponent</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_light_component" title="Link to this definition">¶</a></dt>
 <dd><p>Return this prim’s light component, or None.</p>
@@ -853,14 +858,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.Prim.get_local_rotation">
-<span class="sig-name descname"><span class="pre">get_local_rotation</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_local_rotation" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.scene.Prim.get_local_quat">
+<span class="sig-name descname"><span class="pre">get_local_quat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_local_quat" title="Link to this definition">¶</a></dt>
 <dd><p>Return the effective parent-relative quaternion rotation.</p>
 </dd></dl>
 
@@ -945,7 +944,7 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.scene.Prim.get_point_light">
 <span class="sig-name descname"><span class="pre">get_point_light</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.scene.PointLight" title="kangengine.scene.PointLight"><span class="pre">PointLight</span></a></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_point_light" title="Link to this definition">¶</a></dt>
-<dd><p>Return point light data from this Light prim.</p>
+<dd><p>Return point light values with parent-relative position.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -953,6 +952,11 @@
 <span class="sig-name descname"><span class="pre">get_prim_at_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_prim_at_path" title="Link to this definition">¶</a></dt>
 <dd><p>Find a descendant prim by absolute path.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.scene.Prim.get_rect_light">
+<span class="sig-name descname"><span class="pre">get_rect_light</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.scene.RectLight</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_rect_light" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.scene.Prim.get_render_component">
@@ -981,7 +985,7 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.scene.Prim.get_spot_light">
 <span class="sig-name descname"><span class="pre">get_spot_light</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.scene.SpotLight" title="kangengine.scene.SpotLight"><span class="pre">SpotLight</span></a></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_spot_light" title="Link to this definition">¶</a></dt>
-<dd><p>Return spot light data from this Light prim.</p>
+<dd><p>Return spot light values with parent-relative position and local ray direction.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1003,14 +1007,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.Prim.get_world_rotation">
-<span class="sig-name descname"><span class="pre">get_world_rotation</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_world_rotation" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.scene.Prim.get_world_quat">
+<span class="sig-name descname"><span class="pre">get_world_quat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.get_world_quat" title="Link to this definition">¶</a></dt>
 <dd><p>Return the effective world-space quaternion rotation.</p>
 </dd></dl>
 
@@ -1297,6 +1295,18 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.scene.Prim.set_dome_light">
+<span class="sig-name descname"><span class="pre">set_dome_light</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">light</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.scene.DomeLight</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.set_dome_light" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.scene.Prim.set_local_matrix">
 <span class="sig-name descname"><span class="pre">set_local_matrix</span></span><span class="sig-paren">(</span>
 
@@ -1313,17 +1323,17 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.Prim.set_local_rotation">
-<span class="sig-name descname"><span class="pre">set_local_rotation</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.scene.Prim.set_local_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_local_quat_wxyz</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.set_local_rotation" title="Link to this definition">¶</a></dt>
-<dd><p>Set local quaternion rotation.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.set_local_quat_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Set parent-relative rotation from WXYZ values or a Quat.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1423,6 +1433,18 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.scene.Prim.set_rect_light">
+<span class="sig-name descname"><span class="pre">set_rect_light</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">light</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.scene.RectLight</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.set_rect_light" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.scene.Prim.set_spot_light">
 <span class="sig-name descname"><span class="pre">set_spot_light</span></span><span class="sig-paren">(</span>
 
@@ -1458,17 +1480,17 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.Prim.set_world_rotation">
-<span class="sig-name descname"><span class="pre">set_world_rotation</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.scene.Prim.set_world_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_world_quat_wxyz</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.set_world_rotation" title="Link to this definition">¶</a></dt>
-<dd><p>Set world quaternion rotation.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.set_world_quat_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Set world-space rotation from WXYZ values or a Quat.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1666,7 +1688,8 @@
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.DirectionalLight.direction">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">direction</span></span><a class="headerlink" href="#kangengine.scene.DirectionalLight.direction" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Local direction of emitted rays; (0, -1, 0) shines down in Y-up.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.DirectionalLight.intensity">
@@ -1692,7 +1715,8 @@
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.PointLight.position">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">position</span></span><a class="headerlink" href="#kangengine.scene.PointLight.position" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Owning prim’s parent-relative translation, in scene units.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.PointLight.range">
@@ -1713,7 +1737,8 @@
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.SpotLight.direction">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">direction</span></span><a class="headerlink" href="#kangengine.scene.SpotLight.direction" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Local direction of emitted rays.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.SpotLight.inner_cone_angle">
@@ -1733,7 +1758,8 @@
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.SpotLight.position">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">position</span></span><a class="headerlink" href="#kangengine.scene.SpotLight.position" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Owning prim’s parent-relative translation, in scene units.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.SpotLight.range">
@@ -1789,14 +1815,14 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.get_local_rotation">
-<span class="sig-name descname"><span class="pre">get_local_rotation</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.get_local_quat">
+<span class="sig-name descname"><span class="pre">get_local_quat</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.TransformComponent" title="kangengine.scene.TransformComponent"><span class="pre">TransformComponent</span></a></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.get_local_rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.get_local_quat" title="Link to this definition">¶</a></dt>
 <dd><p>Return the effective parent-relative quaternion rotation.</p>
 </dd></dl>
 
@@ -1813,14 +1839,14 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.get_world_rotation">
-<span class="sig-name descname"><span class="pre">get_world_rotation</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.get_world_quat">
+<span class="sig-name descname"><span class="pre">get_world_quat</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.TransformComponent" title="kangengine.scene.TransformComponent"><span class="pre">TransformComponent</span></a></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.get_world_rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.get_world_quat" title="Link to this definition">¶</a></dt>
 <dd><p>Return the effective world-space quaternion rotation.</p>
 </dd></dl>
 
@@ -1859,17 +1885,17 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.set_local_rotation">
-<span class="sig-name descname"><span class="pre">set_local_rotation</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.set_local_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_local_quat_wxyz</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.TransformComponent" title="kangengine.scene.TransformComponent"><span class="pre">TransformComponent</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.set_local_rotation" title="Link to this definition">¶</a></dt>
-<dd><p>Set local rotation.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.set_local_quat_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Set parent-relative rotation from WXYZ values or a Quat.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1935,17 +1961,17 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.set_world_rotation">
-<span class="sig-name descname"><span class="pre">set_world_rotation</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.scene.TransformComponent.set_world_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_world_quat_wxyz</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.TransformComponent" title="kangengine.scene.TransformComponent"><span class="pre">TransformComponent</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::qua&lt;float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.set_world_rotation" title="Link to this definition">¶</a></dt>
-<dd><p>Set world rotation.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.TransformComponent.set_world_quat_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Set world-space rotation from WXYZ values or a Quat.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -3202,7 +3228,6 @@ physics collision still runs normally but there is no scene component to inspect
 <li><a class="reference internal" href="#kangengine.scene.Prim.add_mesh_component"><code class="docutils literal notranslate"><span class="pre">Prim.add_mesh_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.add_render_component"><code class="docutils literal notranslate"><span class="pre">Prim.add_render_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.add_resource_component"><code class="docutils literal notranslate"><span class="pre">Prim.add_resource_component()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.Prim.add_rotate_quaternion_op"><code class="docutils literal notranslate"><span class="pre">Prim.add_rotate_quaternion_op()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.add_scale_op"><code class="docutils literal notranslate"><span class="pre">Prim.add_scale_op()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.add_translate_op"><code class="docutils literal notranslate"><span class="pre">Prim.add_translate_op()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.compute_local_matrix"><code class="docutils literal notranslate"><span class="pre">Prim.compute_local_matrix()</span></code></a></li>
@@ -3230,9 +3255,10 @@ physics collision still runs normally but there is no scene component to inspect
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_directional_light"><code class="docutils literal notranslate"><span class="pre">Prim.get_directional_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_display_color"><code class="docutils literal notranslate"><span class="pre">Prim.get_display_color()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_display_color_alpha"><code class="docutils literal notranslate"><span class="pre">Prim.get_display_color_alpha()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.get_dome_light"><code class="docutils literal notranslate"><span class="pre">Prim.get_dome_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_light_component"><code class="docutils literal notranslate"><span class="pre">Prim.get_light_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_light_type"><code class="docutils literal notranslate"><span class="pre">Prim.get_light_type()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.Prim.get_local_rotation"><code class="docutils literal notranslate"><span class="pre">Prim.get_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.get_local_quat"><code class="docutils literal notranslate"><span class="pre">Prim.get_local_quat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_local_translation"><code class="docutils literal notranslate"><span class="pre">Prim.get_local_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_manipulation_policy"><code class="docutils literal notranslate"><span class="pre">Prim.get_manipulation_policy()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_material"><code class="docutils literal notranslate"><span class="pre">Prim.get_material()</span></code></a></li>
@@ -3245,12 +3271,13 @@ physics collision still runs normally but there is no scene component to inspect
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_path"><code class="docutils literal notranslate"><span class="pre">Prim.get_path()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_point_light"><code class="docutils literal notranslate"><span class="pre">Prim.get_point_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_prim_at_path"><code class="docutils literal notranslate"><span class="pre">Prim.get_prim_at_path()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.get_rect_light"><code class="docutils literal notranslate"><span class="pre">Prim.get_rect_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_render_component"><code class="docutils literal notranslate"><span class="pre">Prim.get_render_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_resource_component"><code class="docutils literal notranslate"><span class="pre">Prim.get_resource_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_spot_light"><code class="docutils literal notranslate"><span class="pre">Prim.get_spot_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_transform_component"><code class="docutils literal notranslate"><span class="pre">Prim.get_transform_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_type"><code class="docutils literal notranslate"><span class="pre">Prim.get_type()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.Prim.get_world_rotation"><code class="docutils literal notranslate"><span class="pre">Prim.get_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.get_world_quat"><code class="docutils literal notranslate"><span class="pre">Prim.get_world_quat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.get_world_translation"><code class="docutils literal notranslate"><span class="pre">Prim.get_world_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.has_articulation_binding_component"><code class="docutils literal notranslate"><span class="pre">Prim.has_articulation_binding_component()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.has_articulation_component"><code class="docutils literal notranslate"><span class="pre">Prim.has_articulation_component()</span></code></a></li>
@@ -3288,8 +3315,9 @@ physics collision still runs normally but there is no scene component to inspect
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_directional_light"><code class="docutils literal notranslate"><span class="pre">Prim.set_directional_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_display_color"><code class="docutils literal notranslate"><span class="pre">Prim.set_display_color()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_display_color_alpha"><code class="docutils literal notranslate"><span class="pre">Prim.set_display_color_alpha()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.set_dome_light"><code class="docutils literal notranslate"><span class="pre">Prim.set_dome_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_local_matrix"><code class="docutils literal notranslate"><span class="pre">Prim.set_local_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.Prim.set_local_rotation"><code class="docutils literal notranslate"><span class="pre">Prim.set_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.set_local_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">Prim.set_local_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_local_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">Prim.set_local_rotation_axis_angle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_local_scale"><code class="docutils literal notranslate"><span class="pre">Prim.set_local_scale()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_local_translation"><code class="docutils literal notranslate"><span class="pre">Prim.set_local_translation()</span></code></a></li>
@@ -3299,10 +3327,11 @@ physics collision still runs normally but there is no scene component to inspect
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_mesh_source_path"><code class="docutils literal notranslate"><span class="pre">Prim.set_mesh_source_path()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_pickable"><code class="docutils literal notranslate"><span class="pre">Prim.set_pickable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_point_light"><code class="docutils literal notranslate"><span class="pre">Prim.set_point_light()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.set_rect_light"><code class="docutils literal notranslate"><span class="pre">Prim.set_rect_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_spot_light"><code class="docutils literal notranslate"><span class="pre">Prim.set_spot_light()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_visible"><code class="docutils literal notranslate"><span class="pre">Prim.set_visible()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_world_matrix"><code class="docutils literal notranslate"><span class="pre">Prim.set_world_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.Prim.set_world_rotation"><code class="docutils literal notranslate"><span class="pre">Prim.set_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.Prim.set_world_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">Prim.set_world_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_world_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">Prim.set_world_rotation_axis_angle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.set_world_translation"><code class="docutils literal notranslate"><span class="pre">Prim.set_world_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.Prim.traverse"><code class="docutils literal notranslate"><span class="pre">Prim.traverse()</span></code></a></li>
@@ -3353,18 +3382,18 @@ physics collision still runs normally but there is no scene component to inspect
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.compute_local_matrix"><code class="docutils literal notranslate"><span class="pre">TransformComponent.compute_local_matrix()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.compute_model_matrix"><code class="docutils literal notranslate"><span class="pre">TransformComponent.compute_model_matrix()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.compute_world_matrix"><code class="docutils literal notranslate"><span class="pre">TransformComponent.compute_world_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.TransformComponent.get_local_rotation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.get_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.TransformComponent.get_local_quat"><code class="docutils literal notranslate"><span class="pre">TransformComponent.get_local_quat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.get_local_translation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.get_local_translation()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.TransformComponent.get_world_rotation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.get_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.TransformComponent.get_world_quat"><code class="docutils literal notranslate"><span class="pre">TransformComponent.get_world_quat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.get_world_translation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.get_world_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.owner"><code class="docutils literal notranslate"><span class="pre">TransformComponent.owner</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_local_matrix"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_local_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_local_rotation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_local_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_local_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_local_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_local_rotation_axis_angle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_local_scale"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_local_scale()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_local_translation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_local_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_world_matrix"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_world_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_world_rotation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_world_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_world_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_world_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_world_rotation_axis_angle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.set_world_translation"><code class="docutils literal notranslate"><span class="pre">TransformComponent.set_world_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.TransformComponent.version"><code class="docutils literal notranslate"><span class="pre">TransformComponent.version</span></code></a></li>

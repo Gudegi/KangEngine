@@ -9,4 +9,5 @@ scene_rendering/INDEX
 simulation/INDEX
 animation/INDEX
 advanced/INDEX
+CHANGELOG
 ```

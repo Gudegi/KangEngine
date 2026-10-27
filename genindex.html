@@ -10,7 +10,7 @@
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -208,6 +208,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -216,12 +217,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -233,6 +238,8 @@
 <li class="toctree-l3"><a class="reference internal" href="guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -243,6 +250,7 @@
 <li class="toctree-l3"><a class="reference internal" href="guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -252,12 +260,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/geometry.html">ke.geometry</a></li>
@@ -465,8 +479,6 @@
 </li>
         <li><a href="api/visual.html#kangengine.visual.sim.SimWorldVisualizer.add_rigid_scene_graph">add_rigid_scene_graph() (kangengine.visual.sim.SimWorldVisualizer method)</a>
 </li>
-        <li><a href="api/scene.html#kangengine.scene.Prim.add_rotate_quaternion_op">add_rotate_quaternion_op() (kangengine.scene.Prim method)</a>
-</li>
         <li><a href="api/scene.html#kangengine.scene.Prim.add_scale_op">add_scale_op() (kangengine.scene.Prim method)</a>
 </li>
         <li><a href="api/visual.html#kangengine.visual.sim.SimWorldVisualizer.add_scene_graph">add_scene_graph() (kangengine.visual.sim.SimWorldVisualizer method)</a>
@@ -519,10 +531,10 @@
         </ul></li>
         <li><a href="api/rendering.html#kangengine.render.TextureRole.AMBIENT_OCCLUSION">AMBIENT_OCCLUSION (kangengine.render.TextureRole attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.ao_texture">ao_texture (kangengine.material.PBRMaterial property)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/python.html#kangengine.App">App (class in kangengine)</a>
 </li>
         <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.apply_body_forces">apply_body_forces() (kangengine.sim.KangSimWorld method)</a>
@@ -551,6 +563,8 @@
           <li><a href="api/visual.html#kangengine.visual.SkeletalVisual.apply_state">(kangengine.visual.SkeletalVisual method)</a>
 </li>
           <li><a href="api/visual.html#kangengine.visual.SkinnedSurface.apply_state">(kangengine.visual.SkinnedSurface method)</a>
+</li>
+          <li><a href="api/visual.html#kangengine.visual.SkinVisual.apply_state">(kangengine.visual.SkinVisual method)</a>
 </li>
         </ul></li>
         <li><a href="api/visual.html#kangengine.visual.SkinVisual.apply_time">apply_time() (kangengine.visual.SkinVisual method)</a>
@@ -683,6 +697,8 @@
           <li><a href="api/scene.html#kangengine.scene.TransformComponent.attached">(kangengine.scene.TransformComponent property)</a>
 </li>
         </ul></li>
+        <li><a href="api/python.html#kangengine.App.automation">automation (kangengine.App property)</a>
+</li>
         <li><a href="api/python.html#kangengine.DebugOverlay.axes">axes() (kangengine.DebugOverlay method)</a>
 </li>
         <li><a href="api/asset.html#kangengine.asset.JointDesc.axis">axis (kangengine.asset.JointDesc property)</a>
@@ -697,11 +713,17 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/rendering.html#kangengine.Color.b">b (kangengine.Color property)</a>
 </li>
-        <li><a href="api/material.html#kangengine.material.PBRMaterial.base_color">base_color (kangengine.material.PBRMaterial property)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.base_color">base_color (kangengine.asset.USDMeshInfo property)</a>
+
+        <ul>
+          <li><a href="api/material.html#kangengine.material.PBRMaterial.base_color">(kangengine.material.PBRMaterial property)</a>
 </li>
+        </ul></li>
         <li><a href="api/rendering.html#kangengine.render.TextureRole.BASE_COLOR">BASE_COLOR (kangengine.render.TextureRole attribute)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.base_color_texture">base_color_texture (kangengine.material.PBRMaterial property)</a>
+</li>
+        <li><a href="api/visual.html#kangengine.visual.sim.VisualArticulationSceneGraph.base_colors">base_colors (kangengine.visual.sim.VisualArticulationSceneGraph attribute)</a>
 </li>
         <li><a href="api/python.html#kangengine.imgui.begin">begin() (in module kangengine.imgui)</a>
 </li>
@@ -831,6 +853,8 @@
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.bounce_threshold_velocity">bounce_threshold_velocity (kangengine.physics.PhysicsConfig property)</a>
 </li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.bounds">bounds (kangengine.asset.USDMeshInfo property)</a>
+</li>
         <li><a href="api/material.html#kangengine.material.PhongMaterialType.BRASS">BRASS (kangengine.material.PhongMaterialType attribute)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.D6JointConfig.break_force">break_force (kangengine.physics.D6JointConfig property)</a>
@@ -867,7 +891,13 @@
   <h2>C</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/python.html#kangengine.imgui.calc_text_size">calc_text_size() (in module kangengine.imgui)</a>
+</li>
         <li><a href="api/scene.html#kangengine.scene.Camera">Camera (class in kangengine.scene)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDImportResult.cameras">cameras (kangengine.asset.USDImportResult property)</a>
+</li>
+        <li><a href="api/python.html#kangengine.App.capture_frame">capture_frame() (kangengine.App method)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterialType.CARROT">CARROT (kangengine.material.PBRMaterialType attribute)</a>
 </li>
@@ -939,8 +969,12 @@
 </li>
         <li><a href="api/asset.html#kangengine.asset.FBXImportResult.clips">clips (kangengine.asset.FBXImportResult property)</a>
 </li>
-        <li><a href="api/simulation.html#kangengine.sim.SimulationRuntime.close">close() (kangengine.sim.SimulationRuntime method)</a>
+        <li><a href="api/python.html#kangengine.App.close">close() (kangengine.App method)</a>
+
+        <ul>
+          <li><a href="api/simulation.html#kangengine.sim.SimulationRuntime.close">(kangengine.sim.SimulationRuntime method)</a>
 </li>
+        </ul></li>
         <li><a href="api/python.html#kangengine.imgui.close_file_dialog">close_file_dialog() (in module kangengine.imgui)</a>
 </li>
         <li><a href="api/asset.html#kangengine.asset.ArticulationDesc.collision_geoms">collision_geoms (kangengine.asset.ArticulationDesc property)</a>
@@ -1037,12 +1071,12 @@
         </ul></li>
         <li><a href="api/physics.html#kangengine.physics.ArticulationConfig.contact_offset">contact_offset (kangengine.physics.ArticulationConfig property)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pair_body_refs">contact_pair_body_refs (kangengine.physics.PhysicsGpuStateViews property)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pair_count">contact_pair_count (kangengine.physics.PhysicsGpuStateViews property)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pair_headers">contact_pair_headers (kangengine.physics.PhysicsGpuStateViews property)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pairs">contact_pairs (kangengine.physics.PhysicsGpuStateViews property)</a>
@@ -1321,6 +1355,8 @@
           <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.diffuse_texture_path">(kangengine.asset.USDMeshInfo property)</a>
 </li>
         </ul></li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.diffuse_texture_srgb">diffuse_texture_srgb (kangengine.asset.USDMeshInfo property)</a>
+</li>
         <li><a href="api/scene.html#kangengine.scene.DirectionalLight.direction">direction (kangengine.scene.DirectionalLight property)</a>
 
         <ul>
@@ -1347,8 +1383,12 @@
 </li>
         <li><a href="api/simulation.html#kangengine.sim.ArticulationStateView.dof_vel">dof_vel (kangengine.sim.ArticulationStateView attribute)</a>
 </li>
-        <li><a href="api/scene.html#kangengine.scene.RenderComponent.double_sided">double_sided (kangengine.scene.RenderComponent property)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.double_sided">double_sided (kangengine.asset.USDMeshInfo property)</a>
+
+        <ul>
+          <li><a href="api/scene.html#kangengine.scene.RenderComponent.double_sided">(kangengine.scene.RenderComponent property)</a>
 </li>
+        </ul></li>
         <li><a href="api/python.html#kangengine.imgui.draw_circle_filled">draw_circle_filled() (in module kangengine.imgui)</a>
 </li>
         <li><a href="api/python.html#kangengine.imgui.draw_convex_polygon_filled">draw_convex_polygon_filled() (in module kangengine.imgui)</a>
@@ -1395,11 +1435,19 @@
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterialType.EMISSIVE_BLUE">EMISSIVE_BLUE (kangengine.material.PBRMaterialType attribute)</a>
 </li>
-        <li><a href="api/material.html#kangengine.material.PBRMaterial.emissive_color">emissive_color (kangengine.material.PBRMaterial property)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.emissive_color">emissive_color (kangengine.asset.USDMeshInfo property)</a>
+
+        <ul>
+          <li><a href="api/material.html#kangengine.material.PBRMaterial.emissive_color">(kangengine.material.PBRMaterial property)</a>
 </li>
+        </ul></li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.emissive_strength">emissive_strength (kangengine.material.PBRMaterial property)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.emissive_texture">emissive_texture (kangengine.material.PBRMaterial property)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.emissive_texture_path">emissive_texture_path (kangengine.asset.USDMeshInfo property)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.emissive_texture_srgb">emissive_texture_srgb (kangengine.asset.USDMeshInfo property)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.enable_body_accelerations">enable_body_accelerations (kangengine.physics.PhysicsConfig property)</a>
 </li>
@@ -1410,6 +1458,8 @@
         <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.enable_gpu">enable_gpu (kangengine.physics.PhysicsConfig property)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.ArticulationConfig.enable_gyroscopic_forces">enable_gyroscopic_forces (kangengine.physics.ArticulationConfig property)</a>
+</li>
+        <li><a href="api/python.html#kangengine.App.enable_mcp">enable_mcp() (kangengine.App method)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.enable_stabilization">enable_stabilization (kangengine.physics.PhysicsConfig property)</a>
 </li>
@@ -1557,10 +1607,10 @@
         </ul></li>
         <li><a href="api/animation.html#kangengine.animation.SkeletonMotion.fps">fps() (kangengine.animation.SkeletonMotion method)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/rendering.html#kangengine.render.ShaderType.FRAGMENT">FRAGMENT (kangengine.render.ShaderType attribute)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/animation.html#kangengine.animation.SkeletonMotion.frame">frame() (kangengine.animation.SkeletonMotion method)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.D6Joint.frame0">frame0 (kangengine.physics.D6Joint property)</a>
@@ -1601,6 +1651,12 @@
 </li>
         <li><a href="api/asset.html#kangengine.asset.CollisionGeomDesc.friction">friction (kangengine.asset.CollisionGeomDesc property)</a>
 </li>
+        <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.friction_combine_mode">friction_combine_mode (kangengine.physics.PhysicsConfig property)</a>
+
+        <ul>
+          <li><a href="api/physics.html#kangengine.physics.PhysicsMaterialDesc.friction_combine_mode">(kangengine.physics.PhysicsMaterialDesc property)</a>
+</li>
+        </ul></li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.friction_correlation_distance">friction_correlation_distance (kangengine.physics.PhysicsConfig property)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.friction_offset_threshold">friction_offset_threshold (kangengine.physics.PhysicsConfig property)</a>
@@ -1723,6 +1779,12 @@
           <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.get_body_id">(kangengine.sim.SimRigidBatch method)</a>
 </li>
         </ul></li>
+        <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.get_body_local_com_poses">get_body_local_com_poses() (kangengine.sim.KangSimWorld method)</a>
+</li>
+        <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.get_body_mass_space_inertias">get_body_mass_space_inertias() (kangengine.sim.KangSimWorld method)</a>
+</li>
+        <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.get_body_masses">get_body_masses() (kangengine.sim.KangSimWorld method)</a>
+</li>
         <li><a href="api/simulation.html#kangengine.sim.SimArticulation.get_body_pos">get_body_pos() (kangengine.sim.SimArticulation method)</a>
 
         <ul>
@@ -1733,14 +1795,14 @@
           <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.get_body_pos">(kangengine.sim.SimRigidBatch method)</a>
 </li>
         </ul></li>
-        <li><a href="api/simulation.html#kangengine.sim.SimArticulation.get_body_rot">get_body_rot() (kangengine.sim.SimArticulation method)</a>
+        <li><a href="api/simulation.html#kangengine.sim.SimArticulation.get_body_quat_xyzw">get_body_quat_xyzw() (kangengine.sim.SimArticulation method)</a>
 
         <ul>
-          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.get_body_rot">(kangengine.sim.SimArticulationBatch method)</a>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.get_body_quat_xyzw">(kangengine.sim.SimArticulationBatch method)</a>
 </li>
-          <li><a href="api/simulation.html#kangengine.sim.SimRigid.get_body_rot">(kangengine.sim.SimRigid method)</a>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigid.get_body_quat_xyzw">(kangengine.sim.SimRigid method)</a>
 </li>
-          <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.get_body_rot">(kangengine.sim.SimRigidBatch method)</a>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.get_body_quat_xyzw">(kangengine.sim.SimRigidBatch method)</a>
 </li>
         </ul></li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_camera_component">get_camera_component() (kangengine.scene.Prim method)</a>
@@ -1756,6 +1818,8 @@
         <li><a href="api/scene.html#kangengine.scene.Prim.get_child">get_child() (kangengine.scene.Prim method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_children">get_children() (kangengine.scene.Prim method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.get_collision_materials">get_collision_materials() (kangengine.physics.Articulation method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_collision_shape_component">get_collision_shape_component() (kangengine.scene.Prim method)</a>
 </li>
@@ -1797,6 +1861,8 @@
           <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.get_dof_vel">(kangengine.sim.SimArticulationBatch method)</a>
 </li>
         </ul></li>
+        <li><a href="api/scene.html#kangengine.scene.Prim.get_dome_light">get_dome_light() (kangengine.scene.Prim method)</a>
+</li>
         <li><a href="api/scene.html#kangengine.scene.Camera.get_far_plane">get_far_plane() (kangengine.scene.Camera method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.Camera.get_fov">get_fov() (kangengine.scene.Camera method)</a>
@@ -1869,18 +1935,26 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/animation.html#kangengine.animation.SkeletonState.get_joint_quat">get_joint_quat() (kangengine.animation.SkeletonState method)</a>
+</li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_light_component">get_light_component() (kangengine.scene.Prim method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_light_type">get_light_type() (kangengine.scene.Prim method)</a>
 </li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.get_link_local_com_poses">get_link_local_com_poses() (kangengine.physics.Articulation method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.get_link_mass_space_inertias">get_link_mass_space_inertias() (kangengine.physics.Articulation method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.get_link_masses">get_link_masses() (kangengine.physics.Articulation method)</a>
+</li>
         <li><a href="api/physics.html#kangengine.physics.Articulation.get_link_shape_counts">get_link_shape_counts() (kangengine.physics.Articulation method)</a>
 </li>
-        <li><a href="api/python.html#kangengine.RenderablePrimView.get_local_rotation">get_local_rotation() (kangengine.RenderablePrimView method)</a>
+        <li><a href="api/python.html#kangengine.RenderablePrimView.get_local_quat">get_local_quat() (kangengine.RenderablePrimView method)</a>
 
         <ul>
-          <li><a href="api/scene.html#kangengine.scene.Prim.get_local_rotation">(kangengine.scene.Prim method)</a>
+          <li><a href="api/scene.html#kangengine.scene.Prim.get_local_quat">(kangengine.scene.Prim method)</a>
 </li>
-          <li><a href="api/scene.html#kangengine.scene.TransformComponent.get_local_rotation">(kangengine.scene.TransformComponent method)</a>
+          <li><a href="api/scene.html#kangengine.scene.TransformComponent.get_local_quat">(kangengine.scene.TransformComponent method)</a>
 </li>
         </ul></li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.get_local_translation">get_local_translation() (kangengine.RenderablePrimView method)</a>
@@ -1927,6 +2001,8 @@
           <li><a href="api/python.html#kangengine.SceneContext.get_prim_at_path">(kangengine.SceneContext method)</a>
 </li>
         </ul></li>
+        <li><a href="api/scene.html#kangengine.scene.Prim.get_rect_light">get_rect_light() (kangengine.scene.Prim method)</a>
+</li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_render_component">get_render_component() (kangengine.scene.Prim method)</a>
 </li>
         <li><a href="api/python.html#kangengine.App.get_renderer">get_renderer() (kangengine.App method)</a>
@@ -1967,14 +2043,14 @@
           <li><a href="api/python.html#kangengine.SceneContext.get_root_prim">(kangengine.SceneContext method)</a>
 </li>
         </ul></li>
-        <li><a href="api/simulation.html#kangengine.sim.SimArticulation.get_root_rot">get_root_rot() (kangengine.sim.SimArticulation method)</a>
+        <li><a href="api/simulation.html#kangengine.sim.SimArticulation.get_root_quat_xyzw">get_root_quat_xyzw() (kangengine.sim.SimArticulation method)</a>
 
         <ul>
-          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.get_root_rot">(kangengine.sim.SimArticulationBatch method)</a>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.get_root_quat_xyzw">(kangengine.sim.SimArticulationBatch method)</a>
 </li>
-          <li><a href="api/simulation.html#kangengine.sim.SimRigid.get_root_rot">(kangengine.sim.SimRigid method)</a>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigid.get_root_quat_xyzw">(kangengine.sim.SimRigid method)</a>
 </li>
-          <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.get_root_rot">(kangengine.sim.SimRigidBatch method)</a>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.get_root_quat_xyzw">(kangengine.sim.SimRigidBatch method)</a>
 </li>
         </ul></li>
         <li><a href="api/simulation.html#kangengine.sim.SimArticulation.get_root_vel">get_root_vel() (kangengine.sim.SimArticulation method)</a>
@@ -2011,12 +2087,12 @@
 </li>
         <li><a href="api/rendering.html#kangengine.render.Texture.get_width">get_width() (kangengine.render.Texture method)</a>
 </li>
-        <li><a href="api/python.html#kangengine.RenderablePrimView.get_world_rotation">get_world_rotation() (kangengine.RenderablePrimView method)</a>
+        <li><a href="api/python.html#kangengine.RenderablePrimView.get_world_quat">get_world_quat() (kangengine.RenderablePrimView method)</a>
 
         <ul>
-          <li><a href="api/scene.html#kangengine.scene.Prim.get_world_rotation">(kangengine.scene.Prim method)</a>
+          <li><a href="api/scene.html#kangengine.scene.Prim.get_world_quat">(kangengine.scene.Prim method)</a>
 </li>
-          <li><a href="api/scene.html#kangengine.scene.TransformComponent.get_world_rotation">(kangengine.scene.TransformComponent method)</a>
+          <li><a href="api/scene.html#kangengine.scene.TransformComponent.get_world_quat">(kangengine.scene.TransformComponent method)</a>
 </li>
         </ul></li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.get_world_translation">get_world_translation() (kangengine.RenderablePrimView method)</a>
@@ -2206,6 +2282,8 @@
 </li>
         </ul></li>
         <li><a href="api/rendering.html#kangengine.render.BufferUsage.INDEX">INDEX (kangengine.render.BufferUsage attribute)</a>
+</li>
+        <li><a href="api/animation.html#kangengine.animation.SkeletonTree.index">index() (kangengine.animation.SkeletonTree method)</a>
 </li>
         <li><a href="api/asset.html#kangengine.asset.FBXMeshInfo.index_count">index_count (kangengine.asset.FBXMeshInfo property)</a>
 
@@ -2442,6 +2520,8 @@
           <li><a href="api/terrain.html#kangengine.terrain.TerrainGrid.length">(kangengine.terrain.TerrainGrid property)</a>
 </li>
         </ul></li>
+        <li><a href="api/asset.html#kangengine.asset.USDImportResult.lights">lights (kangengine.asset.USDImportResult property)</a>
+</li>
         <li><a href="api/physics.html#kangengine.physics.D6Motion.LIMITED">LIMITED (kangengine.physics.D6Motion attribute)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.D6JointConfig.linear_limits">linear_limits (kangengine.physics.D6JointConfig property)</a>
@@ -2478,10 +2558,10 @@
           <li><a href="api/material.html#kangengine.material.PhongMaterial.load_from_preset">(kangengine.material.PhongMaterial method)</a>
 </li>
         </ul></li>
-        <li><a href="api/scene.html#kangengine.scene.SceneBackend.load_mesh">load_mesh() (kangengine.scene.SceneBackend method)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/scene.html#kangengine.scene.SceneBackend.load_mesh">load_mesh() (kangengine.scene.SceneBackend method)</a>
+</li>
         <li><a href="api/asset.html#kangengine.asset.FBXLoader.load_meshes">load_meshes() (kangengine.asset.FBXLoader static method)</a>
 
         <ul>
@@ -2586,9 +2666,11 @@
 </li>
         <li><a href="api/material.html#kangengine.material.Material">Material (class in kangengine.material)</a>
 </li>
-        <li><a href="api/physics.html#kangengine.physics.CollisionMaterialOverride.material">material (kangengine.physics.CollisionMaterialOverride property)</a>
+        <li><a href="api/asset.html#kangengine.asset.VisualGeomDesc.material">material (kangengine.asset.VisualGeomDesc property)</a>
 
         <ul>
+          <li><a href="api/physics.html#kangengine.physics.CollisionMaterialOverride.material">(kangengine.physics.CollisionMaterialOverride property)</a>
+</li>
           <li><a href="api/scene.html#kangengine.scene.MaterialBindingComponent.material">(kangengine.scene.MaterialBindingComponent property)</a>
 </li>
         </ul></li>
@@ -2659,6 +2741,8 @@
 </li>
           <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.mesh_data">(kangengine.asset.USDMeshInfo property)</a>
 </li>
+          <li><a href="api/asset.html#kangengine.asset.VisualGeomDesc.mesh_data">(kangengine.asset.VisualGeomDesc property)</a>
+</li>
           <li><a href="api/scene.html#kangengine.scene.MeshComponent.mesh_data">(kangengine.scene.MeshComponent property)</a>
 </li>
           <li><a href="api/scene.html#kangengine.scene.RenderComponent.mesh_data">(kangengine.scene.RenderComponent property)</a>
@@ -2686,15 +2770,25 @@
           <li><a href="api/asset.html#kangengine.asset.FBXSkinnedMeshInfo.metadata">(kangengine.asset.FBXSkinnedMeshInfo property)</a>
 </li>
         </ul></li>
-        <li><a href="api/material.html#kangengine.material.PBRMaterial.metallic">metallic (kangengine.material.PBRMaterial property)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.metallic">metallic (kangengine.asset.USDMeshInfo property)</a>
+
+        <ul>
+          <li><a href="api/material.html#kangengine.material.PBRMaterial.metallic">(kangengine.material.PBRMaterial property)</a>
 </li>
+        </ul></li>
         <li><a href="api/rendering.html#kangengine.render.TextureRole.METALLIC">METALLIC (kangengine.render.TextureRole attribute)</a>
 </li>
         <li><a href="api/rendering.html#kangengine.render.TextureRole.METALLIC_ROUGHNESS">METALLIC_ROUGHNESS (kangengine.render.TextureRole attribute)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.metallic_roughness_texture">metallic_roughness_texture (kangengine.material.PBRMaterial property)</a>
 </li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.metallic_roughness_texture_path">metallic_roughness_texture_path (kangengine.asset.USDMeshInfo property)</a>
+</li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.metallic_texture">metallic_texture (kangengine.material.PBRMaterial property)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.metallic_texture_path">metallic_texture_path (kangengine.asset.USDMeshInfo property)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDImportResult.meters_per_unit">meters_per_unit (kangengine.asset.USDImportResult property)</a>
 </li>
         <li><a href="api/rendering.html#kangengine.render.SamplerDesc.min_filter">min_filter (kangengine.render.SamplerDesc property)</a>
 </li>
@@ -2951,12 +3045,18 @@
 </li>
         <li><a href="api/motion.html#kangengine.motion_module.TargetModule.OFFSET_FRAMES">OFFSET_FRAMES (kangengine.motion_module.TargetModule attribute)</a>
 </li>
-        <li><a href="api/rendering.html#kangengine.render.AlphaMode.OPAQUE">OPAQUE (kangengine.render.AlphaMode attribute)</a>
+        <li><a href="api/material.html#kangengine.material.PBRMaterial.opacity_texture">opacity_texture (kangengine.material.PBRMaterial property)</a>
 </li>
-        <li><a href="api/python.html#kangengine.imgui.open_directory_dialog">open_directory_dialog() (in module kangengine.imgui)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.opacity_texture_path">opacity_texture_path (kangengine.asset.USDMeshInfo property)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.opacity_threshold">opacity_threshold (kangengine.asset.USDMeshInfo property)</a>
+</li>
+        <li><a href="api/rendering.html#kangengine.render.AlphaMode.OPAQUE">OPAQUE (kangengine.render.AlphaMode attribute)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/python.html#kangengine.imgui.open_directory_dialog">open_directory_dialog() (in module kangengine.imgui)</a>
+</li>
         <li><a href="api/python.html#kangengine.imgui.open_file_dialog">open_file_dialog() (in module kangengine.imgui)</a>
 </li>
         <li><a href="api/python.html#kangengine.imgui.open_save_dialog">open_save_dialog() (in module kangengine.imgui)</a>
@@ -2968,6 +3068,8 @@
         <li><a href="api/rendering.html#kangengine.render.TextDepthMode.OVERLAY">OVERLAY (kangengine.render.TextDepthMode attribute)</a>
 </li>
         <li><a href="api/asset.html#kangengine.asset.FBXSkinnedMeshInfo.overweight_vertex_count">overweight_vertex_count (kangengine.asset.FBXSkinnedMeshInfo property)</a>
+</li>
+        <li><a href="api/visual.html#kangengine.visual.sim.VisualArticulationSceneGraph.owned_paths">owned_paths (kangengine.visual.sim.VisualArticulationSceneGraph attribute)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.ArticulationBindingComponent.owner">owner (kangengine.scene.ArticulationBindingComponent property)</a>
 
@@ -3201,11 +3303,15 @@
           <li><a href="api/asset.html#kangengine.asset.VisualGeomDesc.quat">(kangengine.asset.VisualGeomDesc property)</a>
 </li>
         </ul></li>
+        <li><a href="api/utils.html#kangengine.utils.math.quat_wxyz_to_matrix_numpy">quat_wxyz_to_matrix_numpy() (in module kangengine.utils.math)</a>
+</li>
         <li><a href="api/utils.html#kangengine.utils.math.quat_wxyz_to_xyzw">quat_wxyz_to_xyzw() (in module kangengine.utils.math)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils.html#kangengine.utils.math.quat_wxyz_twist_angle">quat_wxyz_twist_angle() (in module kangengine.utils.math)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.VisualGeomDesc.quat_xyzw">quat_xyzw (kangengine.asset.VisualGeomDesc property)</a>
 </li>
         <li><a href="api/utils.html#kangengine.utils.math.quat_xyzw_conjugate">quat_xyzw_conjugate() (in module kangengine.utils.math)</a>
 </li>
@@ -3235,6 +3341,12 @@
 
         <ul>
           <li><a href="api/scene.html#kangengine.scene.SpotLight.range">(kangengine.scene.SpotLight property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/terrain.html#kangengine.terrain.TerrainInstance.raycast">raycast() (kangengine.terrain.TerrainInstance method)</a>
+
+        <ul>
+          <li><a href="api/terrain.html#kangengine.terrain.TerrainMesh.raycast">(kangengine.terrain.TerrainMesh method)</a>
 </li>
         </ul></li>
         <li><a href="api/python.html#kangengine.RayPickResult">RayPickResult (class in kangengine)</a>
@@ -3272,6 +3384,8 @@
         <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.refresh_sensors">refresh_sensors() (kangengine.sim.KangSimWorld method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.SceneResourceManager.register_material">register_material() (kangengine.scene.SceneResourceManager method)</a>
+</li>
+        <li><a href="api/python.html#kangengine.App.register_mcp_scenario_target">register_mcp_scenario_target() (kangengine.App method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.SceneResourceManager.register_mesh">register_mesh() (kangengine.scene.SceneResourceManager method)</a>
 </li>
@@ -3375,6 +3489,8 @@
 </li>
         <li><a href="api/scene.html#kangengine.scene.ArticulationComponent.render_prim_count">render_prim_count (kangengine.scene.ArticulationComponent property)</a>
 </li>
+        <li><a href="api/visual.html#kangengine.visual.ArticulationVisual.render_prim_visual_indices">render_prim_visual_indices() (kangengine.visual.ArticulationVisual method)</a>
+</li>
         <li><a href="api/visual.html#kangengine.visual.sim.VisualArticulationSceneGraph.render_prims">render_prims (kangengine.visual.sim.VisualArticulationSceneGraph attribute)</a>
 </li>
         <li><a href="api/visual.html#kangengine.visual.ArticulationVisual.render_prims">render_prims() (kangengine.visual.ArticulationVisual method)</a>
@@ -3427,6 +3543,12 @@
           <li><a href="api/physics.html#kangengine.physics.PhysicsMaterialDesc.restitution">(kangengine.physics.PhysicsMaterialDesc property)</a>
 </li>
           <li><a href="api/scene.html#kangengine.scene.CollisionShapeComponent.restitution">(kangengine.scene.CollisionShapeComponent property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/physics.html#kangengine.physics.PhysicsConfig.restitution_combine_mode">restitution_combine_mode (kangengine.physics.PhysicsConfig property)</a>
+
+        <ul>
+          <li><a href="api/physics.html#kangengine.physics.PhysicsMaterialDesc.restitution_combine_mode">(kangengine.physics.PhysicsMaterialDesc property)</a>
 </li>
         </ul></li>
         <li><a href="api/asset.html#kangengine.asset.SiteDesc.rgba">rgba (kangengine.asset.SiteDesc property)</a>
@@ -3505,7 +3627,7 @@
 </li>
         <li><a href="api/simulation.html#kangengine.sim.ArticulationStateView.root_pos">root_pos (kangengine.sim.ArticulationStateView attribute)</a>
 </li>
-        <li><a href="api/simulation.html#kangengine.sim.ArticulationStateView.root_rot">root_rot (kangengine.sim.ArticulationStateView attribute)</a>
+        <li><a href="api/simulation.html#kangengine.sim.ArticulationStateView.root_quat_xyzw">root_quat_xyzw (kangengine.sim.ArticulationStateView attribute)</a>
 </li>
         <li><a href="api/animation.html#kangengine.animation.SkeletonMotion.root_translation">root_translation() (kangengine.animation.SkeletonMotion method)</a>
 
@@ -3525,13 +3647,17 @@
 </li>
         <li><a href="api/animation.html#kangengine.animation.Transform.rotation">rotation (kangengine.animation.Transform property)</a>
 </li>
-        <li><a href="api/animation.html#kangengine.animation.SkeletonState.rotation">rotation() (kangengine.animation.SkeletonState method)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.roughness">roughness (kangengine.asset.USDMeshInfo property)</a>
+
+        <ul>
+          <li><a href="api/material.html#kangengine.material.PBRMaterial.roughness">(kangengine.material.PBRMaterial property)</a>
 </li>
-        <li><a href="api/material.html#kangengine.material.PBRMaterial.roughness">roughness (kangengine.material.PBRMaterial property)</a>
-</li>
+        </ul></li>
         <li><a href="api/rendering.html#kangengine.render.TextureRole.ROUGHNESS">ROUGHNESS (kangengine.render.TextureRole attribute)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.roughness_texture">roughness_texture (kangengine.material.PBRMaterial property)</a>
+</li>
+        <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.roughness_texture_path">roughness_texture_path (kangengine.asset.USDMeshInfo property)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PhongMaterialType.RUBY">RUBY (kangengine.material.PhongMaterialType attribute)</a>
 </li>
@@ -3553,6 +3679,8 @@
           <li><a href="api/terrain.html#kangengine.terrain.TerrainMesh.sample_height">(kangengine.terrain.TerrainMesh method)</a>
 </li>
         </ul></li>
+        <li><a href="api/animation.html#kangengine.animation.SkeletonMotion.sample_into">sample_into() (kangengine.animation.SkeletonMotion method)</a>
+</li>
         <li><a href="api/rendering.html#kangengine.render.SamplerDesc">SamplerDesc (class in kangengine.render)</a>
 </li>
         <li><a href="api/exports.html#kangengine.exports.bvh.save_motion_bvh">save_motion_bvh() (in module kangengine.exports.bvh)</a>
@@ -3673,6 +3801,12 @@
           <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.set_body_force_at_position">(kangengine.sim.SimRigidBatch method)</a>
 </li>
         </ul></li>
+        <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.set_body_local_com_poses">set_body_local_com_poses() (kangengine.sim.KangSimWorld method)</a>
+</li>
+        <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.set_body_mass_space_inertias">set_body_mass_space_inertias() (kangengine.sim.KangSimWorld method)</a>
+</li>
+        <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.set_body_masses">set_body_masses() (kangengine.sim.KangSimWorld method)</a>
+</li>
         <li><a href="api/visual.html#kangengine.visual.sim.SimWorldVisualizer.set_body_transforms_scene_graph">set_body_transforms_scene_graph() (kangengine.visual.sim.SimWorldVisualizer method)</a>
 </li>
         <li><a href="api/visual.html#kangengine.visual.SkeletalVisual.set_bone_pickable">set_bone_pickable() (kangengine.visual.SkeletalVisual method)</a>
@@ -3710,6 +3844,10 @@
         <li><a href="api/physics.html#kangengine.physics.Articulation.set_collision_material">set_collision_material() (kangengine.physics.Articulation method)</a>
 
         <ul>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulation.set_collision_material">(kangengine.sim.SimArticulation method)</a>
+</li>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.set_collision_material">(kangengine.sim.SimArticulationBatch method)</a>
+</li>
           <li><a href="api/simulation.html#kangengine.sim.SimRigid.set_collision_material">(kangengine.sim.SimRigid method)</a>
 </li>
           <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.set_collision_material">(kangengine.sim.SimRigidBatch method)</a>
@@ -3718,6 +3856,10 @@
         <li><a href="api/physics.html#kangengine.physics.Articulation.set_collision_material_overrides">set_collision_material_overrides() (kangengine.physics.Articulation method)</a>
 
         <ul>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulation.set_collision_material_overrides">(kangengine.sim.SimArticulation method)</a>
+</li>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.set_collision_material_overrides">(kangengine.sim.SimArticulationBatch method)</a>
+</li>
           <li><a href="api/simulation.html#kangengine.sim.SimRigid.set_collision_material_overrides">(kangengine.sim.SimRigid method)</a>
 </li>
           <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.set_collision_material_overrides">(kangengine.sim.SimRigidBatch method)</a>
@@ -3747,6 +3889,8 @@
           <li><a href="api/visual.html#kangengine.visual.SkinVisual.set_color">(kangengine.visual.SkinVisual method)</a>
 </li>
         </ul></li>
+        <li><a href="api/python.html#kangengine.imgui.set_cursor_screen_pos">set_cursor_screen_pos() (in module kangengine.imgui)</a>
+</li>
         <li><a href="api/rendering.html#kangengine.render.Buffer.set_data">set_data() (kangengine.render.Buffer method)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PhongMaterial.set_diffuse">set_diffuse() (kangengine.material.PhongMaterial method)</a>
@@ -3773,6 +3917,8 @@
           <li><a href="api/simulation.html#kangengine.state.RigidStateCache.set_dofs">(kangengine.state.RigidStateCache method)</a>
 </li>
         </ul></li>
+        <li><a href="api/scene.html#kangengine.scene.Prim.set_dome_light">set_dome_light() (kangengine.scene.Prim method)</a>
+</li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.set_double_sided">set_double_sided() (kangengine.RenderablePrimView method)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.D6Batch.set_drive">set_drive() (kangengine.physics.D6Batch method)</a>
@@ -3837,8 +3983,12 @@
         </ul></li>
         <li><a href="api/visual.html#kangengine.visual.SkeletalVisual.set_joint_pickable">set_joint_pickable() (kangengine.visual.SkeletalVisual method)</a>
 </li>
-        <li><a href="api/visual.html#kangengine.visual.ArticulationVisual.set_joint_rotation">set_joint_rotation() (kangengine.visual.ArticulationVisual method)</a>
+        <li><a href="api/animation.html#kangengine.animation.SkeletonState.set_joint_quat_wxyz">set_joint_quat_wxyz() (kangengine.animation.SkeletonState method)</a>
+
+        <ul>
+          <li><a href="api/visual.html#kangengine.visual.ArticulationVisual.set_joint_quat_wxyz">(kangengine.visual.ArticulationVisual method)</a>
 </li>
+        </ul></li>
         <li><a href="api/physics.html#kangengine.physics.D6Batch.set_linear_limit">set_linear_limit() (kangengine.physics.D6Batch method)</a>
 
         <ul>
@@ -3846,6 +3996,12 @@
 </li>
         </ul></li>
         <li><a href="api/physics.html#kangengine.physics.D6Batch.set_link_frames">set_link_frames() (kangengine.physics.D6Batch method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.set_link_local_com_poses">set_link_local_com_poses() (kangengine.physics.Articulation method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.set_link_mass_space_inertias">set_link_mass_space_inertias() (kangengine.physics.Articulation method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.set_link_masses">set_link_masses() (kangengine.physics.Articulation method)</a>
 </li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.set_local_matrix">set_local_matrix() (kangengine.RenderablePrimView method)</a>
 
@@ -3855,12 +4011,12 @@
           <li><a href="api/scene.html#kangengine.scene.TransformComponent.set_local_matrix">(kangengine.scene.TransformComponent method)</a>
 </li>
         </ul></li>
-        <li><a href="api/python.html#kangengine.RenderablePrimView.set_local_rotation">set_local_rotation() (kangengine.RenderablePrimView method)</a>
+        <li><a href="api/python.html#kangengine.RenderablePrimView.set_local_quat_wxyz">set_local_quat_wxyz() (kangengine.RenderablePrimView method)</a>
 
         <ul>
-          <li><a href="api/scene.html#kangengine.scene.Prim.set_local_rotation">(kangengine.scene.Prim method)</a>
+          <li><a href="api/scene.html#kangengine.scene.Prim.set_local_quat_wxyz">(kangengine.scene.Prim method)</a>
 </li>
-          <li><a href="api/scene.html#kangengine.scene.TransformComponent.set_local_rotation">(kangengine.scene.TransformComponent method)</a>
+          <li><a href="api/scene.html#kangengine.scene.TransformComponent.set_local_quat_wxyz">(kangengine.scene.TransformComponent method)</a>
 </li>
         </ul></li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.set_local_rotation_axis_angle">set_local_rotation_axis_angle() (kangengine.RenderablePrimView method)</a>
@@ -3923,6 +4079,8 @@
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.set_normal_texture">set_normal_texture() (kangengine.material.PBRMaterial method)</a>
 </li>
+        <li><a href="api/material.html#kangengine.material.PBRMaterial.set_opacity_texture">set_opacity_texture() (kangengine.material.PBRMaterial method)</a>
+</li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.set_orm_texture">set_orm_texture() (kangengine.material.PBRMaterial method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.Prim.set_pickable">set_pickable() (kangengine.scene.Prim method)</a>
@@ -3949,14 +4107,16 @@
           <li><a href="api/python.html#kangengine.WorldText.set_position">(kangengine.WorldText method)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/rendering.html#kangengine.render.Renderer.set_profiler_enabled">set_profiler_enabled() (kangengine.render.Renderer method)</a>
+</li>
+        <li><a href="api/scene.html#kangengine.scene.Prim.set_rect_light">set_rect_light() (kangengine.scene.Prim method)</a>
 </li>
         <li><a href="api/python.html#kangengine.App.set_render_hz">set_render_hz() (kangengine.App method)</a>
 </li>
         <li><a href="api/rendering.html#kangengine.render.Renderer.set_renderable_alpha_mode">set_renderable_alpha_mode() (kangengine.render.Renderer method)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/rendering.html#kangengine.render.Renderer.set_renderable_casts_shadow">set_renderable_casts_shadow() (kangengine.render.Renderer method)</a>
 </li>
         <li><a href="api/rendering.html#kangengine.render.Renderer.set_renderable_colors">set_renderable_colors() (kangengine.render.Renderer method)</a>
@@ -3997,8 +4157,20 @@
           <li><a href="api/visual.html#kangengine.visual.ArticulationVisual.set_root_translation">(kangengine.visual.ArticulationVisual method)</a>
 </li>
         </ul></li>
-        <li><a href="api/animation.html#kangengine.animation.SkeletonState.set_rotation">set_rotation() (kangengine.animation.SkeletonState method)</a>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.set_root_velocity">set_root_velocity() (kangengine.physics.Articulation method)</a>
+
+        <ul>
+          <li><a href="api/simulation.html#kangengine.sim.KangSimWorld.set_root_velocity">(kangengine.sim.KangSimWorld method)</a>
 </li>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulation.set_root_velocity">(kangengine.sim.SimArticulation method)</a>
+</li>
+          <li><a href="api/simulation.html#kangengine.sim.SimArticulationBatch.set_root_velocity">(kangengine.sim.SimArticulationBatch method)</a>
+</li>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigid.set_root_velocity">(kangengine.sim.SimRigid method)</a>
+</li>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigidBatch.set_root_velocity">(kangengine.sim.SimRigidBatch method)</a>
+</li>
+        </ul></li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.set_roughness">set_roughness() (kangengine.material.PBRMaterial method)</a>
 </li>
         <li><a href="api/material.html#kangengine.material.PBRMaterial.set_roughness_texture">set_roughness_texture() (kangengine.material.PBRMaterial method)</a>
@@ -4081,12 +4253,12 @@
           <li><a href="api/scene.html#kangengine.scene.TransformComponent.set_world_matrix">(kangengine.scene.TransformComponent method)</a>
 </li>
         </ul></li>
-        <li><a href="api/python.html#kangengine.RenderablePrimView.set_world_rotation">set_world_rotation() (kangengine.RenderablePrimView method)</a>
+        <li><a href="api/python.html#kangengine.RenderablePrimView.set_world_quat_wxyz">set_world_quat_wxyz() (kangengine.RenderablePrimView method)</a>
 
         <ul>
-          <li><a href="api/scene.html#kangengine.scene.Prim.set_world_rotation">(kangengine.scene.Prim method)</a>
+          <li><a href="api/scene.html#kangengine.scene.Prim.set_world_quat_wxyz">(kangengine.scene.Prim method)</a>
 </li>
-          <li><a href="api/scene.html#kangengine.scene.TransformComponent.set_world_rotation">(kangengine.scene.TransformComponent method)</a>
+          <li><a href="api/scene.html#kangengine.scene.TransformComponent.set_world_quat_wxyz">(kangengine.scene.TransformComponent method)</a>
 </li>
         </ul></li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.set_world_rotation_axis_angle">set_world_rotation_axis_angle() (kangengine.RenderablePrimView method)</a>
@@ -4261,8 +4433,12 @@
 </li>
         <li><a href="api/rendering.html#kangengine.render.ShaderStage.source">source (kangengine.render.ShaderStage property)</a>
 </li>
-        <li><a href="api/simulation.html#kangengine.sim.SimRigid.source_data">source_data (kangengine.sim.SimRigid attribute)</a>
+        <li><a href="api/simulation.html#kangengine.sim.SimArticulation.source_data">source_data (kangengine.sim.SimArticulation attribute)</a>
+
+        <ul>
+          <li><a href="api/simulation.html#kangengine.sim.SimRigid.source_data">(kangengine.sim.SimRigid attribute)</a>
 </li>
+        </ul></li>
         <li><a href="api/scene.html#kangengine.scene.CollisionShapeComponent.source_geom_index">source_geom_index (kangengine.scene.CollisionShapeComponent property)</a>
 </li>
         <li><a href="api/motion.html#kangengine.motion_module.TargetModule.source_position">source_position() (kangengine.motion_module.TargetModule method)</a>
@@ -4387,6 +4563,8 @@
 </li>
         <li><a href="api/scene.html#kangengine.scene.SceneResourceManager.texture">texture() (kangengine.scene.SceneResourceManager method)</a>
 </li>
+        <li><a href="api/material.html#kangengine.material.Material.texture_paths">texture_paths (kangengine.material.Material property)</a>
+</li>
         <li><a href="api/rendering.html#kangengine.render.TextureRole">TextureRole (class in kangengine.render)</a>
 </li>
         <li><a href="api/terrain.html#kangengine.terrain.TerrainGrid.tile_origin">tile_origin() (kangengine.terrain.TerrainGrid method)</a>
@@ -4405,10 +4583,10 @@
 </li>
         <li><a href="api/scene.html#kangengine.scene.CollisionShapeComponent.to_position">to_position (kangengine.scene.CollisionShapeComponent property)</a>
 </li>
-        <li><a href="api/python.html#kangengine.App.toggle_video_recording">toggle_video_recording() (kangengine.App method)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/python.html#kangengine.App.toggle_video_recording">toggle_video_recording() (kangengine.App method)</a>
+</li>
         <li><a href="api/scene.html#kangengine.scene.Token">Token (class in kangengine.scene)</a>
 </li>
         <li><a href="api/rendering.html#kangengine.render.ScreenAnchor.TOP_CENTER">TOP_CENTER (kangengine.render.ScreenAnchor attribute)</a>
@@ -4493,8 +4671,12 @@
 </li>
         <li><a href="api/physics.html#kangengine.physics.unwrap_native">unwrap_native() (in module kangengine.physics)</a>
 </li>
-        <li><a href="api/motion.html#kangengine.motion_module.ContactData.up_axis">up_axis (kangengine.motion_module.ContactData attribute)</a>
+        <li><a href="api/asset.html#kangengine.asset.USDImportResult.up_axis">up_axis (kangengine.asset.USDImportResult property)</a>
+
+        <ul>
+          <li><a href="api/motion.html#kangengine.motion_module.ContactData.up_axis">(kangengine.motion_module.ContactData attribute)</a>
 </li>
+        </ul></li>
         <li><a href="api/motion.html#kangengine.motion_module.ContactModule.update">update() (kangengine.motion_module.ContactModule method)</a>
 
         <ul>
@@ -4519,10 +4701,10 @@
 </li>
         <li><a href="api/scene.html#kangengine.scene.DebugDraw.update_component_arrows">update_component_arrows() (kangengine.scene.DebugDraw static method)</a>
 </li>
-        <li><a href="api/scene.html#kangengine.scene.DebugDraw.update_component_lines">update_component_lines() (kangengine.scene.DebugDraw static method)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/scene.html#kangengine.scene.DebugDraw.update_component_lines">update_component_lines() (kangengine.scene.DebugDraw static method)</a>
+</li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.update_geometry">update_geometry() (kangengine.RenderablePrimView method)</a>
 </li>
         <li><a href="api/visual.html#kangengine.visual.SkinnedSurface.update_joint_matrices">update_joint_matrices() (kangengine.visual.SkinnedSurface method)</a>

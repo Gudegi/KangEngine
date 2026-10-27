@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -359,11 +373,14 @@ public paths regardless of whether an object is implemented in C++ or Python.</p
 <ul class="simple">
 <li><p><cite>setup()</cite> runs once before the loop starts.</p></li>
 <li><p><cite>pre_update()</cite> handles per-frame input before simulation updates.</p></li>
-<li><p><cite>fixed_update(dt)</cite> runs zero or more fixed updates per rendered frame.</p></li>
+<li><p><cite>fixed_update(dt)</cite> runs zero or more times in <cite>update_and_draw()</cite>.</p></li>
 <li><p><cite>pre_render()</cite> runs before scene rendering each frame.</p></li>
 <li><p><cite>render()</cite> runs while the ImGui frame is active.</p></li>
-<li><p><cite>post_render()</cite> runs after UI rendering and buffer swap setup.</p></li>
+<li><p><cite>post_render()</cite> runs after UI rendering and before capture/presentation.</p></li>
 </ul>
+<p><cite>start()</cite> repeats <cite>update_and_draw()</cite>. External simulation loops use
+<cite>process_events()</cite> and <cite>draw_frame()</cite>; drawing runs the render hooks without
+invoking <cite>pre_update()</cite> or <cite>fixed_update()</cite>.</p>
 <p>The C++ implementation still handles the default camera controls:
 WASD/mouse navigation, H to hide UI, Escape to close, framebuffer updates,
 and the built-in scene/performance panels.</p>
@@ -408,10 +425,51 @@ skinning and deformable vertex updates remain per-renderable state.</p>
 <span class="sig-name descname"><span class="pre">as_vec3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.as_vec3" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.App.automation">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">automation</span></span><a class="headerlink" href="#kangengine.App.automation" title="Link to this definition">¶</a></dt>
+<dd><p>Common observation service; create it on the App thread before sharing.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.capture_frame">
+<span class="sig-name descname"><span class="pre">capture_frame</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Future</span><span class="p"><span class="pre">[</span></span><span class="pre">CaptureResult</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.App.capture_frame" title="Link to this definition">¶</a></dt>
+<dd><p>Request the next scene frame as a future of CaptureResult.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output_path</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Optional PNG beneath <code class="docutils literal notranslate"><span class="pre">tmp/captures</span></code>. Relative paths
+are relative to that directory; existing files are rejected.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Future</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">CaptureResult</span></code>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A future containing PNG bytes and native frame identity. Wait from
+a worker thread or after rendering a frame, never in a render hook.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.cleanup">
 <span class="sig-name descname"><span class="pre">cleanup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.cleanup" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.close" title="Link to this definition">¶</a></dt>
+<dd><p>Finalize App services and release graphics resources on the owner thread.</p>
+<p>This is idempotent and is called by <code class="docutils literal notranslate"><span class="pre">start</span></code> even after a callback
+raises. Manually stepped apps must call it in a <code class="docutils literal notranslate"><span class="pre">finally</span></code> block.
+App-owned native views must not be used after this call.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.configure_run">
@@ -445,6 +503,7 @@ skinning and deformable vertex updates remain per-renderable state.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">ao_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">orm_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">emissive_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">opacity_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="material.html#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><span class="pre">PBRMaterial</span></a></span></span><a class="headerlink" href="#kangengine.App.create_pbr_material" title="Link to this definition">¶</a></dt>
@@ -532,6 +591,15 @@ should call <a class="reference internal" href="#kangengine.App.create_standard_
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.enable_mcp">
+<span class="sig-name descname"><span class="pre">enable_mcp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8765</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.enable_mcp" title="Link to this definition">¶</a></dt>
+<dd><p>Start the optional loopback observation server on this App.</p>
+<p>Connection credentials are saved per session in the user’s MCP runtime
+or cache directory, with owner-only POSIX permissions. Enable it also by
+<code class="docutils literal notranslate"><span class="pre">KANGENGINE_MCP=1</span></code> when calling <a class="reference internal" href="#kangengine.App.start" title="kangengine.App.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.fixed_update">
 <span class="sig-name descname"><span class="pre">fixed_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.fixed_update" title="Link to this definition">¶</a></dt>
 <dd><p>User override called zero or more times at a fixed timestep.</p>
@@ -601,8 +669,19 @@ native SceneBackend.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.load_texture">
-<span class="sig-name descname"><span class="pre">load_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><span class="pre">Texture</span></a></span></span><a class="headerlink" href="#kangengine.App.load_texture" title="Link to this definition">¶</a></dt>
-<dd><p>Load and retain a GPU texture, cached by normalized path.</p>
+<span class="sig-name descname"><span class="pre">load_texture</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">srgb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><span class="pre">Texture</span></a></span></span><a class="headerlink" href="#kangengine.App.load_texture" title="Link to this definition">¶</a></dt>
+<dd><p>Load and retain a texture, with optional sRGB decoding for color maps.</p>
+<p>Normal, roughness, metallic and other data maps use <code class="docutils literal notranslate"><span class="pre">srgb=False</span></code>.
+Cache identity includes image orientation and color space.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-class docutils literal notranslate"><span class="pre">Texture</span></code></a></span></p>
@@ -636,6 +715,32 @@ native SceneBackend.</p>
 <dt class="sig sig-object py" id="kangengine.App.pre_update">
 <span class="sig-name descname"><span class="pre">pre_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.pre_update" title="Link to this definition">¶</a></dt>
 <dd><p>User override called once before fixed updates each frame.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.register_mcp_scenario_target">
+<span class="sig-name descname"><span class="pre">register_mcp_scenario_target</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">McpScenarioTarget</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.register_mcp_scenario_target" title="Link to this definition">¶</a></dt>
+<dd><p>Register an optional MCP extension for scenario playback and capture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Unique nonempty name used by MCP scenario tools.</p></li>
+<li><p><strong>target</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">McpScenarioTarget</span></code></span>) – An implementation of
+<code class="docutils literal notranslate"><span class="pre">kangengine.app.mcp.scenario.McpScenarioTarget</span></code>.
+Register before running frames; registration does not start MCP.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -691,7 +796,7 @@ native SceneBackend.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.start">
 <span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.start" title="Link to this definition">¶</a></dt>
-<dd><p>Enter the application render loop.</p>
+<dd><p>Enter the application loop; close after Python-owned cleanup.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1204,8 +1309,8 @@ pybind API explicitly requires SceneBackend.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_local_rotation">
-<span class="sig-name descname"><span class="pre">get_local_rotation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_local_rotation" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_local_quat">
+<span class="sig-name descname"><span class="pre">get_local_quat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_local_quat" title="Link to this definition">¶</a></dt>
 <dd><p>Return the effective parent-relative quaternion rotation.</p>
 </dd></dl>
 
@@ -1216,8 +1321,8 @@ pybind API explicitly requires SceneBackend.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_world_rotation">
-<span class="sig-name descname"><span class="pre">get_world_rotation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_world_rotation" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_world_quat">
+<span class="sig-name descname"><span class="pre">get_world_quat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_world_quat" title="Link to this definition">¶</a></dt>
 <dd><p>Return the effective world-space quaternion rotation.</p>
 </dd></dl>
 
@@ -1266,9 +1371,9 @@ pybind API explicitly requires SceneBackend.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_rotation">
-<span class="sig-name descname"><span class="pre">set_local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_rotation" title="Link to this definition">¶</a></dt>
-<dd><p>Set the parent-relative quaternion rotation.</p>
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_local_quat_wxyz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quat_wxyz</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_quat_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Set parent-relative rotation from WXYZ values or a Quat.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1330,9 +1435,9 @@ without allocating a new NumPy array or Torch tensor.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_world_rotation">
-<span class="sig-name descname"><span class="pre">set_world_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_world_rotation" title="Link to this definition">¶</a></dt>
-<dd><p>Set quaternion rotation in world space.</p>
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_world_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_world_quat_wxyz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quat_wxyz</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_world_quat_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Set world-space rotation from WXYZ values or a Quat.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1426,19 +1531,22 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoBackground</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">128</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoMove</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoInputs</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">197120</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoMove</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">4</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoResize</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoResize</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoScrollbar</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoScrollbar</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">8</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoTitleBar</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoTitleBar</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_None</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_None</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
 </tr>
 </tbody>
@@ -1468,6 +1576,11 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.button">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">button</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.button" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.calc_text_size">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">calc_text_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.calc_text_size" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -1556,6 +1669,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;4</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rounding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.draw_rect_filled" title="Link to this definition">¶</a></dt>
@@ -1580,6 +1694,9 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">opacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">uv0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'FixedSize(2)'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0.0,</span> <span class="pre">1.0]</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">uv1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'FixedSize(2)'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[1.0,</span> <span class="pre">0.0]</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rounding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.image" title="Link to this definition">¶</a></dt>
@@ -1687,6 +1804,11 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.separator">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">separator</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.separator" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.set_cursor_screen_pos">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">set_cursor_screen_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.set_cursor_screen_pos" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -2174,7 +2296,10 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.add_render_hook"><code class="docutils literal notranslate"><span class="pre">App.add_render_hook()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.add_skinned_mesh"><code class="docutils literal notranslate"><span class="pre">App.add_skinned_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.as_vec3"><code class="docutils literal notranslate"><span class="pre">App.as_vec3()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.automation"><code class="docutils literal notranslate"><span class="pre">App.automation</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.capture_frame"><code class="docutils literal notranslate"><span class="pre">App.capture_frame()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.cleanup"><code class="docutils literal notranslate"><span class="pre">App.cleanup()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.close"><code class="docutils literal notranslate"><span class="pre">App.close()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.configure_run"><code class="docutils literal notranslate"><span class="pre">App.configure_run()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.configure_timing"><code class="docutils literal notranslate"><span class="pre">App.configure_timing()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_pbr_material"><code class="docutils literal notranslate"><span class="pre">App.create_pbr_material()</span></code></a></li>
@@ -2183,6 +2308,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.create_standard_materials"><code class="docutils literal notranslate"><span class="pre">App.create_standard_materials()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_standard_shaders"><code class="docutils literal notranslate"><span class="pre">App.create_standard_shaders()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_vertex_color_material"><code class="docutils literal notranslate"><span class="pre">App.create_vertex_color_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.enable_mcp"><code class="docutils literal notranslate"><span class="pre">App.enable_mcp()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.fixed_update"><code class="docutils literal notranslate"><span class="pre">App.fixed_update()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.get_native_scene"><code class="docutils literal notranslate"><span class="pre">App.get_native_scene()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.get_renderer"><code class="docutils literal notranslate"><span class="pre">App.get_renderer()</span></code></a></li>
@@ -2196,6 +2322,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.post_render"><code class="docutils literal notranslate"><span class="pre">App.post_render()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.pre_render"><code class="docutils literal notranslate"><span class="pre">App.pre_render()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.pre_update"><code class="docutils literal notranslate"><span class="pre">App.pre_update()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.register_mcp_scenario_target"><code class="docutils literal notranslate"><span class="pre">App.register_mcp_scenario_target()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.remove_render_hook"><code class="docutils literal notranslate"><span class="pre">App.remove_render_hook()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.render"><code class="docutils literal notranslate"><span class="pre">App.render()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.set_camera_view"><code class="docutils literal notranslate"><span class="pre">App.set_camera_view()</span></code></a></li>
@@ -2278,9 +2405,9 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.compute_local_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.compute_local_matrix()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.compute_world_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.compute_world_matrix()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.get_base_color"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_base_color()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_local_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_local_quat"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_local_quat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.get_local_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_local_translation()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_world_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_world_quat"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_world_quat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.get_world_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_world_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.path"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.path</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.remove"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.remove()</span></code></a></li>
@@ -2289,7 +2416,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_casts_shadow()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_double_sided"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_double_sided()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_rotation_axis_angle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_scale"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_scale()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_translation()</span></code></a></li>
@@ -2298,7 +2425,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_transform_buffer"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_transform_buffer()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_visible"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_visible()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_matrix()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_rotation_axis_angle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView.update_geometry"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.update_geometry()</span></code></a></li>
@@ -2320,6 +2447,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.imgui.begin"><code class="docutils literal notranslate"><span class="pre">begin()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.begin_child"><code class="docutils literal notranslate"><span class="pre">begin_child()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.button"><code class="docutils literal notranslate"><span class="pre">button()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.calc_text_size"><code class="docutils literal notranslate"><span class="pre">calc_text_size()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.checkbox"><code class="docutils literal notranslate"><span class="pre">checkbox()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.close_file_dialog"><code class="docutils literal notranslate"><span class="pre">close_file_dialog()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.colored_button"><code class="docutils literal notranslate"><span class="pre">colored_button()</span></code></a></li>
@@ -2343,6 +2471,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.imgui.same_line"><code class="docutils literal notranslate"><span class="pre">same_line()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.selectable"><code class="docutils literal notranslate"><span class="pre">selectable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.separator"><code class="docutils literal notranslate"><span class="pre">separator()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.set_cursor_screen_pos"><code class="docutils literal notranslate"><span class="pre">set_cursor_screen_pos()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_item_width"><code class="docutils literal notranslate"><span class="pre">set_next_item_width()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_window_pos"><code class="docutils literal notranslate"><span class="pre">set_next_window_pos()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_window_size"><code class="docutils literal notranslate"><span class="pre">set_next_window_size()</span></code></a></li>

@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -469,6 +483,18 @@ state visualization.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisual.render_prim_visual_indices">
+<span class="sig-name descname"><span class="pre">render_prim_visual_indices</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.animation.ArticulationVisual</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.render_prim_visual_indices" title="Link to this definition">¶</a></dt>
+<dd><p>Return descriptor visual indices, or -1 for collision fallback.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.ArticulationVisual.render_prims">
 <span class="sig-name descname"><span class="pre">render_prims</span></span><span class="sig-paren">(</span>
 
@@ -493,15 +519,15 @@ state visualization.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisual.set_joint_rotation">
-<span class="sig-name descname"><span class="pre">set_joint_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.set_joint_rotation" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisual.set_joint_quat_wxyz">
+<span class="sig-name descname"><span class="pre">set_joint_quat_wxyz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.set_joint_quat_wxyz" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>set_joint_rotation(self: kangengine.animation.ArticulationVisual, index: int, rotation: npt.ArrayLike | torch.Tensor) -&gt; None</p></li>
+<li><p>set_joint_quat_wxyz(self: kangengine.animation.ArticulationVisual, index: int, quat_wxyz: npt.ArrayLike | torch.Tensor) -&gt; None</p></li>
 </ol>
-<p>Set a joint rotation from an XYZW array.</p>
+<p>Set the indexed node’s quaternion from WXYZ values in the state frame.</p>
 <ol class="arabic simple" start="2">
-<li><p>set_joint_rotation(self: kangengine.animation.ArticulationVisual, index: int, rotation: glm::qua&lt;float, (glm::qualifier)0&gt;) -&gt; None</p></li>
+<li><p>set_joint_quat_wxyz(self: kangengine.animation.ArticulationVisual, index: int, quat_wxyz: glm::qua&lt;float, (glm::qualifier)0&gt;) -&gt; None</p></li>
 </ol>
 <p>Set a joint rotation from a quaternion.</p>
 </dd></dl>
@@ -1050,7 +1076,9 @@ state visualization.</p>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.from_fbx" title="Link to this definition">¶</a></dt>
-<dd><p>Convert one imported FBX skinned mesh without reading the file again.</p>
+<dd><p>Convert one imported FBX mesh; the loader already baked bind coordinates.</p>
+<p>To use a different compatible skeleton, pass it as <code class="docutils literal notranslate"><span class="pre">skeleton_tree</span></code> to
+<code class="docutils literal notranslate"><span class="pre">FBXLoader.load_skinned_meshes</span></code> first, so bone indices match this tree.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset</span></code></a></span></p>
@@ -1505,6 +1533,18 @@ dynamic bounds handling. It is not a supported cloth/soft-body visual API.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinVisual.apply_state">
+<span class="sig-name descname"><span class="pre">apply_state</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.apply_state" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.apply_time">
 <span class="sig-name descname"><span class="pre">apply_time</span></span><span class="sig-paren">(</span>
 
@@ -1531,10 +1571,13 @@ dynamic bounds handling. It is not a supported cloth/soft-body visual API.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">use_materials</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.SkinVisual</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.from_fbx" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Load an FBX skin and clip, or connect only its skin to skeleton_tree by bone name. External skeletons use apply_state/apply_pose, not motion/apply_time; no retargeting is performed.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.motion">
@@ -1817,7 +1860,7 @@ state consumed by policy or training code.</p>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">sim_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="simulation.html#kangengine.sim.SimRigid" title="kangengine.sim.SimRigid"><span class="pre">SimRigid</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><span class="pre">SimArticulation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimRigidBatch" title="kangengine.sim.SimRigidBatch"><span class="pre">SimRigidBatch</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><span class="pre">SimArticulationBatch</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em>,</dd>
@@ -1828,7 +1871,8 @@ state consumed by policy or training code.</p>
 <p><code class="docutils literal notranslate"><span class="pre">sim_handle</span></code> may be a single <code class="docutils literal notranslate"><span class="pre">SimRigid</span></code> / <code class="docutils literal notranslate"><span class="pre">SimArticulation</span></code> or a
 <code class="docutils literal notranslate"><span class="pre">SimRigidBatch</span></code> / <code class="docutils literal notranslate"><span class="pre">SimArticulationBatch</span></code>. Single objects are treated
 as a one-env visual batch. Use <code class="docutils literal notranslate"><span class="pre">add_scene_graph</span></code> when an inspectable
-per-environment SceneGraph visual is required.</p>
+per-environment SceneGraph visual is required. Handles use their registered
+descriptor’s appearance unless an explicit path overrides the source.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualBatch" title="kangengine.visual.sim.VisualBatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualBatch</span></code></a></span></p>
@@ -1843,7 +1887,7 @@ per-environment SceneGraph visual is required.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">asset_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
@@ -1902,7 +1946,7 @@ MimicKit-style per-body SceneGraph control.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/rigid'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
@@ -1931,7 +1975,7 @@ access.</p>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">sim_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="simulation.html#kangengine.sim.SimRigid" title="kangengine.sim.SimRigid"><span class="pre">SimRigid</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><span class="pre">SimArticulation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimRigidBatch" title="kangengine.sim.SimRigidBatch"><span class="pre">SimRigidBatch</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><span class="pre">SimArticulationBatch</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
@@ -2076,7 +2120,7 @@ environment into prims is impossible.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">body_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">body_rot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_quat_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.set_body_transforms_scene_graph" title="Link to this definition">¶</a></dt>
@@ -2117,7 +2161,7 @@ reference pose itself and expects the engine viewer to draw that pose.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">root_rot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_quat_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.set_root_transform_scene_graph" title="Link to this definition">¶</a></dt>
@@ -2195,7 +2239,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.release">
 <span class="sig-name descname"><span class="pre">release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.release" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Release visual resources; rigid visuals also remove their scene prims.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.set_collision_visible">
@@ -2356,6 +2401,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <dd><em class="sig-param"><span class="n"><span class="pre">collision_prims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">body_handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle_body_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">base_colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">owned_paths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="Link to this definition">¶</a></dt>
@@ -2398,6 +2445,16 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.handle_body_ids">
 <span class="sig-name descname"><span class="pre">handle_body_ids</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.handle_body_ids" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.base_colors">
+<span class="sig-name descname"><span class="pre">base_colors</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.base_colors" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.owned_paths">
+<span class="sig-name descname"><span class="pre">owned_paths</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.owned_paths" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -2541,9 +2598,10 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.from_urdf"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.from_urdf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.num_bodies"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.num_bodies()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.render_prim_body_indices"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.render_prim_body_indices()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.render_prim_visual_indices"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.render_prim_visual_indices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.render_prims"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.render_prims()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.reset_to_zero_pose"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.reset_to_zero_pose()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_joint_rotation"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_joint_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_joint_quat_wxyz"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_joint_quat_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_pickable"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_pickable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_root_translation"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_root_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.skeleton"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.skeleton()</span></code></a></li>
@@ -2635,6 +2693,7 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 </li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual"><code class="docutils literal notranslate"><span class="pre">SkinVisual</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.apply_pose"><code class="docutils literal notranslate"><span class="pre">SkinVisual.apply_pose()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinVisual.apply_state"><code class="docutils literal notranslate"><span class="pre">SkinVisual.apply_state()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.apply_time"><code class="docutils literal notranslate"><span class="pre">SkinVisual.apply_time()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.from_fbx"><code class="docutils literal notranslate"><span class="pre">SkinVisual.from_fbx()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.motion"><code class="docutils literal notranslate"><span class="pre">SkinVisual.motion()</span></code></a></li>
@@ -2746,6 +2805,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.collision_prims"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.collision_prims</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_handles"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.body_handles</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.handle_body_ids"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.handle_body_ids</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.base_colors"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.base_colors</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.owned_paths"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.owned_paths</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_id_from_render_handle"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.body_id_from_render_handle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.collision_visuals"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.collision_visuals</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph.key"><code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph.key</span></code></a></li>

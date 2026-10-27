@@ -8,4 +8,5 @@ Use KangEngine with external simulation and reinforcement-learning systems.
 ../KELAB
 ../NEWTON
 ../MIMICKIT
+MCP
 ```

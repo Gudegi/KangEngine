@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Procedural Terrain and Collision" href="PROCEDURAL_TERRAIN.html"><link rel="prev" title="Control DOFs" href="DOF_CONTROL.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Change Mass, Inertia, and Center of Mass" href="MASS_PROPERTIES.html"><link rel="prev" title="Control DOFs" href="DOF_CONTROL.html">
         <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/simulation/MULTI_ENV.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -180,7 +180,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -332,38 +346,84 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="multi-environment-simulation">
 <h1>Multi-Environment Simulation<a class="headerlink" href="#multi-environment-simulation" title="Link to this heading">¶</a></h1>
-<p>Create the world with the desired environment count, register the same object
-id in each environment, and retrieve a batched view.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">world</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span><span class="n">num_envs</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">sim_dt</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">120.0</span><span class="p">)</span>
+<p>Run multiple independent simulations in one world and read or update their
+state as batches. Objects with the same <code class="docutils literal notranslate"><span class="pre">obj_id</span></code> form a batch across environments.</p>
+<section id="share-one-rigid-description">
+<h2>Share one rigid description<a class="headerlink" href="#share-one-rigid-description" title="Link to this heading">¶</a></h2>
+<p>Prepare <code class="docutils literal notranslate"><span class="pre">box_asset</span></code> as shown in <a class="reference internal" href="RIGID_BODIES.html#prepare-a-rigid-description"><span class="std std-ref">Rigid Bodies</span></a>.
+This CPU example creates a new world; release any previous viewer and world first.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
 
-<span class="k">for</span> <span class="n">env_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">16</span><span class="p">):</span>
-    <span class="n">world</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
-        <span class="n">box_data</span><span class="p">,</span>
-        <span class="n">env_id</span><span class="o">=</span><span class="n">env_id</span><span class="p">,</span>
-        <span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;box_</span><span class="si">{</span><span class="n">env_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="n">pos</span><span class="o">=</span><span class="n">positions</span><span class="p">[</span><span class="n">env_id</span><span class="p">],</span>
-    <span class="p">)</span>
-
-<span class="n">boxes</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_rigid_batch</span><span class="p">(</span><span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">world</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
+    <span class="n">num_envs</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">sim_dt</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">120.0</span><span class="p">,</span> <span class="n">add_ground</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">cloner</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">GridCloner</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">GridCloner</span><span class="p">(</span><span class="n">world</span><span class="o">=</span><span class="n">world</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+<span class="n">boxes</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimRigidBatch</span> <span class="o">=</span> <span class="n">cloner</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
+    <span class="n">box_asset</span><span class="p">,</span> <span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">initial_root_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">),</span> <span class="n">density</span><span class="o">=</span><span class="mf">600.0</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <p>State and reset values are batched along the first dimension:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">positions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">16</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="n">positions</span> <span class="o">=</span> <span class="n">cloner</span><span class="o">.</span><span class="n">env_origins</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">])</span>
 <span class="n">rotations</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">16</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="n">rotations</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
 
-<span class="n">boxes</span><span class="o">.</span><span class="n">set_root_state</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">rotations</span><span class="p">)</span>
+<span class="n">boxes</span><span class="o">.</span><span class="n">set_root_state</span><span class="p">(</span><span class="n">env_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">positions</span><span class="p">,</span> <span class="n">quat_xyzw</span><span class="o">=</span><span class="n">rotations</span><span class="p">,</span> <span class="n">immediate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">root_pos</span> <span class="o">=</span> <span class="n">boxes</span><span class="o">.</span><span class="n">get_root_pos</span><span class="p">()</span>  <span class="c1"># shape: [16, 3]</span>
 </pre></div>
 </div>
+<p>Reset positions use world coordinates, so add each environment origin to the
+desired local offset. This reset moves every box to 0.8 meters above its origin.
+See <a class="reference internal" href="STATE_AND_RESET.html"><span class="std std-doc">State and Reset</span></a> for queued resets and CUDA inputs.</p>
+</section>
+<section id="different-rigid-sources-per-environment">
+<h2>Different rigid sources per environment<a class="headerlink" href="#different-rigid-sources-per-environment" title="Link to this heading">¶</a></h2>
+<p>This example creates a new three-environment world from procedural stairs.
+Release any previous viewer and world before creating this world; the
+<a class="reference internal" href="RIGID_BODIES.html#place-a-body-in-each-environment"><span class="std std-ref">rigid guide</span></a> shows the simpler
+case of sharing one box description.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">world</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span><span class="n">num_envs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">cloner</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">GridCloner</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">GridCloner</span><span class="p">(</span><span class="n">world</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+<span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">RigidDesc</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">rigid_from_terrain_mesh</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">terrain</span><span class="o">.</span><span class="n">pyramid_stairs_mesh</span><span class="p">(</span><span class="n">step_height</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)),</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">rigid_from_terrain_mesh</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">terrain</span><span class="o">.</span><span class="n">pyramid_stairs_mesh</span><span class="p">(</span><span class="n">step_height</span><span class="o">=</span><span class="mf">0.18</span><span class="p">)),</span>
+<span class="p">]</span>
+<span class="n">rigids</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimRigidBatch</span> <span class="o">=</span> <span class="n">cloner</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sources</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">kinematic</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Pass one description to share it across every selected environment, or a
+sequence in selected-environment order as above. The terrain conversion shares
+the generated mesh. <code class="docutils literal notranslate"><span class="pre">kinematic=True</span></code> allows pose resets, <code class="docutils literal notranslate"><span class="pre">static=True</span></code> creates
+fixed collision bodies, and leaving both false creates dynamic bodies.</p>
+<p>The default collider from <code class="docutils literal notranslate"><span class="pre">rigid_from_terrain_mesh()</span></code> is a triangle mesh.
+Triangle-mesh collision supports static and kinematic bodies; dynamic bodies
+require primitive or convex colliders.</p>
+<p>Sources sharing an <code class="docutils literal notranslate"><span class="pre">obj_id</span></code> must have the same physical body count and the same
+collision shape count, checked separately. Every rigid has one body, even with
+multiple colliders. Names, geometry, and visual part counts may differ between
+environments. Shape arrays use fixed slots without padding or masks.
+Create all actors before initializing a GPU simulation.
+Environment collision groups isolate bodies from other environments.</p>
+<p>Initial positions are relative to the cloner’s environment origins.
+<code class="docutils literal notranslate"><span class="pre">initial_root_pos</span></code> accepts <code class="docutils literal notranslate"><span class="pre">[3]</span></code> or <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">3]</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">initial_root_quat_xyzw</span></code> accepts <code class="docutils literal notranslate"><span class="pre">[4]</span></code> or <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">4]</span></code>, where <code class="docutils literal notranslate"><span class="pre">N</span></code> is the selected
+environment count. Positions use meters; rotations are unit XYZW quaternions.</p>
+</section>
+<section id="try-the-ramp-example">
+<h2>Try the ramp example<a class="headerlink" href="#try-the-ramp-example" title="Link to this heading">¶</a></h2>
 <p>Run:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>./python/examples/sim_world_multi_env.py<span class="w"> </span>--num-envs<span class="w"> </span><span class="m">16</span>
 </pre></div>
@@ -637,7 +697,7 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos">265</span>        <span class="n">view</span><span class="o">.</span><span class="n">prim</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ramp_pos</span><span class="p">))</span>
 <span class="linenos">266</span>        <span class="c1"># ke.Quat constructor is (w, x, y, z), while PhysX binding args above</span>
 <span class="linenos">267</span>        <span class="c1"># use xyzw lists.</span>
-<span class="linenos">268</span>        <span class="n">view</span><span class="o">.</span><span class="n">prim</span><span class="o">.</span><span class="n">set_local_rotation</span><span class="p">(</span>
+<span class="linenos">268</span>        <span class="n">view</span><span class="o">.</span><span class="n">prim</span><span class="o">.</span><span class="n">set_local_quat_wxyz</span><span class="p">(</span>
 <span class="linenos">269</span>            <span class="n">ke</span><span class="o">.</span><span class="n">Quat</span><span class="p">(</span>
 <span class="linenos">270</span>                <span class="bp">self</span><span class="o">.</span><span class="n">ramp_rot_xyzw</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
 <span class="linenos">271</span>                <span class="bp">self</span><span class="o">.</span><span class="n">ramp_rot_xyzw</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -689,18 +749,19 @@ id in each environment, and retrieve a batched view.</p>
 batched state statistics.</p>
 <p><img alt="Batched ramp environments" src="../../_images/multi_env.png" /></p>
 </section>
+</section>
 
         </article>
       </div>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="PROCEDURAL_TERRAIN.html">
+          <a class="next-page" href="MASS_PROPERTIES.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Procedural Terrain and Collision</div>
+                <div class="title">Change Mass, Inertia, and Center of Mass</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -733,8 +794,29 @@ batched state statistics.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Multi-Environment Simulation</a><ul>
+<li><a class="reference internal" href="#share-one-rigid-description">Share one rigid description</a></li>
+<li><a class="reference internal" href="#different-rigid-sources-per-environment">Different rigid sources per environment</a></li>
+<li><a class="reference internal" href="#try-the-ramp-example">Try the ramp example</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

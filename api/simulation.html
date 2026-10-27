@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -522,7 +536,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
@@ -549,7 +563,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
@@ -727,6 +741,60 @@ remain valid until the next call to this method on the same world.</p>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimArticulationBatch</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_body_local_com_poses">
+<span class="sig-name descname"><span class="pre">get_body_local_com_poses</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_body_local_com_poses" title="Link to this definition">¶</a></dt>
+<dd><p>Return CPU actor/link-local poses <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B,</span> <span class="pre">7)</span></code>: metres XYZ, quaternion XYZW.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_body_mass_space_inertias">
+<span class="sig-name descname"><span class="pre">get_body_mass_space_inertias</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_body_mass_space_inertias" title="Link to this definition">¶</a></dt>
+<dd><p>Return CPU principal inertias in COM frames, <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B,</span> <span class="pre">3)</span></code>, kg*m².</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_body_masses">
+<span class="sig-name descname"><span class="pre">get_body_masses</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_body_masses" title="Link to this definition">¶</a></dt>
+<dd><p>Return CPU masses in kg, shape <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B)</span></code>; a compound rigid has B=1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1080,6 +1148,79 @@ properties that remain caller-owned or are not imported.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_body_local_com_poses">
+<span class="sig-name descname"><span class="pre">set_body_local_com_poses</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">poses</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_body_local_com_poses" title="Link to this definition">¶</a></dt>
+<dd><p>Set CPU local poses <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">selected_bodies,</span> <span class="pre">7)</span></code>; actor poses stay fixed.</p>
+<p>Rows contain metres XYZ followed by a unit XYZW quaternion. Inertia
+values stay in the new COM frame. Call between completed CPU/GPU steps;
+GPU changes upload on the next actual physics step. This does not
+compensate velocity for a shifted COM.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_body_mass_space_inertias">
+<span class="sig-name descname"><span class="pre">set_body_mass_space_inertias</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">inertias</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_body_mass_space_inertias" title="Link to this definition">¶</a></dt>
+<dd><p>Set CPU values <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">selected_bodies,</span> <span class="pre">3)</span></code> in kg*m², in each COM frame.</p>
+<p>Call between completed CPU/GPU steps; mass is unchanged. GPU changes
+upload on the next actual physics step, as with <code class="docutils literal notranslate"><span class="pre">set_body_masses</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_body_masses">
+<span class="sig-name descname"><span class="pre">set_body_masses</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">masses</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_body_masses" title="Link to this definition">¶</a></dt>
+<dd><p>Set CPU values <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">selected_bodies)</span></code> in kg; inertia is unchanged.</p>
+<p>Use between completed CPU/GPU steps. GPU changes upload on the next
+actual physics step, not on refresh or a zero-substep flush. Body IDs
+select articulation links; dynamic/kinematic rigids have only body 0.
+The registered state metadata is refreshed. Actors are not woken.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_cmd">
 <span class="sig-name descname"><span class="pre">set_cmd</span></span><span class="sig-paren">(</span>
 
@@ -1130,10 +1271,18 @@ on device through row selection and the indexed PhysX apply call.
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_gpu_root_state_batch">
 <span class="sig-name descname"><span class="pre">set_gpu_root_state_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_gpu_root_state_batch" title="Link to this definition">¶</a></dt>
 <dd><p>Queue CUDA root states without creating per-environment reset objects.</p>
-<p><code class="docutils literal notranslate"><span class="pre">env_ids</span></code> may be a one-dimensional CUDA int32/int64 tensor. It stays
-on device through row selection and the indexed PhysX apply call.
-<code class="docutils literal notranslate"><span class="pre">state</span></code> must be a contiguous <code class="docutils literal notranslate"><span class="pre">float32</span></code> CUDA tensor shaped <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">13]</span></code>
-with position, xyzw rotation, linear velocity, and angular velocity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env_ids</strong> – Environment rows, optionally a 1-D CUDA int32/int64 tensor
+kept on device through row selection and indexed PhysX apply.</p></li>
+<li><p><strong>obj_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Simulation object index.</p></li>
+<li><p><strong>state</strong> – Contiguous float32 CUDA tensor <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">13)</span></code> in world space:
+position in meters <code class="docutils literal notranslate"><span class="pre">0:3</span></code>, quaternion XYZW <code class="docutils literal notranslate"><span class="pre">3:7</span></code>, linear
+velocity in m/s <code class="docutils literal notranslate"><span class="pre">7:10</span></code>, angular velocity in rad/s <code class="docutils literal notranslate"><span class="pre">10:13</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1144,7 +1293,7 @@ with position, xyzw rotation, linear velocity, and angular velocity.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">immediate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
@@ -1152,6 +1301,40 @@ with position, xyzw rotation, linear velocity, and angular velocity.</p>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_root_state" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_root_velocity">
+<span class="sig-name descname"><span class="pre">set_root_velocity</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_root_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Set world velocities between steps without resetting other state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">integer</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>] | <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Selected environments in output row order; None selects
+all environments containing this object. CUDA IDs require the
+object to be registered in every environment.</p></li>
+<li><p><strong>obj_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Simulation object identifier.</p></li>
+<li><p><strong>linear_velocity</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span>) – World linear velocity in m/s, shape (3,) or (N, 3).</p></li>
+<li><p><strong>angular_velocity</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span>) – World angular velocity in rad/s, same shapes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+<p>CUDA simulation requires float32 CUDA velocity tensors. Pose, DOFs,
+forces and control commands are preserved. Pending resets remain queued;
+apply them first when setting a post-reset velocity. GPU snapshots need
+an explicit refresh. Static/kinematic and fixed-base objects are excluded.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.step">
@@ -1188,10 +1371,12 @@ helpers for the latest canonical CUDA state when avoiding readback.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">articulation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">world</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.sim.KangSimWorld" title="kangengine.sim.KangSimWorld"><span class="pre">KangSimWorld</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">source_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.sim.SimArticulation" title="Link to this definition">¶</a></dt>
-<dd><p>Simulation-facing view for one registered articulation.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CollisionShapeMixin</span></code></p>
+<p>Simulation-facing view for one registered articulation.</p>
 <p>This is the lightweight public object users should grow into using. It
 keeps the native articulation accessible for compatibility, while routing
 common commands and state access through <code class="docutils literal notranslate"><span class="pre">KangSimWorld</span></code>.</p>
@@ -1218,6 +1403,11 @@ common commands and state access through <code class="docutils literal notransla
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.sim.SimArticulation.world">
 <span class="sig-name descname"><span class="pre">world</span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.world" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.source_data">
+<span class="sig-name descname"><span class="pre">source_data</span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.source_data" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1290,15 +1480,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.get_body_rot">
-<span class="sig-name descname"><span class="pre">get_body_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.get_body_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_body_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.get_body_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.get_body_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -1418,15 +1608,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.get_root_rot">
-<span class="sig-name descname"><span class="pre">get_root_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.get_root_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_root_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.get_root_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.get_root_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -1532,6 +1722,28 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.set_collision_material">
+<span class="sig-name descname"><span class="pre">set_collision_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">material</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.set_collision_material" title="Link to this definition">¶</a></dt>
+<dd><p>Replace all collision shape materials on this articulation at runtime.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.set_collision_material_overrides">
+<span class="sig-name descname"><span class="pre">set_collision_material_overrides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.set_collision_material_overrides" title="Link to this definition">¶</a></dt>
+<dd><p>Change matched collision shapes, preserving unmatched materials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.SimArticulation.set_dof_state">
 <span class="sig-name descname"><span class="pre">set_dof_state</span></span><span class="sig-paren">(</span>
 
@@ -1558,14 +1770,33 @@ common commands and state access through <code class="docutils literal notransla
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">immediate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.set_root_state" title="Link to this definition">¶</a></dt>
-<dd><p>Shapes: position/velocity <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">3)</span></code>, rotation <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
+<dd><p>World pose/velocities: vectors <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">3)</span></code>, XYZW quaternion <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulation.set_root_velocity">
+<span class="sig-name descname"><span class="pre">set_root_velocity</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulation.set_root_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
@@ -1587,7 +1818,8 @@ common commands and state access through <code class="docutils literal notransla
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch" title="Link to this definition">¶</a></dt>
-<dd><p>Batched simulation-facing view for one logical articulation object.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">CollisionShapeBatchMixin</span></code></p>
+<p>Batched simulation-facing view for one logical articulation object.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.world">
 <span class="sig-name descname"><span class="pre">world</span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.world" title="Link to this definition">¶</a></dt>
@@ -1682,15 +1914,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.get_body_rot">
-<span class="sig-name descname"><span class="pre">get_body_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.get_body_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_body_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.get_body_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.get_body_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -1810,15 +2042,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.get_root_rot">
-<span class="sig-name descname"><span class="pre">get_root_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.get_root_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_root_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.get_root_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.get_root_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -1934,6 +2166,42 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.set_collision_material">
+<span class="sig-name descname"><span class="pre">set_collision_material</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.set_collision_material" title="Link to this definition">¶</a></dt>
+<dd><p>Replace shape materials on selected articulation env instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.set_collision_material_overrides">
+<span class="sig-name descname"><span class="pre">set_collision_material_overrides</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.set_collision_material_overrides" title="Link to this definition">¶</a></dt>
+<dd><p>Change matched shapes on selected articulation env instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.set_dof_state">
 <span class="sig-name descname"><span class="pre">set_dof_state</span></span><span class="sig-paren">(</span>
 
@@ -1960,7 +2228,7 @@ common commands and state access through <code class="docutils literal notransla
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">immediate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
@@ -1968,6 +2236,25 @@ common commands and state access through <code class="docutils literal notransla
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.set_root_state" title="Link to this definition">¶</a></dt>
 <dd><p>Shapes: position/velocity <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">3)</span></code>, rotation <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimArticulationBatch.set_root_velocity">
+<span class="sig-name descname"><span class="pre">set_root_velocity</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimArticulationBatch.set_root_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
@@ -1991,7 +2278,8 @@ common commands and state access through <code class="docutils literal notransla
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.sim.SimRigid" title="Link to this definition">¶</a></dt>
-<dd><p>Simulation-facing view for one registered rigid object.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">RigidQueryMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CollisionShapeMixin</span></code></p>
+<p>Simulation-facing view for one registered rigid object.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.sim.SimRigid.env_id">
 <span class="sig-name descname"><span class="pre">env_id</span></span><a class="headerlink" href="#kangengine.sim.SimRigid.env_id" title="Link to this definition">¶</a></dt>
@@ -2075,15 +2363,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimRigid.get_body_rot">
-<span class="sig-name descname"><span class="pre">get_body_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimRigid.get_body_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_body_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigid.get_body_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigid.get_body_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -2142,15 +2430,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimRigid.get_root_rot">
-<span class="sig-name descname"><span class="pre">get_root_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimRigid.get_root_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_root_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigid.get_root_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigid.get_root_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -2233,7 +2521,7 @@ common commands and state access through <code class="docutils literal notransla
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.SimRigid.set_collision_material_overrides">
 <span class="sig-name descname"><span class="pre">set_collision_material_overrides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.SimRigid.set_collision_material_overrides" title="Link to this definition">¶</a></dt>
-<dd><p>Apply named/indexed collision material overrides at runtime.</p>
+<dd><p>Change matched collision shapes, preserving unmatched materials.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -2243,14 +2531,33 @@ common commands and state access through <code class="docutils literal notransla
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">immediate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigid.set_root_state" title="Link to this definition">¶</a></dt>
-<dd><p>Shapes: position/velocity <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">3)</span></code>, rotation <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
+<dd><p>World pose/velocities: vectors <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">3)</span></code>, XYZW quaternion <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">4)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimRigid.set_root_velocity">
+<span class="sig-name descname"><span class="pre">set_root_velocity</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigid.set_root_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
@@ -2272,7 +2579,8 @@ common commands and state access through <code class="docutils literal notransla
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch" title="Link to this definition">¶</a></dt>
-<dd><p>Batched simulation-facing view for one logical rigid object.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">RigidQueryMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CollisionShapeBatchMixin</span></code></p>
+<p>Batched simulation-facing view for one logical rigid object.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.sim.SimRigidBatch.world">
 <span class="sig-name descname"><span class="pre">world</span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.world" title="Link to this definition">¶</a></dt>
@@ -2346,15 +2654,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimRigidBatch.get_body_rot">
-<span class="sig-name descname"><span class="pre">get_body_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimRigidBatch.get_body_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_body_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.get_body_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.get_body_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">B,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -2413,15 +2721,15 @@ common commands and state access through <code class="docutils literal notransla
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.SimRigidBatch.get_root_rot">
-<span class="sig-name descname"><span class="pre">get_root_rot</span></span><span class="sig-paren">(</span>
+<dt class="sig sig-object py" id="kangengine.sim.SimRigidBatch.get_root_quat_xyzw">
+<span class="sig-name descname"><span class="pre">get_root_quat_xyzw</span></span><span class="sig-paren">(</span>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.get_root_rot" title="Link to this definition">¶</a></dt>
-<dd><p>Shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.get_root_quat_xyzw" title="Link to this definition">¶</a></dt>
+<dd><p>World-space XYZW quaternions; shape: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span></p>
@@ -2520,7 +2828,7 @@ common commands and state access through <code class="docutils literal notransla
 </dl>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.set_collision_material" title="Link to this definition">¶</a></dt>
-<dd><p>Replace collision shape materials for selected rigid env instances.</p>
+<dd><p>Replace shape materials on selected dynamic, kinematic, or static rigids.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -2534,7 +2842,7 @@ common commands and state access through <code class="docutils literal notransla
 </dl>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.set_collision_material_overrides" title="Link to this definition">¶</a></dt>
-<dd><p>Apply named/indexed material overrides to selected rigid env instances.</p>
+<dd><p>Change matched shapes on selected dynamic, kinematic, or static rigids.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -2544,7 +2852,7 @@ common commands and state access through <code class="docutils literal notransla
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">immediate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
@@ -2552,6 +2860,25 @@ common commands and state access through <code class="docutils literal notransla
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.set_root_state" title="Link to this definition">¶</a></dt>
 <dd><p>Shapes: position/velocity <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">3)</span></code>, rotation <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimRigidBatch.set_root_velocity">
+<span class="sig-name descname"><span class="pre">set_root_velocity</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">integer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="headerlink" href="#kangengine.sim.SimRigidBatch.set_root_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Set world velocities (m/s, rad/s), shape (3,) or (N, 3), without reset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Self</span></code></span></p>
@@ -2650,7 +2977,7 @@ snapshot refresh and updates the canonical CUDA frame cache instead.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">root_rot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_quat_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_vel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_ang_vel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">dof_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
@@ -2678,10 +3005,21 @@ snapshot refresh and updates the canonical CUDA frame cache instead.</p>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.sim.SimulationRuntime.set_articulation_state_packed" title="Link to this definition">¶</a></dt>
-<dd><p>Apply packed GPU root <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">13)</span></code> and DOF <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">D,</span> <span class="pre">2)</span></code> state.</p>
+<dd><p>Apply packed GPU articulation state.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span>) – Environment rows to update.</p></li>
+<li><p><strong>obj_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Articulation object index.</p></li>
+<li><p><strong>root_state</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span>) – <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">13)</span></code> world-space rows: position in meters
+<code class="docutils literal notranslate"><span class="pre">0:3</span></code>, quaternion XYZW <code class="docutils literal notranslate"><span class="pre">3:7</span></code>, linear velocity in m/s
+<code class="docutils literal notranslate"><span class="pre">7:10</span></code>, angular velocity in rad/s <code class="docutils literal notranslate"><span class="pre">10:13</span></code>.</p></li>
+<li><p><strong>dof_state</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code></span>) – <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">D,</span> <span class="pre">2)</span></code> joint position and velocity, in radians
+and rad/s for angular DOFs, meters and m/s for linear DOFs.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2729,7 +3067,7 @@ snapshot refresh and updates the canonical CUDA frame cache instead.</p>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">root_rot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_quat_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_vel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_ang_vel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">dof_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
@@ -2738,9 +3076,11 @@ snapshot refresh and updates the canonical CUDA frame cache instead.</p>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.sim.ArticulationStateView" title="Link to this definition">¶</a></dt>
 <dd><p>Torch tensors for control and reinforcement-learning loops.</p>
+<p>Root pose and velocities use world coordinates, meters, XYZW quaternions,
+m/s, and rad/s. DOFs use joint coordinates (radians or meters).</p>
 <dl class="simple">
 <dt>Shapes:</dt><dd><p>root_pos: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">3)</span></code>.
-root_rot: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.
+root_quat_xyzw: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>.
 root_vel: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">3)</span></code>.
 root_ang_vel: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">3)</span></code>.
 dof_pos: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">D)</span></code>.
@@ -2753,8 +3093,8 @@ dof_vel: <code class="docutils literal notranslate"><span class="pre">(N,</span>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.sim.ArticulationStateView.root_rot">
-<span class="sig-name descname"><span class="pre">root_rot</span></span><a class="headerlink" href="#kangengine.sim.ArticulationStateView.root_rot" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.sim.ArticulationStateView.root_quat_xyzw">
+<span class="sig-name descname"><span class="pre">root_quat_xyzw</span></span><a class="headerlink" href="#kangengine.sim.ArticulationStateView.root_quat_xyzw" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -3027,7 +3367,7 @@ avoid contradictory <code class="docutils literal notranslate"><span class="pre"
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
@@ -3044,21 +3384,8 @@ avoid contradictory <code class="docutils literal notranslate"><span class="pre"
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.state.RigidStateCache">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.state.</span></span><span class="sig-name descname"><span class="pre">RigidStateCache</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">rigid</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">physics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">body_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">local_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">local_rot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.state.RigidStateCache" title="Link to this definition">¶</a></dt>
-<dd><p>State cache for one dynamic rigid body.</p>
-<p>Compound rigid bodies expose one body slot per collision shape for
-MimicKit-style body APIs, while PhysX still simulates one rigid actor.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.state.</span></span><span class="sig-name descname"><span class="pre">RigidStateCache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rigid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'rigid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.state.RigidStateCache" title="Link to this definition">¶</a></dt>
+<dd><p>State cache for one physical actor, regardless of its collision shapes.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.state.RigidStateCache.refresh_metadata">
 <span class="sig-name descname"><span class="pre">refresh_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.state.RigidStateCache.refresh_metadata" title="Link to this definition">¶</a></dt>
@@ -3082,7 +3409,7 @@ MimicKit-style body APIs, while PhysX still simulates one rigid actor.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.state.RigidStateCache.set_root">
-<span class="sig-name descname"><span class="pre">set_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.state.RigidStateCache.set_root" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quat_xyzw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.state.RigidStateCache.set_root" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -3369,6 +3696,9 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_asset_cache_size"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_asset_cache_size()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_asset_load_count"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_asset_load_count()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_batch()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_body_local_com_poses"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_body_local_com_poses()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_body_mass_space_inertias"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_body_mass_space_inertias()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_body_masses"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_body_masses()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_centroidal_dynamics"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_centroidal_dynamics()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_root"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_com_root()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_world"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_com_world()</span></code></a></li>
@@ -3414,12 +3744,16 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.rigid_gpu_row"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.rigid_gpu_row()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_force"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_force_at_position"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_force_at_position()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_local_com_poses"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_local_com_poses()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_mass_space_inertias"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_mass_space_inertias()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_masses"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_masses()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_cmd"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_cmd()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_dof_state"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_dof_state()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_articulation_link_wrenches"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_articulation_link_wrenches()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_dof_state_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_dof_state_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_root_state_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_root_state_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_root_state"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_root_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_root_velocity"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_root_velocity()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.step"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.step()</span></code></a></li>
 </ul>
 </li>
@@ -3429,6 +3763,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.name"><code class="docutils literal notranslate"><span class="pre">SimArticulation.name</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.articulation"><code class="docutils literal notranslate"><span class="pre">SimArticulation.articulation</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.world"><code class="docutils literal notranslate"><span class="pre">SimArticulation.world</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulation.source_data"><code class="docutils literal notranslate"><span class="pre">SimArticulation.source_data</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.add_contact_sensor"><code class="docutils literal notranslate"><span class="pre">SimArticulation.add_contact_sensor()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.add_force_sensor"><code class="docutils literal notranslate"><span class="pre">SimArticulation.add_force_sensor()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.body_names"><code class="docutils literal notranslate"><span class="pre">SimArticulation.body_names</span></code></a></li>
@@ -3438,7 +3773,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.frame_names"><code class="docutils literal notranslate"><span class="pre">SimArticulation.frame_names</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_body_id"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_body_id()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_body_pos"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_body_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_body_rot"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_body_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_body_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_body_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_data"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_dof_force"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_dof_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_dof_pos"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_dof_pos()</span></code></a></li>
@@ -3446,7 +3781,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_joint_id"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_joint_id()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_root_ang_vel"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_root_ang_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_root_pos"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_root_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_root_rot"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_root_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_root_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_root_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.get_root_vel"><code class="docutils literal notranslate"><span class="pre">SimArticulation.get_root_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.joint_names"><code class="docutils literal notranslate"><span class="pre">SimArticulation.joint_names</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.key"><code class="docutils literal notranslate"><span class="pre">SimArticulation.key</span></code></a></li>
@@ -3455,8 +3790,11 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_body_force"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_body_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_body_force_at_position"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_body_force_at_position()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_cmd"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_cmd()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_collision_material"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_collision_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_collision_material_overrides"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_collision_material_overrides()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_dof_state"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_dof_state()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_root_state"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_root_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulation.set_root_velocity"><code class="docutils literal notranslate"><span class="pre">SimArticulation.set_root_velocity()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch</span></code></a><ul>
@@ -3474,7 +3812,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.frame_names"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.frame_names</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_body_id"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_body_id()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_body_pos"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_body_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_body_rot"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_body_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_body_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_body_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_data"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_dof_force"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_dof_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_dof_pos"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_dof_pos()</span></code></a></li>
@@ -3482,7 +3820,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_joint_id"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_joint_id()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_root_ang_vel"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_root_ang_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_root_pos"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_root_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_root_rot"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_root_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_root_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_root_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.get_root_vel"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.get_root_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.joint_names"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.joint_names</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.key"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.key</span></code></a></li>
@@ -3493,8 +3831,11 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_body_force"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_body_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_body_force_at_position"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_body_force_at_position()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_cmd"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_cmd()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_collision_material"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_collision_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_collision_material_overrides"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_collision_material_overrides()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_dof_state"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_dof_state()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_root_state"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_root_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimArticulationBatch.set_root_velocity"><code class="docutils literal notranslate"><span class="pre">SimArticulationBatch.set_root_velocity()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid"><code class="docutils literal notranslate"><span class="pre">SimRigid</span></code></a><ul>
@@ -3511,11 +3852,11 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.env_ids"><code class="docutils literal notranslate"><span class="pre">SimRigid.env_ids</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.get_body_id"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_body_id()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.get_body_pos"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_body_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimRigid.get_body_rot"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_body_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimRigid.get_body_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_body_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.get_data"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.get_root_ang_vel"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_root_ang_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.get_root_pos"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_root_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimRigid.get_root_rot"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_root_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimRigid.get_root_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_root_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.get_root_vel"><code class="docutils literal notranslate"><span class="pre">SimRigid.get_root_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.key"><code class="docutils literal notranslate"><span class="pre">SimRigid.key</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.num_bodies"><code class="docutils literal notranslate"><span class="pre">SimRigid.num_bodies</span></code></a></li>
@@ -3524,6 +3865,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.set_collision_material"><code class="docutils literal notranslate"><span class="pre">SimRigid.set_collision_material()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.set_collision_material_overrides"><code class="docutils literal notranslate"><span class="pre">SimRigid.set_collision_material_overrides()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigid.set_root_state"><code class="docutils literal notranslate"><span class="pre">SimRigid.set_root_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimRigid.set_root_velocity"><code class="docutils literal notranslate"><span class="pre">SimRigid.set_root_velocity()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch</span></code></a><ul>
@@ -3538,11 +3880,11 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.first"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.first</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_body_id"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_body_id()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_body_pos"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_body_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_body_rot"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_body_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_body_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_body_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_data"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_root_ang_vel"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_root_ang_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_root_pos"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_root_pos()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_root_rot"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_root_rot()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_root_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_root_quat_xyzw()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.get_root_vel"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.get_root_vel()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.key"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.key</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.num_bodies"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.num_bodies</span></code></a></li>
@@ -3554,6 +3896,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.set_collision_material"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.set_collision_material()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.set_collision_material_overrides"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.set_collision_material_overrides()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.set_root_state"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.set_root_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimRigidBatch.set_root_velocity"><code class="docutils literal notranslate"><span class="pre">SimRigidBatch.set_root_velocity()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime</span></code></a><ul>
@@ -3574,7 +3917,7 @@ contact data to the host.</p>
 </li>
 <li><a class="reference internal" href="#kangengine.sim.ArticulationStateView"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.sim.ArticulationStateView.root_pos"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView.root_pos</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.ArticulationStateView.root_rot"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView.root_rot</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.ArticulationStateView.root_quat_xyzw"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView.root_quat_xyzw</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.ArticulationStateView.root_vel"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView.root_vel</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.ArticulationStateView.root_ang_vel"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView.root_ang_vel</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.ArticulationStateView.dof_pos"><code class="docutils literal notranslate"><span class="pre">ArticulationStateView.dof_pos</span></code></a></li>

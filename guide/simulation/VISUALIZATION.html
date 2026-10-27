@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -339,8 +353,86 @@
         <article role="main" id="furo-main-content">
           <section id="simulation-visualization">
 <h1>Simulation Visualization<a class="headerlink" href="#simulation-visualization" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">ke.visual.sim</span></code> synchronizes <code class="docutils literal notranslate"><span class="pre">KangSimWorld</span></code> objects to renderer and scene
-visuals.</p>
+<p>Display simulated objects and keep their visuals aligned with the latest
+physics state. <code class="docutils literal notranslate"><span class="pre">ke.visual.sim.SimWorldVisualizer</span></code> connects a <code class="docutils literal notranslate"><span class="pre">KangSimWorld</span></code>
+to an App and synchronizes poses before rendering.</p>
+<p>For objects driven by supplied poses without physics, use
+<a class="reference internal" href="RIGID_BODIES.html#render-without-physics"><span class="std std-ref"><code class="docutils literal notranslate"><span class="pre">ke.visual.RigidVisual</span></code></span></a> and call
+<code class="docutils literal notranslate"><span class="pre">apply_pose()</span></code> directly.</p>
+<section id="batched-rendering">
+<h2>Batched rendering<a class="headerlink" href="#batched-rendering" title="Link to this heading">¶</a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">add()</span></code> for normal simulation rendering, including batched environments.
+The snippets extend an <code class="docutils literal notranslate"><span class="pre">App</span></code> subclass with <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">kangengine</span> <span class="pre">as</span> <span class="pre">ke</span></code>, as in
+<a class="reference internal" href="../getting_started/FIRST_SIMULATION.html"><span class="std std-doc">First Simulation</span></a>. In <code class="docutils literal notranslate"><span class="pre">setup()</span></code>, create
+<code class="docutils literal notranslate"><span class="pre">self.world</span></code> and register an articulation as shown in
+<a class="reference internal" href="ARTICULATION.html"><span class="std std-doc">Articulations</span></a>; keep the returned <code class="docutils literal notranslate"><span class="pre">SimArticulation</span></code> as
+<code class="docutils literal notranslate"><span class="pre">record</span></code>. The following code also belongs in <code class="docutils literal notranslate"><span class="pre">setup()</span></code> and uses that record’s
+registered visual geometry and materials:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">robot_visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">VisualBatch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">sim_handle</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/robot&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Add these methods to the same App class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="n">fixed_dt</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">add()</span></code> returns a <code class="docutils literal notranslate"><span class="pre">VisualBatch</span></code>, not an <code class="docutils literal notranslate"><span class="pre">ArticulationVisual</span></code>. It is the normal
+rendering handle for both rigid bodies and articulations and uses an
+ExternalBuffer-backed path.</p>
+<p>Rigid and articulation batches choose their CPU or CUDA rendering path from the
+simulation device. CUDA batches update render transforms directly from GPU
+simulation state. Static rigid bodies use the CPU path in either kind of world.
+Both paths preserve each visual part’s local position, rotation, and scale.</p>
+<p>Rigid bodies registered from a <code class="docutils literal notranslate"><span class="pre">RigidDesc</span></code> already carry their visual geometry
+and material subsets. Use <code class="docutils literal notranslate"><span class="pre">visualizer.add(sim_handle=rigids,</span> <span class="pre">path=&quot;/props&quot;)</span></code>
+without an MJCF path. The same call renders rigid descriptions using
+their collision shapes when no visual parts are authored. Articulations can also
+use the <code class="docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code> parts in their registered <code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code> without
+reloading an MJCF. See <a class="reference internal" href="RIGID_BODIES.html#prepare-a-rigid-description"><span class="std std-ref">Rigid Bodies</span></a>
+for textured objects whose visual surface differs from their colliders.</p>
+<p><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.material</span></code> accepts the same PBR and Phong materials used by the
+renderer. A source material’s <code class="docutils literal notranslate"><span class="pre">texture_paths</span></code> can defer texture loading until
+the visual is attached to an App. Rigid and articulation visuals retain the
+source appearance while creating their own App-owned runtime materials.</p>
+<p>Simulation state and scene/render state are separate. Advance physics in
+<code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> and synchronize visuals in <code class="docutils literal notranslate"><span class="pre">pre_render()</span></code> so rendering speed
+does not alter the physics rate.</p>
+</section>
+<section id="inspectable-scenegraph-visuals">
+<h2>Inspectable SceneGraph visuals<a class="headerlink" href="#inspectable-scenegraph-visuals" title="Link to this heading">¶</a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">add_scene_graph()</span></code> when individual prims must be visible and selectable in
+the editor. In <code class="docutils literal notranslate"><span class="pre">setup()</span></code>, replace the <code class="docutils literal notranslate"><span class="pre">self.visual.add(...)</span></code> call above with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">robot_visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">VisualArticulationSceneGraph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add_scene_graph</span><span class="p">(</span>
+    <span class="n">sim_handle</span><span class="o">=</span><span class="n">record</span><span class="p">,</span>
+    <span class="n">env_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">robot_visual</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+<span class="n">robot_visual</span><span class="o">.</span><span class="n">set_collision_visible</span><span class="p">(</span><span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For an articulation, <code class="docutils literal notranslate"><span class="pre">robot_visual</span></code> is a <code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code> and
+<code class="docutils literal notranslate"><span class="pre">robot_visual.articulation_visual</span></code> is the underlying <code class="docutils literal notranslate"><span class="pre">ArticulationVisual</span></code>
+synchronized from the simulation. Most applications should use the record
+rather than call the underlying bridge directly.</p>
+<p><code class="docutils literal notranslate"><span class="pre">VisualBatch.release()</span></code> removes one batch. <code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.release()</span></code>
+releases every visual registered through that visualizer.</p>
+<p>Use one representation deliberately:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">add()</span></code> / <code class="docutils literal notranslate"><span class="pre">VisualBatch</span></code> for throughput and batched environments.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_scene_graph()</span></code> for inspectable prims, selection, and collision display.</p></li>
+</ul>
+</section>
+<section id="visual-types">
+<h2>Visual types<a class="headerlink" href="#visual-types" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
@@ -367,58 +459,9 @@ visuals.</p>
 </tbody>
 </table>
 </div>
-<section id="batched-rendering">
-<h2>Batched rendering<a class="headerlink" href="#batched-rendering" title="Link to this heading">¶</a></h2>
-<p>Use <code class="docutils literal notranslate"><span class="pre">add()</span></code> for normal simulation rendering, including batched environments:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="p">)</span>
-<span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">robot_visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">VisualBatch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-    <span class="n">sim_handle</span><span class="o">=</span><span class="n">robot</span><span class="p">,</span>
-    <span class="n">mjcf_path</span><span class="o">=</span><span class="n">mjcf_path</span><span class="p">,</span>
-    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/robot&quot;</span><span class="p">,</span>
-    <span class="n">material</span><span class="o">=</span><span class="n">material</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="n">fixed_dt</span><span class="p">)</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">add()</span></code> returns a <code class="docutils literal notranslate"><span class="pre">VisualBatch</span></code>, not an <code class="docutils literal notranslate"><span class="pre">ArticulationVisual</span></code>. It is the normal
-rendering handle for both rigid bodies and articulations and uses an
-ExternalBuffer-backed path.</p>
-<p>Simulation state and scene/render state are separate. Advance physics in
-<code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> and synchronize visuals in <code class="docutils literal notranslate"><span class="pre">pre_render()</span></code> so rendering speed
-does not alter the physics rate.</p>
 </section>
-<section id="inspectable-scenegraph-visuals">
-<h2>Inspectable SceneGraph visuals<a class="headerlink" href="#inspectable-scenegraph-visuals" title="Link to this heading">¶</a></h2>
-<p>Use <code class="docutils literal notranslate"><span class="pre">add_scene_graph()</span></code> when individual prims must be visible and selectable in
-the editor:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">record</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">VisualArticulationSceneGraph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add_scene_graph</span><span class="p">(</span>
-    <span class="n">sim_handle</span><span class="o">=</span><span class="n">robot</span><span class="p">,</span>
-    <span class="n">mjcf_path</span><span class="o">=</span><span class="n">mjcf_path</span><span class="p">,</span>
-    <span class="n">env_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">record</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
-<span class="n">record</span><span class="o">.</span><span class="n">set_collision_visible</span><span class="p">(</span><span class="n">visible</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>For an articulation, <code class="docutils literal notranslate"><span class="pre">record</span></code> is a <code class="docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code> and
-<code class="docutils literal notranslate"><span class="pre">record.articulation_visual</span></code> is the underlying <code class="docutils literal notranslate"><span class="pre">ArticulationVisual</span></code>
-synchronized from the simulation. Most applications should use the record
-rather than call the underlying bridge directly.</p>
-<p><code class="docutils literal notranslate"><span class="pre">VisualBatch.release()</span></code> removes one batch. <code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.release()</span></code>
-releases every visual registered through that visualizer.</p>
-<p>Use one representation deliberately:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">add()</span></code> / <code class="docutils literal notranslate"><span class="pre">VisualBatch</span></code> for throughput and batched environments.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">add_scene_graph()</span></code> for inspectable prims, selection, and collision display.</p></li>
-</ul>
-<p>Examples:</p>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/sim_world_minimal.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/sim_world_multi_env.py</span></code></p></li>
@@ -485,6 +528,8 @@ releases every visual registered through that visualizer.</p>
 <li><a class="reference internal" href="#">Simulation Visualization</a><ul>
 <li><a class="reference internal" href="#batched-rendering">Batched rendering</a></li>
 <li><a class="reference internal" href="#inspectable-scenegraph-visuals">Inspectable SceneGraph visuals</a></li>
+<li><a class="reference internal" href="#visual-types">Visual types</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
 </ul>
 </li>
 </ul>

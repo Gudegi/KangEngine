@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Fixed Timestep and Rendering" href="FIXED_TIMESTEP.html"><link rel="prev" title="Simulation" href="INDEX.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="State and Reset" href="STATE_AND_RESET.html"><link rel="prev" title="Simulation" href="INDEX.html">
         <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/simulation/RIGID_BODIES.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -180,7 +180,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -332,43 +346,247 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="rigid-bodies">
 <h1>Rigid Bodies<a class="headerlink" href="#rigid-bodies" title="Link to this heading">¶</a></h1>
-<p>Load a rigid description, register it in one environment, and keep the returned
-simulation view.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">world</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span><span class="n">num_envs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sim_dt</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">120.0</span><span class="p">,</span> <span class="n">add_ground</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<p>A rigid body is a physical object that moves without deforming. This guide
+shows how to define its geometry, add it to a simulation, and synchronize its
+visual representation. You can also reuse the same description to create
+bodies across multiple environments.</p>
+<ul class="simple">
+<li><p>To draw an object at supplied poses, <a class="reference internal" href="#render-without-physics">render without physics</a>.</p></li>
+<li><p>To simulate it, <a class="reference internal" href="#register-a-body">register one body</a> or
+<a class="reference internal" href="#place-a-body-in-each-environment">place bodies in multiple environments</a>.</p></li>
+<li><p>For a runnable viewer with surface queries, see the
+<a class="reference internal" href="PROCEDURAL_TERRAIN.html#try-the-interactive-stair-raycast-example"><span class="std std-ref">interactive stair raycast example</span></a>.</p></li>
+</ul>
+<p>The basic example below needs no asset files. Later snippets name the objects
+they reuse; rendering snippets require an initialized <code class="docutils literal notranslate"><span class="pre">app</span></code>, as described in
+<a class="reference internal" href="../getting_started/HELLO_APP.html"><span class="std std-doc">Hello App</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Simulation snippets use CPU PhysX with Z-up unless stated otherwise.
+When attaching simulated visuals, initialize
+the App with <code class="docutils literal notranslate"><span class="pre">up_axis=ke.UpAxis.Z</span></code> instead of the Y-up setting in Hello App.</p>
+</div>
+<section id="prepare-a-rigid-description">
+<h2>Prepare a rigid description<a class="headerlink" href="#prepare-a-rigid-description" title="Link to this heading">¶</a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">ke.asset.RigidDesc</span></code> to prepare visual geometry, collision geometry, and
+optional mass properties. One description can supply multiple visual or
+simulated instances with independent poses.</p>
+<p>Create a 1.0 × 0.6 × 0.8 meter box with separate visual and collision geometry:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
 
-<span class="n">ball_data</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">load_mjcf</span><span class="p">(</span><span class="n">ball_xml</span><span class="p">)</span>
-<span class="n">ball</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
-    <span class="n">ball_data</span><span class="p">,</span>
+<span class="n">mesh</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">MeshData</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_box_data</span><span class="p">(</span>
+    <span class="n">x_scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">y_scale</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">z_scale</span><span class="o">=</span><span class="mf">0.8</span>
+<span class="p">)</span>
+<span class="n">material</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">PBRMaterial</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">PBRMaterial</span><span class="p">()</span>
+<span class="n">material</span><span class="o">.</span><span class="n">base_color</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="n">material</span><span class="o">.</span><span class="n">roughness</span> <span class="o">=</span> <span class="mf">0.45</span>
+
+<span class="n">box_collider</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">CollisionGeomDesc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">CollisionGeomDesc</span><span class="p">(</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">CollisionGeomDescType</span><span class="o">.</span><span class="n">BOX</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">],</span>  <span class="c1"># Half extents in meters.</span>
+    <span class="n">position</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+    <span class="n">quat_xyzw</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="n">box_asset</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">RigidDesc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">RigidDesc</span><span class="p">(</span>
+    <span class="n">visual_geoms</span><span class="o">=</span><span class="p">[</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">VisualGeomDesc</span><span class="p">(</span><span class="n">mesh_data</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">material</span><span class="o">=</span><span class="n">material</span><span class="p">)],</span>
+    <span class="n">collision_geoms</span><span class="o">=</span><span class="p">[</span><span class="n">box_collider</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">visual_geoms</span></code> holds <code class="docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code> parts, each with its own mesh, local
+position, rotation, scale, and material. <code class="docutils literal notranslate"><span class="pre">collision_geoms</span></code> independently
+defines the physics shapes in the same body-local frame. They need not have the
+same detail or number of parts. Articulations use the same visual part and
+material types.</p>
+<p>Without an <code class="docutils literal notranslate"><span class="pre">inertial</span></code> description, the instance density and its colliders
+determine mass properties. Supply <code class="docutils literal notranslate"><span class="pre">ke.asset.InertialDesc</span></code> for authored mass,
+center of mass, and diagonal inertia.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Finish editing descriptions, meshes, and source materials before creating
+instances: later changes do not automatically update existing visuals or
+collision/query caches. For changed geometry, create new mesh data and a new
+description, then recreate the instances.</p>
+</div>
+<p>For imported geometry, see <a class="reference internal" href="../scene_rendering/LOAD_ASSETS.html#rigid-body-sources"><span class="std std-ref">Load Assets</span></a>;
+for textures and appearance, see
+<a class="reference internal" href="../scene_rendering/MATERIALS_TEXTURES.html#asset-source-materials"><span class="std std-ref">asset source materials</span></a>.</p>
+</section>
+<section id="render-without-physics">
+<h2>Render without physics<a class="headerlink" href="#render-without-physics" title="Link to this heading">¶</a></h2>
+<p>Using <code class="docutils literal notranslate"><span class="pre">box_asset</span></code> from the preparation example and an initialized <code class="docutils literal notranslate"><span class="pre">app</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">box_visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">RigidVisual</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">RigidVisual</span><span class="p">(</span>
+    <span class="n">app</span><span class="o">=</span><span class="n">app</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/props/box&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">box_asset</span>
+<span class="p">)</span>
+<span class="n">box_visual</span><span class="o">.</span><span class="n">apply_pose</span><span class="p">(</span><span class="n">position</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">quat_xyzw</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This creates scene objects without a physics world. <code class="docutils literal notranslate"><span class="pre">apply_pose()</span></code> takes a
+world position <code class="docutils literal notranslate"><span class="pre">[3]</span></code> in meters and a unit XYZW quaternion <code class="docutils literal notranslate"><span class="pre">[4]</span></code>, including when
+the visual has a transformed parent. Parts retain their authored local poses,
+scales, and materials. Multiple visuals can share <code class="docutils literal notranslate"><span class="pre">box_asset</span></code> and use different
+poses. Remove them with <code class="docutils literal notranslate"><span class="pre">box_visual.remove()</span></code> when finished.</p>
+</section>
+<section id="register-a-body">
+<h2>Register a body<a class="headerlink" href="#register-a-body" title="Link to this heading">¶</a></h2>
+<p>For physics, use the same <code class="docutils literal notranslate"><span class="pre">box_asset</span></code> prepared above:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">world</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
+    <span class="n">num_envs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sim_dt</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">120.0</span><span class="p">,</span> <span class="n">add_ground</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">box</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimRigid</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
+    <span class="n">box_asset</span><span class="p">,</span>
     <span class="n">env_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ball&quot;</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;box&quot;</span><span class="p">,</span>
     <span class="n">pos</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">],</span>
     <span class="n">density</span><span class="o">=</span><span class="mf">600.0</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="n">world</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Reset position, rotation, and velocity through the same object view:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ball</span><span class="o">.</span><span class="n">set_root_state</span><span class="p">(</span>
-    <span class="kc">None</span><span class="p">,</span>
-    <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">],</span>
-    <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>  <span class="c1"># quaternion xyzw</span>
-    <span class="n">linear_velocity</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
-    <span class="n">angular_velocity</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+<p>This registers and steps the physics body. To display it, attach a visualizer
+as shown in <a class="reference internal" href="#attach-and-synchronize-simulated-visuals">Attach and synchronize simulated visuals</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">env_id</span></code> selects an environment. <code class="docutils literal notranslate"><span class="pre">obj_id</span></code> is an object slot within it, shared
+by rigid bodies and articulations; each <code class="docutils literal notranslate"><span class="pre">(env_id,</span> <span class="pre">obj_id)</span></code> must be unused before
+registration. Across environments, the same <code class="docutils literal notranslate"><span class="pre">obj_id</span></code> groups instances into a
+batch. It does not identify a mesh or asset type. See
+<a class="reference internal" href="INDEX.html#object-identifiers"><span class="std std-ref">Object identifiers</span></a> for the shared terminology.</p>
+<p><code class="docutils literal notranslate"><span class="pre">world.add_rigid()</span></code> creates a dynamic body by default. Use <code class="docutils literal notranslate"><span class="pre">kinematic=True</span></code>
+for a body unaffected by gravity and contact forces, or
+<code class="docutils literal notranslate"><span class="pre">world.add_static_rigid()</span></code> for fixed geometry. Reposition kinematic bodies
+through pose resets; see <a class="reference internal" href="STATE_AND_RESET.html"><span class="std std-doc">State and Reset</span></a> for the
+distinction from continuous kinematic motion.</p>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">box</span></code> supports the same pose reset API as the batch below;
+<code class="docutils literal notranslate"><span class="pre">env_ids=None</span></code> selects its single environment. For a complete simulation loop,
+see <a class="reference internal" href="../getting_started/FIRST_SIMULATION.html"><span class="std std-doc">First Simulation</span></a>.</p>
+</section>
+<section id="attach-and-synchronize-simulated-visuals">
+<h2>Attach and synchronize simulated visuals<a class="headerlink" href="#attach-and-synchronize-simulated-visuals" title="Link to this heading">¶</a></h2>
+<p>Using the single body’s <code class="docutils literal notranslate"><span class="pre">world</span></code> and <code class="docutils literal notranslate"><span class="pre">box</span></code>, plus an initialized Z-up <code class="docutils literal notranslate"><span class="pre">app</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">viewer</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span><span class="p">(</span>
+    <span class="n">app</span><span class="o">=</span><span class="n">app</span><span class="p">,</span> <span class="n">world</span><span class="o">=</span><span class="n">world</span>
+<span class="p">)</span>
+<span class="n">rendered</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">VisualBatch</span> <span class="o">=</span> <span class="n">viewer</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sim_handle</span><span class="o">=</span><span class="n">box</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/scenery&quot;</span><span class="p">)</span>
+<span class="n">viewer</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The registered description supplies the visual geometry and materials, so no
+<code class="docutils literal notranslate"><span class="pre">mjcf_path</span></code> is needed. Synchronize after simulation or applied resets and before
+drawing. For CUDA simulation, initialize the GPU runtime before <code class="docutils literal notranslate"><span class="pre">viewer.add()</span></code>.
+See <a class="reference internal" href="VISUALIZATION.html"><span class="std std-doc">Simulation Visualization</span></a> for the shared viewer workflow.</p>
+</section>
+<section id="place-a-body-in-each-environment">
+<h2>Place a body in each environment<a class="headerlink" href="#place-a-body-in-each-environment" title="Link to this heading">¶</a></h2>
+<p>Reuse <code class="docutils literal notranslate"><span class="pre">box_asset</span></code> to place the same box in three environments. This replaces
+the single-body world above; release its viewer first if you attached one:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">world</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+<span class="n">world</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span><span class="n">num_envs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">add_ground</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">cloner</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">GridCloner</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">GridCloner</span><span class="p">(</span><span class="n">world</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+<span class="n">rigids</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimRigidBatch</span> <span class="o">=</span> <span class="n">cloner</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
+    <span class="n">box_asset</span><span class="p">,</span> <span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">initial_root_pos</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">),</span> <span class="n">density</span><span class="o">=</span><span class="mf">600.0</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">None</span></code> selects every environment represented by the view. For one object in
-one environment, that still means a batch of size one.</p>
-<p>Complete example: <code class="docutils literal notranslate"><span class="pre">python/examples/sim_world_minimal.py</span></code>. The
-<a class="reference internal" href="../getting_started/FIRST_SIMULATION.html"><span class="std std-doc">First Simulation guide</span></a> includes its
-complete source.</p>
+<p>The source geometry is shared; each environment owns its physical actor and
+collision shapes. Initial positions are relative to <code class="docutils literal notranslate"><span class="pre">cloner.env_origins</span></code>,
+and environment collision groups isolate bodies from other environments.
+For different sources per environment and batch layout constraints, see
+<a class="reference internal" href="MULTI_ENV.html#different-rigid-sources-per-environment"><span class="std std-ref">Multi-Environment Simulation</span></a>.</p>
+<p>To display this batch, create a new <code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer</span></code> for the new <code class="docutils literal notranslate"><span class="pre">world</span></code>
+using the setup above, and pass <code class="docutils literal notranslate"><span class="pre">sim_handle=rigids</span></code> to <code class="docutils literal notranslate"><span class="pre">viewer.add()</span></code> instead
+of <code class="docutils literal notranslate"><span class="pre">sim_handle=box</span></code>.</p>
+</section>
+<section id="reset-selected-poses">
+<h2>Reset selected poses<a class="headerlink" href="#reset-selected-poses" title="Link to this heading">¶</a></h2>
+<p>Reset positions use world coordinates. Add an environment origin to an
+environment-local offset to move only that box:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="n">position</span> <span class="o">=</span> <span class="n">cloner</span><span class="o">.</span><span class="n">env_origins</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">]])</span>
+<span class="n">quat_xyzw</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.38268343</span><span class="p">,</span> <span class="mf">0.92387953</span><span class="p">]])</span>  <span class="c1"># 45° yaw.</span>
+<span class="n">rigids</span><span class="o">.</span><span class="n">set_root_state</span><span class="p">(</span><span class="n">env_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">pos</span><span class="o">=</span><span class="n">position</span><span class="p">,</span> <span class="n">quat_xyzw</span><span class="o">=</span><span class="n">quat_xyzw</span><span class="p">,</span> <span class="n">immediate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This CPU example changes environment 1 immediately. Positions are meters and
+rotations are unit XYZW quaternions; <code class="docutils literal notranslate"><span class="pre">env_ids=None</span></code> selects every environment
+in the view. With the default <code class="docutils literal notranslate"><span class="pre">immediate=False</span></code>, resets take effect when
+<code class="docutils literal notranslate"><span class="pre">world.apply_resets()</span></code> or <code class="docutils literal notranslate"><span class="pre">world.step()</span></code> runs.</p>
+<p>GPU resets use <code class="docutils literal notranslate"><span class="pre">immediate=False</span></code>; supported input devices, velocity changes,
+and reset ordering are described in <a class="reference internal" href="STATE_AND_RESET.html"><span class="std std-doc">State and Reset</span></a>.
+To read collider poses rather than body poses, use
+<code class="docutils literal notranslate"><span class="pre">rigids.get_collision_shape_pose()</span></code>:
+<a class="reference internal" href="COLLISION_SHAPES.html"><span class="std std-doc">Collision Shapes</span></a>.</p>
+</section>
+<section id="clean-up">
+<h2>Clean up<a class="headerlink" href="#clean-up" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Objects created</p></th>
+<th class="head"><p>Release when finished</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Standalone <code class="docutils literal notranslate"><span class="pre">box_visual</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">box_visual.remove()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Simulated visuals through <code class="docutils literal notranslate"><span class="pre">viewer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">viewer.release()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Physics <code class="docutils literal notranslate"><span class="pre">world</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">world.release()</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Remove visuals and release the viewer before releasing the world and closing
+the App. Put these calls in <code class="docutils literal notranslate"><span class="pre">App.cleanup()</span></code> when using <code class="docutils literal notranslate"><span class="pre">App.start()</span></code>; for a
+manually stepped application, call <code class="docutils literal notranslate"><span class="pre">app.close()</span></code> last.</p>
+</section>
+<section id="terminology">
+<h2>Terminology<a class="headerlink" href="#terminology" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Term</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Body</p></td>
+<td><p>One physical actor for a rigid; one physical link for an articulation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">collision_geom</span></code></p></td>
+<td><p>Authored collision geometry in <code class="docutils literal notranslate"><span class="pre">collision_geoms</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>Collision shape</p></td>
+<td><p>A runtime collider attached to a body, with its own local pose and material.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">visual_geom</span></code></p></td>
+<td><p>Authored visual geometry and appearance in <code class="docutils literal notranslate"><span class="pre">visual_geoms</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>Visual instance</p></td>
+<td><p>Scene prim/render component or an instance in a render batch. Its count need not match collision shapes.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 </section>
 
         </article>
@@ -376,12 +594,12 @@ complete source.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="FIXED_TIMESTEP.html">
+          <a class="next-page" href="STATE_AND_RESET.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Fixed Timestep and Rendering</div>
+                <div class="title">State and Reset</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -414,8 +632,34 @@ complete source.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Rigid Bodies</a><ul>
+<li><a class="reference internal" href="#prepare-a-rigid-description">Prepare a rigid description</a></li>
+<li><a class="reference internal" href="#render-without-physics">Render without physics</a></li>
+<li><a class="reference internal" href="#register-a-body">Register a body</a></li>
+<li><a class="reference internal" href="#attach-and-synchronize-simulated-visuals">Attach and synchronize simulated visuals</a></li>
+<li><a class="reference internal" href="#place-a-body-in-each-environment">Place a body in each environment</a></li>
+<li><a class="reference internal" href="#reset-selected-poses">Reset selected poses</a></li>
+<li><a class="reference internal" href="#clean-up">Clean up</a></li>
+<li><a class="reference internal" href="#terminology">Terminology</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

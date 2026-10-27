@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=dc8d0e23" />
     
     
 
@@ -212,6 +212,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LIGHTING.html">Scene Lighting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
@@ -220,12 +221,16 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/STATE_AND_RESET.html">State and Reset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_SHAPES.html">Collision Shapes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MASS_PROPERTIES.html">Change Mass, Inertia, and Center of Mass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/COLLISION_MATERIALS.html">Set Collision Materials</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
@@ -237,6 +242,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/MOTION_MATCHING.html">Motion Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/FOOT_CONTACT.html">Foot Contact</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -247,6 +254,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/CHANGELOG.html">Changelog</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -256,12 +264,18 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/integrations/MCP.html">MCP</a><input aria-label="Toggle navigation of MCP" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/WORKFLOWS.html">Scene editing, capture and recording</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/REFERENCE.html">MCP tool reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/integrations/mcp/SCENARIOS.html">Optional MCP scenario jobs</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -365,6 +379,12 @@
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">Material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.material.Material" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NativeWrapper</span></code></p>
 <p>Base facade wrapping a native renderer material.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.Material.texture_paths">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">texture_paths</span></span><a class="headerlink" href="#kangengine.material.Material.texture_paths" title="Link to this definition">¶</a></dt>
+<dd><p>Deferred visual-asset texture paths by slot; assign the complete dictionary.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -629,6 +649,12 @@
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.opacity_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">opacity_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.opacity_texture" title="Link to this definition">¶</a></dt>
+<dd><p>Linear red-channel opacity mask overriding the base-color texture alpha.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.material.PBRMaterial.orm_texture">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">orm_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.orm_texture" title="Link to this definition">¶</a></dt>
 <dd><p>Optional packed occlusion-roughness-metallic texture.</p>
@@ -755,6 +781,17 @@
 <dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_normal_texture">
 <span class="sig-name descname"><span class="pre">set_normal_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><span class="pre">Texture</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><span class="pre">PBRMaterial</span></a></span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_normal_texture" title="Link to this definition">¶</a></dt>
 <dd><p>Set the normal texture and return this material.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><code class="xref py py-class docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_opacity_texture">
+<span class="sig-name descname"><span class="pre">set_opacity_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><span class="pre">Texture</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><span class="pre">PBRMaterial</span></a></span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_opacity_texture" title="Link to this definition">¶</a></dt>
+<dd><p>Set the red-channel opacity mask and return this material.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><code class="xref py py-class docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a></span></p>
@@ -1074,7 +1111,10 @@
             <ul>
 <li><a class="reference internal" href="#">ke.material</a><ul>
 <li><a class="reference internal" href="#api-overview">API overview</a><ul>
-<li><a class="reference internal" href="#kangengine.material.Material"><code class="docutils literal notranslate"><span class="pre">Material</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.Material"><code class="docutils literal notranslate"><span class="pre">Material</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.material.Material.texture_paths"><code class="docutils literal notranslate"><span class="pre">Material.texture_paths</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#kangengine.material.VertexColorMaterial"><code class="docutils literal notranslate"><span class="pre">VertexColorMaterial</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.material.VertexColorMaterial.set_style"><code class="docutils literal notranslate"><span class="pre">VertexColorMaterial.set_style()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.VertexColorMaterial.style"><code class="docutils literal notranslate"><span class="pre">VertexColorMaterial.style</span></code></a></li>
@@ -1112,6 +1152,7 @@
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.metallic_roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.metallic_roughness_texture</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.metallic_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.metallic_texture</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.normal_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.normal_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.opacity_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.opacity_texture</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.orm_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.orm_texture</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.roughness"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.roughness</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.roughness_texture</span></code></a></li>
@@ -1125,6 +1166,7 @@
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_metallic_roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_metallic_roughness_texture()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_metallic_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_metallic_texture()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_normal_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_normal_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_opacity_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_opacity_texture()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_orm_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_orm_texture()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_roughness"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_roughness()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_roughness_texture()</span></code></a></li>
