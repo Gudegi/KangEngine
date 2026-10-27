@@ -194,6 +194,7 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
         glm::vec4 emissiveAlpha;
         glm::vec4 textureFlags0;
         glm::vec4 textureFlags1;
+        glm::vec4 textureFlags2;
     };
     auto [it, inserted] = _pbrResources.try_emplace(&material);
     PbrResources& resources = it->second;
@@ -218,10 +219,11 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
         glm::vec4(material.roughnessTexture ? 1.0f : 0.0f,
                   material.aoTexture ? 1.0f : 0.0f,
                   material.ormTexture ? 1.0f : 0.0f,
-                  material.emissiveTexture ? 1.0f : 0.0f)};
+                  material.emissiveTexture ? 1.0f : 0.0f),
+        glm::vec4(material.opacityTexture ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f)};
     resources.params->setData(&params, sizeof(params));
 
-    std::array<Backend::Texture*, 8> textures{
+    std::array<Backend::Texture*, 9> textures{
         material.baseColorTexture ? material.baseColorTexture : _whiteTexture,
         material.normalTexture ? material.normalTexture : _normalTexture,
         material.metallicRoughnessTexture ? material.metallicRoughnessTexture
@@ -230,8 +232,9 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
         material.roughnessTexture ? material.roughnessTexture : _whiteTexture,
         material.aoTexture ? material.aoTexture : _whiteTexture,
         material.ormTexture ? material.ormTexture : _whiteTexture,
-        material.emissiveTexture ? material.emissiveTexture : _whiteTexture};
-    std::array<uintptr_t, 8> handles{};
+        material.emissiveTexture ? material.emissiveTexture : _whiteTexture,
+        material.opacityTexture ? material.opacityTexture : _whiteTexture};
+    std::array<uintptr_t, 9> handles{};
     for (size_t i = 0; i < textures.size(); ++i)
         handles[i] = textures[i]->getNativeHandle();
     if (!resources.bindGroup || handles != resources.textureHandles) {
@@ -247,11 +250,11 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
         desc.label = "pbr_material_bind_group";
         desc.entries.push_back(
             {0, resources.params.get(), 0, sizeof(Params), nullptr, nullptr});
-        for (uint32_t binding = 1; binding <= 8; ++binding)
+        for (uint32_t binding = 1; binding <= 9; ++binding)
             desc.entries.push_back({binding, nullptr, 0, 0,
                                     resources.views[binding - 1].get(),
                                     nullptr});
-        desc.entries.push_back({9, nullptr, 0, 0, nullptr, _materialSampler});
+        desc.entries.push_back({10, nullptr, 0, 0, nullptr, _materialSampler});
         resources.bindGroup = _device->createBindGroup(desc);
         resources.textureHandles = handles;
     }
@@ -773,12 +776,12 @@ void ForwardPass::initializeResources(
     pbrMaterialLayoutDesc.entries.push_back(
         {0, Backend::BindingType::UniformBuffer,
          Backend::ShaderStageVisibility::Fragment});
-    for (uint32_t binding = 1; binding <= 8; ++binding)
+    for (uint32_t binding = 1; binding <= 9; ++binding)
         pbrMaterialLayoutDesc.entries.push_back(
             {binding, Backend::BindingType::SampledTexture,
              Backend::ShaderStageVisibility::Fragment});
     pbrMaterialLayoutDesc.entries.push_back(
-        {9, Backend::BindingType::Sampler,
+        {10, Backend::BindingType::Sampler,
          Backend::ShaderStageVisibility::Fragment});
     _pbrMaterialGroupLayout = createBindGroupLayout(pbrMaterialLayoutDesc);
     Backend::PipelineLayoutDesc pbrLayoutDesc;

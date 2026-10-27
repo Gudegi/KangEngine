@@ -85,7 +85,7 @@ class USDSceneViewer(ke.App):
             view.set_double_sided(self.double_sided or mesh.double_sided)
             if mesh.opacity_threshold > 0:
                 view.set_alpha_mode(render.AlphaMode.MASK, cutoff=mesh.opacity_threshold)
-            elif mesh.base_color[3] < 1:
+            elif mesh.base_color[3] < 1 or mesh.opacity_texture_path:
                 view.set_alpha_mode(render.AlphaMode.BLEND)
             self.mesh_views.append(view)
 
@@ -262,6 +262,7 @@ class USDSceneViewer(ke.App):
             emissive_texture=self._load_texture(
                 mesh.emissive_texture_path, srgb=mesh.emissive_texture_srgb
             ),
+            opacity_texture=self._load_texture(mesh.opacity_texture_path),
         )
         if normal_texture is not None:
             self.normal_texture_bindings.append((material, normal_texture))

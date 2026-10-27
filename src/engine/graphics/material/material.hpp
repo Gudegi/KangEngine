@@ -157,12 +157,19 @@ class PBRMaterial : public Material {
     Backend::Texture* aoTexture = nullptr;
     Backend::Texture* ormTexture = nullptr;
     Backend::Texture* emissiveTexture = nullptr;
+    // Separate linear opacity mask uses the red channel instead of color alpha.
+    Backend::Texture* opacityTexture = nullptr;
 
     bool hasNormalMap() const override { return normalTexture != nullptr; }
     MaterialShadingModel shadingModel() const override {
         return MaterialShadingModel::PBR;
     }
-    Backend::Texture* alphaTexture() const override { return baseColorTexture; }
+    Backend::Texture* alphaTexture() const override {
+        return opacityTexture ? opacityTexture : baseColorTexture;
+    }
+    bool alphaTextureUsesRedChannel() const override {
+        return opacityTexture != nullptr;
+    }
 
     PBRMaterial* setBaseColor(glm::vec4 v) {
         baseColor = v;
@@ -214,6 +221,10 @@ class PBRMaterial : public Material {
     }
     PBRMaterial* setEmissiveTexture(Backend::Texture* texture) {
         emissiveTexture = texture;
+        return this;
+    }
+    PBRMaterial* setOpacityTexture(Backend::Texture* texture) {
+        opacityTexture = texture;
         return this;
     }
 

@@ -94,9 +94,9 @@ class ForwardPass : public RenderPassBase {
     };
     struct PbrResources {
         std::unique_ptr<Backend::Buffer> params;
-        std::array<std::unique_ptr<Backend::TextureView>, 8> views;
+        std::array<std::unique_ptr<Backend::TextureView>, 9> views;
         std::unique_ptr<Backend::BindGroup> bindGroup;
-        std::array<uintptr_t, 8> textureHandles{};
+        std::array<uintptr_t, 9> textureHandles{};
     };
 
     Backend::BindGroupLayout* _texturedVertexColorLayout = nullptr;

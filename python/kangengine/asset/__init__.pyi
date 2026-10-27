@@ -400,6 +400,7 @@ class USDMeshInfo:
     metallic_texture_path: str
     roughness_texture_path: str
     emissive_texture_path: str
+    opacity_texture_path: str
     diffuse_texture_srgb: bool
     emissive_texture_srgb: bool
     base_color: tuple[float, float, float, float]

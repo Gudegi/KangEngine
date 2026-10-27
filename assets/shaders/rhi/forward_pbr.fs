@@ -53,6 +53,7 @@ layout(std140) uniform ke_g3_b0 {
     vec4 pbrEmissiveAlpha; // rgb emissive, w alpha mode
     vec4 pbrTextureFlags0; // base, normal, metallic-roughness, metallic
     vec4 pbrTextureFlags1; // roughness, ao, orm, emissive
+    vec4 pbrTextureFlags2; // opacity, reserved, reserved, reserved
 };
 uniform sampler2D ke_g3_b1;
 uniform sampler2D ke_g3_b2;
@@ -62,6 +63,7 @@ uniform sampler2D ke_g3_b5;
 uniform sampler2D ke_g3_b6;
 uniform sampler2D ke_g3_b7;
 uniform sampler2D ke_g3_b8;
+uniform sampler2D ke_g3_b9;
 
 #define shadowMap0 ke_g1_b0
 #define shadowMap1 ke_g1_b1
@@ -124,6 +126,8 @@ void main() {
     vec4 base = pbrBaseColor * vColor;
     if (pbrTextureFlags0.x > 0.5)
         base *= texture(ke_g3_b1, TexCoord);
+    if (pbrTextureFlags2.x > 0.5)
+        base.a = pbrBaseColor.a * vColor.a * texture(ke_g3_b9, TexCoord).r;
     if (int(pbrEmissiveAlpha.w + 0.5) == 1 && base.a < pbrFactors.w)
         discard;
     float metallic = clamp(pbrFactors.x, 0.0, 1.0);

@@ -862,6 +862,7 @@ void bind_asset(py::module& m) {
         .def_readonly("metallic_texture_path", &USDMeshInfo::metallicTexturePath)
         .def_readonly("roughness_texture_path", &USDMeshInfo::roughnessTexturePath)
         .def_readonly("emissive_texture_path", &USDMeshInfo::emissiveTexturePath)
+        .def_readonly("opacity_texture_path", &USDMeshInfo::opacityTexturePath)
         .def_readonly("diffuse_texture_srgb", &USDMeshInfo::diffuseTextureSrgb)
         .def_readonly("emissive_texture_srgb", &USDMeshInfo::emissiveTextureSrgb)
         .def_property_readonly("base_color", [](const USDMeshInfo& self) {

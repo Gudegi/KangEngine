@@ -236,6 +236,8 @@ void bind_material(py::module& m) {
              py::return_value_policy::reference_internal)
         .def("set_emissive_texture", &PBRMaterial::setEmissiveTexture,
              py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_opacity_texture", &PBRMaterial::setOpacityTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
         .def_readwrite("base_color", &PBRMaterial::baseColor,
                        "Base color factor as RGBA.")
         .def_readwrite("metallic", &PBRMaterial::metallic,
@@ -262,6 +264,8 @@ void bind_material(py::module& m) {
         .def_readwrite("orm_texture", &PBRMaterial::ormTexture,
                        "Optional packed occlusion-roughness-metallic texture.")
         .def_readwrite("emissive_texture", &PBRMaterial::emissiveTexture,
-                       "Optional emissive texture.");
+                       "Optional emissive texture.")
+        .def_readwrite("opacity_texture", &PBRMaterial::opacityTexture,
+                       "Optional linear red-channel opacity mask overriding color alpha.");
 
 }

@@ -158,6 +158,61 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
     assert result.diagnostics.warnings == []
 
 
+@pytest.mark.parametrize("scalar_channel", ["r", "rgb"])
+def test_nodegraph_texture_forwarding(tmp_path, scalar_channel):
+    texture = tmp_path / "color.png"
+    texture.touch()
+    result = parse(tmp_path, f'''
+def Material "Paint" {{
+    token outputs:surface.connect = </Paint/Surface.outputs:surface>
+    def Shader "Surface" {{
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Paint/Maps.outputs:color>
+        float inputs:roughness.connect = </Paint/Maps.outputs:roughness>
+        float inputs:metallic.connect = </Paint/Maps.outputs:roughness>
+        float inputs:opacity.connect = </Paint/Maps.outputs:roughness>
+        normal3f inputs:normal.connect = </Paint/Maps/Normal.outputs:rgb>
+        token outputs:surface
+    }}
+    def NodeGraph "Maps" {{
+        color3f outputs:color.connect = </Paint/Maps/Nested.outputs:color>
+        float outputs:roughness.connect = </Paint/Maps/Nested/Texture.outputs:{scalar_channel}>
+        def Shader "Normal" {{
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @color.png@
+            float4 inputs:scale = (2,2,2,1)
+            float4 inputs:bias = (-1,-1,-1,0)
+            float3 outputs:rgb
+        }}
+        def NodeGraph "Nested" {{
+            color3f outputs:color.connect = </Paint/Maps/Nested/Texture.outputs:rgb>
+            def Shader "Texture" {{
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @color.png@
+                float4 inputs:scale = (0.2,0.4,0.6,1)
+                color3f outputs:rgb
+                float outputs:r
+            }}
+        }}
+    }}
+}}
+def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
+    rel material:binding = </Paint>
+    {TRIANGLE}
+}}
+''')
+    mesh = result.meshes[0]
+    assert Path(mesh.diffuse_texture_path) == texture
+    assert Path(mesh.roughness_texture_path) == texture
+    assert Path(mesh.metallic_texture_path) == texture
+    assert Path(mesh.normal_texture_path) == texture
+    assert Path(mesh.opacity_texture_path) == texture
+    np.testing.assert_allclose(mesh.base_color, [0.2, 0.4, 0.6, 0.2])
+    assert mesh.roughness == pytest.approx(0.2)
+    assert mesh.metallic == pytest.approx(0.2)
+    assert result.diagnostics.warnings == []
+
+
 def test_missing_texture_diagnostic_once_per_material(tmp_path):
     result = parse(tmp_path, f'''
 def Material "Paint" {{

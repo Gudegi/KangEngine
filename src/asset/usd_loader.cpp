@@ -90,7 +90,8 @@ PreviewTexture readPreviewTexture(const pxr::UsdShadeInput& input,
                                   ImportDiagnostics& diagnostics, bool report) {
     if (!input || !input.HasConnectedSource())
         return {};
-    const auto sources = input.GetConnectedSources();
+    // Resolve NodeGraph forwarding to the shader output that supplies the value.
+    const auto sources = input.GetValueProducingAttributes(true);
     auto warn = [&](const std::string& message) {
         if (report)
             diagnostics.warnings.push_back(message + ": " + input.GetAttr().GetPath().GetString());
@@ -100,7 +101,7 @@ PreviewTexture readPreviewTexture(const pxr::UsdShadeInput& input,
         return {};
     }
     const auto& source = sources.front();
-    pxr::UsdShadeShader texture(source.source.GetPrim());
+    pxr::UsdShadeShader texture(source.GetPrim());
     pxr::TfToken id;
     if (!texture || !texture.GetIdAttr().Get(&id) || id != pxr::TfToken("UsdUVTexture")) {
         warn("Unsupported USD texture node (expected UsdUVTexture)");
@@ -112,7 +113,7 @@ PreviewTexture readPreviewTexture(const pxr::UsdShadeInput& input,
     if (fileInput)
         fileInput.Get(&file);
     result.path = resolveUsdTexturePath(usdPath, assetPathString(file));
-    result.channel = source.sourceName;
+    result.channel = pxr::UsdShadeOutput(source).GetBaseName();
     if (const auto value = texture.GetInput(pxr::TfToken("scale")))
         value.Get(&result.scale);
     if (const auto value = texture.GetInput(pxr::TfToken("bias")))
@@ -370,7 +371,8 @@ void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
 
     // Native PBR decodes normal maps from [0,1] to [-1,1] itself.
     if (!normal.path.empty() && (normal.channel != pxr::TfToken("rgb") ||
-        normal.scale != pxr::GfVec4f(2.0f) || normal.bias != pxr::GfVec4f(-1.0f)))
+        pxr::GfVec3f(normal.scale[0], normal.scale[1], normal.scale[2]) != pxr::GfVec3f(2.0f) ||
+        pxr::GfVec3f(normal.bias[0], normal.bias[1], normal.bias[2]) != pxr::GfVec3f(-1.0f)))
         warn("USD normal map differs from the supported scale=2, bias=-1 encoding");
 
     // Preserve packed G roughness/B metallic without treating absent metallic as 1.
@@ -384,7 +386,7 @@ void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
             info.metallic = metallic.scale[2];
     } else {
         if (!roughness.path.empty()) {
-            if (roughness.channel == pxr::TfToken("r")) {
+            if (roughness.channel == pxr::TfToken("r") || roughness.channel == pxr::TfToken("rgb")) {
                 info.roughnessTexturePath = roughness.path;
                 info.roughness = roughness.scale[0];
             } else {
@@ -392,7 +394,7 @@ void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
             }
         }
         if (!metallic.path.empty()) {
-            if (metallic.channel == pxr::TfToken("r")) {
+            if (metallic.channel == pxr::TfToken("r") || metallic.channel == pxr::TfToken("rgb")) {
                 info.metallicTexturePath = metallic.path;
                 info.metallic = metallic.scale[0];
             } else {
@@ -402,8 +404,16 @@ void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
     }
     if (metallic.bias != pxr::GfVec4f(0) || roughness.bias != pxr::GfVec4f(0))
         warn("USD metallic/roughness texture bias is unsupported");
-    if (input("opacity") && input("opacity").HasConnectedSource())
-        warn("Separate USD opacity texture is unsupported");
+    const auto opacity = texture("opacity");
+    if (!opacity.path.empty()) {
+        if ((opacity.channel == pxr::TfToken("r") || opacity.channel == pxr::TfToken("rgb")) &&
+            opacity.bias[0] == 0.0f) {
+            info.opacityTexturePath = opacity.path;
+            info.baseColor.a = opacity.scale[0];
+        } else {
+            warn("Unsupported USD opacity channel/bias");
+        }
+    }
     int specularWorkflow = 0;
     if (const auto attr = input("useSpecularWorkflow"))
         attr.Get(&specularWorkflow);

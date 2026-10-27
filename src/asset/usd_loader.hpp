@@ -23,6 +23,7 @@ struct USDMeshInfo {
     std::string metallicTexturePath;
     std::string roughnessTexturePath;
     std::string emissiveTexturePath;
+    std::string opacityTexturePath;
     bool diffuseTextureSrgb = true;
     bool emissiveTextureSrgb = true;
     glm::vec4 baseColor = glm::vec4(0.18f, 0.18f, 0.18f, 1.0f);

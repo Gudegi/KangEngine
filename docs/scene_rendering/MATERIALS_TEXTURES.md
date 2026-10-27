@@ -150,6 +150,11 @@ material = self.create_pbr_material(
 Material color factors multiply their corresponding textures. Use a white
 factor when the texture should appear without an additional tint.
 
+For a separate PBR transparency mask, pass `opacity_texture` to
+`create_pbr_material()`. Load it with `srgb=False`; its red channel replaces
+the base-color texture alpha and is multiplied by the base-color alpha factor.
+Set the mesh alpha mode to `MASK` or `BLEND` to enable transparency.
+
 OBJ/MTL imports create material subsets automatically and attach supported
 diffuse, specular, alpha, and normal textures. See
 [Load Assets](LOAD_ASSETS.md) for the import workflow.

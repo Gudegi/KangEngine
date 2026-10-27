@@ -49,6 +49,8 @@ void collectMaterialTextures(const Material* material,
             out.push_back(pbr->ormTexture);
         if (pbr->emissiveTexture)
             out.push_back(pbr->emissiveTexture);
+        if (pbr->opacityTexture)
+            out.push_back(pbr->opacityTexture);
     }
 }
 } // namespace

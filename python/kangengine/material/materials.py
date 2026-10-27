@@ -308,6 +308,15 @@ class PBRMaterial(Material):
     def emissive_texture(self, texture) -> None:
         self._native.emissive_texture = unwrap_native(texture)
 
+    @property
+    def opacity_texture(self):
+        """Linear red-channel opacity mask overriding the base-color texture alpha."""
+        return self._native.opacity_texture
+
+    @opacity_texture.setter
+    def opacity_texture(self, texture) -> None:
+        self._native.opacity_texture = unwrap_native(texture)
+
     def set_base_color(self, base_color):
         self._native.set_base_color(base_color)
         return self
@@ -358,6 +367,10 @@ class PBRMaterial(Material):
 
     def set_emissive_texture(self, texture):
         self._native.set_emissive_texture(unwrap_native(texture))
+        return self
+
+    def set_opacity_texture(self, texture):
+        self._native.set_opacity_texture(unwrap_native(texture))
         return self
 
 

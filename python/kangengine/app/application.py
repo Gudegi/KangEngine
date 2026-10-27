@@ -1232,6 +1232,7 @@ class App(_NativeApp):
         ao_texture=None,
         orm_texture=None,
         emissive_texture=None,
+        opacity_texture=None,
     ) -> material_api.PBRMaterial:
         """Create and retain a PBR material instance.
 
@@ -1268,6 +1269,8 @@ class App(_NativeApp):
             material.orm_texture = orm_texture
         if emissive_texture is not None:
             material.emissive_texture = emissive_texture
+        if opacity_texture is not None:
+            material.opacity_texture = opacity_texture
         self._remember_textures(
             base_color_texture,
             normal_texture,
@@ -1277,6 +1280,7 @@ class App(_NativeApp):
             ao_texture,
             orm_texture,
             emissive_texture,
+            opacity_texture,
         )
         return self._remember_material(material)
 

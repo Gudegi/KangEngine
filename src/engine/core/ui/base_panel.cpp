@@ -642,6 +642,7 @@ void drawMaterialInspector(Scene::Prim& prim) {
         drawTextureStatus("AO Map", pbr->aoTexture);
         drawTextureStatus("ORM Map", pbr->ormTexture);
         drawTextureStatus("Emissive Map", pbr->emissiveTexture);
+        drawTextureStatus("Opacity Map", pbr->opacityTexture);
     } else if (dynamic_cast<VertexColorMaterial*>(material)) {
         ImGui::TextWrapped(
             "Compatibility wrapper for legacy shader-only renderables. "

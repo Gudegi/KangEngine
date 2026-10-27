@@ -76,10 +76,11 @@ inherited visibility and purpose. A mesh with collision properties is still
 displayed if it is also visible render geometry.
 
 `UsdPreviewSurface` materials retain base color/opacity, metallic, roughness,
-emission, normal maps and double-sided state. Texture support includes direct
-`UsdUVTexture` RGB color maps, R-channel scalar maps and packed G-roughness /
-B-metallic maps. Unsupported shader connections produce diagnostics. Color
-maps use sRGB decoding unless `sourceColorSpace` is `raw`; normal and scalar
+emission, normal maps and double-sided state. Texture connections can pass through
+`NodeGraph` outputs. Supported `UsdUVTexture` maps include RGB colors, R-channel
+scalar maps, RGB scalar maps (sampled from red), separate R/RGB opacity masks,
+and packed G-roughness / B-metallic maps. Unsupported shader connections produce
+diagnostics. Color maps use sRGB decoding unless `sourceColorSpace` is `raw`; normal and scalar
 maps remain linear. For manually loaded textures, see
 [Materials and Textures](MATERIALS_TEXTURES.md#load-and-attach-textures).
 
@@ -99,8 +100,8 @@ The returned meshes have transforms baked into their vertices. The result is
 for static display, not editing and saving the original USD scene; keep the
 source USD for that purpose. `prim_path` and `material_path` identify the source
 objects. The viewer uses fallback lighting when no supported USD lights were
-imported. MDL/MaterialX networks, arbitrary texture transforms, separate opacity
-textures and camera roll are not reproduced.
+imported. MDL/MaterialX networks, arbitrary texture transforms and camera roll
+are not reproduced.
 
 ## Examples
 
