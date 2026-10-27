@@ -6,7 +6,7 @@
 #include "asset/articulation_desc.hpp"
 #include "asset/rigid_desc.hpp"
 #include "articulation.hpp"
-#include "collision_material_utils.hpp"
+#include "collision_material_overrides.hpp"
 #include "physics/physx_compat.hpp"
 #include <cooking/PxCooking.h>
 #ifndef __APPLE__

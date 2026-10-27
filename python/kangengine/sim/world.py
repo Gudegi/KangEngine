@@ -21,7 +21,7 @@ from ..utils.env_utils import (
     select_optional_env_value,
 )
 from .rigid_query import RigidQueryMixin
-from .collision_query import CollisionShapeMixin, CollisionShapeBatchMixin
+from .collision_shape_query import CollisionShapeMixin, CollisionShapeBatchMixin
 
 _TORCH = None
 

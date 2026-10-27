@@ -1,5 +1,4 @@
-#ifndef _PHYSICS_COLLISION_MATERIAL_UTILS_HPP_
-#define _PHYSICS_COLLISION_MATERIAL_UTILS_HPP_
+#pragma once
 
 #include "asset/articulation_desc.hpp"
 
@@ -94,5 +93,3 @@ inline const Physics::PhysicsMaterialDesc* findCollisionMaterialOverride(
 }
 
 } // namespace KE
-
-#endif

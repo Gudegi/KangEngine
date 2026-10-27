@@ -2,8 +2,8 @@
 #include "material_utils.hpp"
 #include "d6_joint.hpp"
 #include "animation/skeleton_state.hpp"
-#include "collision_material_utils.hpp"
-#include "mass_properties.hpp"
+#include "collision_material_overrides.hpp"
+#include "mass_properties_utils.hpp"
 #include "physics/physx_compat.hpp"
 
 #include <Eigen/Geometry>

@@ -22,7 +22,7 @@
 #include "physics/articulation.hpp"
 #include "physics/d6_joint.hpp"
 #include "physics/physics_material.hpp"
-#include "physics/mass_properties.hpp"
+#include "physics/mass_properties_utils.hpp"
 #include "physics/material_utils.hpp"
 #include "physics/physics.hpp"
 #include <extensions/PxRigidBodyExt.h>
