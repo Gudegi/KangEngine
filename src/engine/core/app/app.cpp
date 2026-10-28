@@ -2335,16 +2335,17 @@ bool App::setPickTransform(const RayPickResult& result,
 }
 
 void App::renderSelectedLightOverlay() {
-    if (_hideUI || !_interaction.hasSelection()) {
+    if (_hideUI || !_rasterizer || !_interaction.hasSelection()) {
         clearDebugLines(SelectedLightOverlayPath);
         return;
     }
 
     const RayPickResult& selection = _interaction.selection();
-    Scene::Prim* prim =
-        selection.prim ? selection.prim->resolveManipulationTarget() : nullptr;
+    // Match the inspector's subject; a manipulation group only owns transforms.
+    Scene::Prim* prim = selection.prim;
     if (!prim || prim->getType() != Scene::PrimType::Light ||
-        !prim->hasLightComponent()) {
+        !prim->hasLightComponent() || !prim->isActiveInHierarchy() ||
+        !prim->isVisibleInHierarchy()) {
         clearDebugLines(SelectedLightOverlayPath);
         return;
     }
@@ -2358,38 +2359,51 @@ void App::renderSelectedLightOverlay() {
     std::vector<glm::vec3> starts;
     std::vector<glm::vec3> ends;
     glm::vec4 color(1.0f, 0.83f, 0.22f, 1.0f);
+    const glm::mat4 world = prim->computeWorldMatrix();
+    const glm::vec3 origin(world[3]);
 
     switch (component->type()) {
     case Scene::LightType::Directional: {
         const Scene::DirectionalLight light = evaluateWorldLight(
-            component->directionalLight(), prim->computeWorldMatrix());
-        const glm::vec3 origin = glm::vec3(prim->computeWorldMatrix()[3]);
+            component->directionalLight(), world);
+        Scene::DebugGeometry::appendSphereWire(starts, ends, origin, 0.15f, 24);
         Scene::DebugGeometry::appendDirectionArrowWire(starts, ends, origin,
                                                        light.direction, 2.0f);
         break;
     }
     case Scene::LightType::Point: {
         const Scene::PointLight light = evaluateWorldLight(
-            component->pointLight(), prim->computeWorldMatrix());
+            component->pointLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, light.position,
                                                light.range);
         break;
     }
     case Scene::LightType::Spot: {
         const Scene::SpotLight light = evaluateWorldLight(
-            component->spotLight(), prim->computeWorldMatrix());
+            component->spotLight(), world);
+        Scene::DebugGeometry::appendSphereWire(starts, ends, origin, 0.08f, 16);
         Scene::DebugGeometry::appendConeWire(starts, ends, light.position,
                                              light.direction, light.range,
                                              light.outerConeAngle);
         break;
     }
+    case Scene::LightType::Rect: {
+        const Scene::RectLight light = component->rectLight();
+        Scene::DebugGeometry::appendRectLightWire(starts, ends, world,
+                                                  light.width, light.height);
+        break;
+    }
+    case Scene::LightType::Dome:
+        Scene::DebugGeometry::appendDomeLightWire(starts, ends, origin);
+        break;
     }
 
     if (starts.empty()) {
         clearDebugLines(SelectedLightOverlayPath);
         return;
     }
-    logDebugLines(SelectedLightOverlayPath, starts, ends, {color}, 1.5f, false);
+    _rasterizer->logDebugLines(SelectedLightOverlayPath, starts, ends, {color},
+                               1.5f, false, true);
 }
 
 void App::renderSelectedCameraOverlay() {

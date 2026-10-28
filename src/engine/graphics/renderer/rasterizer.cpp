@@ -428,8 +428,8 @@ void Rasterizer::logDebugLines(const std::string& path,
                                const std::vector<glm::vec3>& starts,
                                const std::vector<glm::vec3>& ends,
                                const std::vector<glm::vec4>& colors,
-                               float width, bool hidden) {
-    _debugRenderer.logLines(path, starts, ends, colors, width, hidden);
+                               float width, bool hidden, bool overlay) {
+    _debugRenderer.logLines(path, starts, ends, colors, width, hidden, overlay);
 }
 
 void Rasterizer::logDebugAxes(const std::string& path,

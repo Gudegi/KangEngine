@@ -139,6 +139,13 @@ void appendConeWire(std::vector<glm::vec3>& starts,
                     std::vector<glm::vec3>& ends, const glm::vec3& apex,
                     const glm::vec3& direction, float range,
                     float outerConeAngle, int segments = 64);
+void appendRectLightWire(std::vector<glm::vec3>& starts,
+                         std::vector<glm::vec3>& ends,
+                         const glm::mat4& world, float width, float height);
+// A fixed-size environment glyph, not a finite influence volume.
+void appendDomeLightWire(std::vector<glm::vec3>& starts,
+                         std::vector<glm::vec3>& ends,
+                         const glm::vec3& origin);
 // Camera
 void appendCameraGlyphWire(std::vector<glm::vec3>& starts,
                            std::vector<glm::vec3>& ends,

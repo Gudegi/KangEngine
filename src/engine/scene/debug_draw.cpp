@@ -619,9 +619,10 @@ void appendConeWire(std::vector<glm::vec3>& starts,
         safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
     glm::vec3 right, up;
     basisFromDirection(forward, right, up);
-    const glm::vec3 center = apex + forward * safeRange;
-    const float coneRadius =
-        std::tan(std::max(0.0f, outerConeAngle)) * safeRange;
+    // Range is radial distance from the source, not distance along the cone axis.
+    const float angle = glm::clamp(outerConeAngle, 0.0f, glm::pi<float>());
+    const glm::vec3 center = apex + forward * (std::cos(angle) * safeRange);
+    const float coneRadius = std::sin(angle) * safeRange;
     appendCircle(starts, ends, center, right, up, coneRadius, segments);
 
     for (int i = 0; i < 4; ++i) {
@@ -629,8 +630,53 @@ void appendConeWire(std::vector<glm::vec3>& starts,
         const glm::vec3 rim =
             center + (std::cos(a) * right + std::sin(a) * up) * coneRadius;
         appendLine(starts, ends, apex, rim);
+        const glm::vec3 radial = std::cos(a) * right + std::sin(a) * up;
+        const int arcSegments = std::max(2, segments / 4);
+        glm::vec3 previous = apex + forward * safeRange;
+        for (int j = 1; j <= arcSegments; ++j) {
+            const float theta = angle * static_cast<float>(j) / arcSegments;
+            const glm::vec3 point = apex + safeRange *
+                (std::cos(theta) * forward + std::sin(theta) * radial);
+            appendLine(starts, ends, previous, point);
+            previous = point;
+        }
     }
-    appendLine(starts, ends, apex, center);
+    appendLine(starts, ends, apex, apex + forward * safeRange);
+}
+
+void appendRectLightWire(std::vector<glm::vec3>& starts,
+                         std::vector<glm::vec3>& ends,
+                         const glm::mat4& world, float width, float height) {
+    const glm::vec3 origin(world[3]);
+    const glm::vec3 halfX = glm::vec3(world[0]) * width * 0.5f;
+    const glm::vec3 halfY = glm::vec3(world[1]) * height * 0.5f;
+    const glm::vec3 corners[] = {
+        origin - halfX - halfY, origin + halfX - halfY,
+        origin + halfX + halfY, origin - halfX + halfY,
+    };
+    for (int i = 0; i < 4; ++i)
+        appendLine(starts, ends, corners[i], corners[(i + 1) % 4]);
+
+    // Match the emitting normal under shear and mirrored parent transforms.
+    const float handedness = glm::determinant(glm::mat3(world)) < 0 ? -1.0f : 1.0f;
+    const glm::vec3 normal = glm::cross(halfY, halfX) * handedness;
+    if (glm::dot(normal, normal) > 1e-12f)
+        appendDirectionArrowWire(starts, ends, origin, normal, 1.0f);
+}
+
+void appendDomeLightWire(std::vector<glm::vec3>& starts,
+                         std::vector<glm::vec3>& ends,
+                         const glm::vec3& origin) {
+    appendSphereWire(starts, ends, origin, 0.65f, 32);
+    // Incoming rays distinguish the infinite environment from a point range.
+    for (const glm::vec3 axis : {glm::vec3(1, 0, 0), glm::vec3(0, 1, 0),
+                                 glm::vec3(0, 0, 1)}) {
+        for (float sign : {-1.0f, 1.0f}) {
+            const glm::vec3 outward = axis * sign;
+            appendDirectionArrowWire(starts, ends, origin + outward * 1.2f,
+                                      -outward, 0.45f);
+        }
+    }
 }
 
 void appendCameraGlyphWire(std::vector<glm::vec3>& starts,

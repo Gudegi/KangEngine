@@ -35,6 +35,18 @@ For Python, use `define_prim()` to create a light and `get_prim_at_path()` to
 look up an existing one. An existing prim at the requested path is reused by
 `define_prim()`.
 
+### Selected light guides
+
+Select a light in the scene hierarchy to show yellow guides, including through
+walls and floors. Hidden or inactive lights do not show guides.
+
+- Directional: an arrow along the emitted rays.
+- Point: a sphere at the light's `range`.
+- Spot: the outer cone with a curved end at `range` from the source.
+- Rect: the transformed emitting rectangle and its outward direction.
+- Dome: a small sphere with incoming arrows. This is an icon for infinite
+  environment illumination, not a finite range; moving it does not change lighting.
+
 ### Coordinates and updates
 
 | Type | Setter input and parent transforms | Getter result |

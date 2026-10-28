@@ -370,7 +370,8 @@ class Rasterizer : public RenderPipeline {
                        const std::vector<glm::vec3>& starts,
                        const std::vector<glm::vec3>& ends,
                        const std::vector<glm::vec4>& colors = {},
-                       float width = 1.0f, bool hidden = false);
+                       float width = 1.0f, bool hidden = false,
+                       bool overlay = false);
     void logDebugAxes(const std::string& path, const glm::mat4& transform,
                       float length = 1.0f, float width = 1.0f,
                       bool hidden = false);

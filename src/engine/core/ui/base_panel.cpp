@@ -396,7 +396,7 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
         lightChanged |= ImGui::DragFloat3("Local ray direction", &direction.x, 0.02f);
         lightChanged |= ImGui::ColorEdit3("Color", color);
         lightChanged |=
-            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 5.0f);
+            ImGui::DragFloat("Intensity", &light.intensity, 0.05f, 0.0f, FLT_MAX);
         lightChanged |= ImGui::ColorEdit3("Ambient", &ambient.x);
         if (lightChanged) {
             if (glm::length(direction) > 1e-4f)
@@ -415,7 +415,7 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
         lightChanged |= ImGui::DragFloat3("Local position", &light.position.x, 0.01f);
         lightChanged |= ImGui::ColorEdit3("Color", color);
         lightChanged |=
-            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+            ImGui::DragFloat("Intensity", &light.intensity, 0.05f, 0.0f, FLT_MAX);
         lightChanged |=
             ImGui::DragFloat("Range", &light.range, 0.05f, 0.0f, FLT_MAX);
         if (lightChanged) {
@@ -436,7 +436,7 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
         lightChanged |= ImGui::DragFloat3("Local ray direction", &direction.x, 0.02f);
         lightChanged |= ImGui::ColorEdit3("Color", color);
         lightChanged |=
-            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+            ImGui::DragFloat("Intensity", &light.intensity, 0.05f, 0.0f, FLT_MAX);
         lightChanged |=
             ImGui::DragFloat("Range", &light.range, 0.05f, 0.0f, FLT_MAX);
         lightChanged |= ImGui::SliderFloat("Inner Cone", &innerDegrees, 0.0f,

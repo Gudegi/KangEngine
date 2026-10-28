@@ -111,6 +111,12 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
     desc.colorTargets = {{Backend::TextureFormat::RGBA16Float, blend}};
     desc.sampleCount = 4;
     _linePipeline = _device->createGraphicsPipeline(desc);
+    desc.label = "debug_line_overlay_pipeline";
+    desc.depthStencil->depthWriteEnabled = false;
+    desc.depthStencil->depthCompare = Backend::CompareFunction::Always;
+    _lineOverlayPipeline = _device->createGraphicsPipeline(desc);
+    desc.depthStencil->depthWriteEnabled = true;
+    desc.depthStencil->depthCompare = Backend::CompareFunction::Less;
 
     Backend::VertexBufferLayout pointLayout;
     pointLayout.arrayStride = sizeof(PointVertex);
@@ -174,7 +180,7 @@ void DebugRenderer::logLines(const std::string& path,
                              const std::vector<glm::vec3>& starts,
                              const std::vector<glm::vec3>& ends,
                              const std::vector<glm::vec4>& colors, float width,
-                             bool hidden) {
+                             bool hidden, bool overlay) {
     if (path.empty())
         return;
     validateLineInputs("DebugRenderer::logLines", starts, ends, colors);
@@ -184,6 +190,7 @@ void DebugRenderer::logLines(const std::string& path,
     batch.vertices.reserve(starts.size() * 2);
     batch.width = std::max(1.0f, width);
     batch.hidden = hidden;
+    batch.overlay = overlay;
 
     for (size_t i = 0; i < starts.size(); ++i) {
         const glm::vec4 color = pickColor(colors, i);
@@ -269,23 +276,29 @@ bool DebugRenderer::hasDraws() const {
 }
 
 void DebugRenderer::record(Backend::RenderPassEncoder& pass) const {
-    for (const auto& [path, batch] : _lineBatches) {
-        if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
-            continue;
-        pass.setPipeline(_linePipeline.get());
-        pass.setBindGroup(0, _frameBindGroup);
-        pass.setLineWidth(batch.width);
-        pass.setVertexBuffer(0, batch.vertexBuffer.get());
-        pass.draw(static_cast<uint32_t>(batch.vertices.size()));
-    }
-    for (const auto& [path, batch] : _pointBatches) {
-        if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
-            continue;
-        pass.setPipeline(batch.overlay ? _pointOverlayPipeline.get()
-                                       : _pointPipeline.get());
-        pass.setBindGroup(0, _frameBindGroup);
-        pass.setVertexBuffer(0, batch.vertexBuffer.get());
-        pass.draw(static_cast<uint32_t>(batch.vertices.size()));
+    // Editor guides draw last without testing or changing scene depth.
+    for (bool overlay : {false, true}) {
+        for (const auto& [path, batch] : _lineBatches) {
+            if (batch.overlay != overlay || batch.hidden ||
+                batch.vertices.empty() || !batch.vertexBuffer)
+                continue;
+            pass.setPipeline(overlay ? _lineOverlayPipeline.get()
+                                     : _linePipeline.get());
+            pass.setBindGroup(0, _frameBindGroup);
+            pass.setLineWidth(batch.width);
+            pass.setVertexBuffer(0, batch.vertexBuffer.get());
+            pass.draw(static_cast<uint32_t>(batch.vertices.size()));
+        }
+        for (const auto& [path, batch] : _pointBatches) {
+            if (batch.overlay != overlay || batch.hidden ||
+                batch.vertices.empty() || !batch.vertexBuffer)
+                continue;
+            pass.setPipeline(overlay ? _pointOverlayPipeline.get()
+                                     : _pointPipeline.get());
+            pass.setBindGroup(0, _frameBindGroup);
+            pass.setVertexBuffer(0, batch.vertexBuffer.get());
+            pass.draw(static_cast<uint32_t>(batch.vertices.size()));
+        }
     }
 }
 
