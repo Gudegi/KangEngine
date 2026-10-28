@@ -31,6 +31,8 @@ class Material {
   public:
     // Source files are resolved into scene-local textures by the owning App.
     std::unordered_map<std::string, std::string> texturePaths;
+    // Per-slot decoding for deferred textures. Defaults to false (linear).
+    std::unordered_map<std::string, bool> textureSrgb;
 
     virtual ~Material() = default;
     virtual bool hasNormalMap() const { return false; }

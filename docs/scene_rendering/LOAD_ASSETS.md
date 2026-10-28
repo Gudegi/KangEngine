@@ -138,6 +138,17 @@ diagnostics. Color maps use sRGB decoding unless `sourceColorSpace` is `raw`; no
 maps remain linear. For manually loaded textures, see
 [Materials and Textures](MATERIALS_TEXTURES.md#load-and-attach-textures).
 
+OmniPBR materials retain constant diffuse color, metallic, and roughness values,
+plus a directly assigned `diffuse_texture` and its `diffuse_tint`. The texture
+replaces the constant color; `colorSpace = "raw"` disables sRGB decoding.
+Other OmniPBR maps, albedo adjustments, and connected MDL networks are unsupported.
+
+Articulation imports retain these mesh-bound materials and their base-color,
+normal, metallic, roughness, packed metallic-roughness, and emissive maps.
+Textures are loaded by the App when visuals are attached, preserving color-space
+settings and sharing cached textures across instances. Articulation opacity maps,
+alpha cutout, and per-face material assignments are not imported.
+
 The parsing snippet uses `usd_file`, the path to your root USD layer:
 
 ```python

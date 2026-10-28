@@ -34,13 +34,16 @@ def normalize_color_array(color):
 
 def _texture_values(app, source, slots, asset_dir):
     paths = source.texture_paths
+    srgb = source.texture_srgb
     unknown = paths.keys() - slots
     if unknown:
         raise ValueError(f"unknown material texture slots: {sorted(unknown)}")
 
     return {
         slot: (
-            app.load_texture(Path(asset_dir) / paths[slot], flip=True)
+            app.load_texture(
+                Path(asset_dir) / paths[slot], flip=True, srgb=srgb.get(slot, False)
+            )
             if paths.get(slot)
             else getattr(source, slot)
         )

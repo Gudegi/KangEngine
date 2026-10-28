@@ -48,6 +48,18 @@ class Material(NativeWrapper):
     def texture_paths(self, value: dict[str, str]) -> None:
         self._native.texture_paths = value
 
+    @property
+    def texture_srgb(self) -> dict[str, bool]:
+        """sRGB decoding by texture-path slot. Defaults to False (linear).
+
+        Assign a complete dictionary, as with ``texture_paths``.
+        """
+        return self._native.texture_srgb
+
+    @texture_srgb.setter
+    def texture_srgb(self, value: dict[str, bool]) -> None:
+        self._native.texture_srgb = value
+
 
 class VertexColorMaterial(Material):
     """Material for vertex/display-color shaders."""

@@ -131,7 +131,10 @@ void bind_material(py::module& m) {
         m, "Material", "Base class for renderer materials.")
         .def_readwrite("texture_paths", &Material::texturePaths,
                        "Source texture paths keyed by texture slot. Reading "
-                       "returns a copy; assign a dictionary to update paths.");
+                       "returns a copy; assign a dictionary to update paths.")
+        .def_readwrite("texture_srgb", &Material::textureSrgb,
+                       "sRGB decoding by source texture slot. Defaults to False (linear). "
+                       "Assign a dictionary to update values.");
 
     py::enum_<VertexColorStyle>(m, "VertexColorStyle")
         .value("UNTEXTURED", VertexColorStyle::Untextured)

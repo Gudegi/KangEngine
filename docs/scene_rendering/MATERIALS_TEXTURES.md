@@ -175,6 +175,7 @@ paint.base_color = ke.Vec4(1.0, 1.0, 1.0, 1.0)
 paint.metallic = 0.1
 paint.roughness = 0.45
 paint.texture_paths = {"base_color_texture": "textures/paint.png"}
+paint.texture_srgb = {"base_color_texture": True}  # Defaults to False (linear).
 
 # The getter returns a copy; assign the updated dictionary back.
 paint.texture_paths = {

@@ -60,6 +60,7 @@ class VertexColorStyle(Enum):
 class NativeMaterial:
     """Native renderer material base used for advanced interop."""
     texture_paths: dict[str, str]
+    texture_srgb: dict[str, bool]
 
 class NativeVertexColorMaterial(NativeMaterial):
     """Native vertex-color material used for advanced interop."""
@@ -83,6 +84,12 @@ class Material:
         ...
     @texture_paths.setter
     def texture_paths(self, value: dict[str, str]) -> None: ...
+    @property
+    def texture_srgb(self) -> dict[str, bool]:
+        """sRGB decoding by texture-path slot. Defaults to False (linear)."""
+        ...
+    @texture_srgb.setter
+    def texture_srgb(self, value: dict[str, bool]) -> None: ...
 
 class VertexColorMaterial(Material):
     """Material using vertex/display colors and an optional built-in style."""

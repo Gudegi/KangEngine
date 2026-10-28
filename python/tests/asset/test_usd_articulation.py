@@ -77,6 +77,159 @@ def xyz(v):
     return np.array([v.x, v.y, v.z])
 
 
+def with_material(shader, *, mdl=False, textures=""):
+    surface = "mdl:surface" if mdl else "surface"
+    text = USD.replace(
+        '"PhysicsCollisionAPI", "PhysicsMeshCollisionAPI"',
+        '"PhysicsCollisionAPI", "PhysicsMeshCollisionAPI", "MaterialBindingAPI"',
+    ).replace(
+        'bool physics:collisionEnabled = true',
+        '''bool physics:collisionEnabled = true
+        rel material:binding = </Paint>
+        texCoord2f[] primvars:st = [(0,0), (1,0), (0,1), (1,1)] (
+            interpolation = "vertex"
+        )''',
+    )
+    return text + f'''
+def Material "Paint" {{
+    token outputs:{surface}.connect = </Paint/Shader.outputs:out>
+    def Shader "Shader" {{
+        {shader}
+        token outputs:out
+    }}
+    {textures}
+}}
+'''
+
+
+@pytest.mark.parametrize("mdl", [False, True])
+@pytest.mark.parametrize("authored_factors", [False, True])
+def test_visual_material_preserves_authored_color(tmp_path, mdl, authored_factors):
+    surface = "mdl:surface" if mdl else "surface"
+    shader = (
+        'uniform token info:implementationSource = "sourceAsset"\n'
+        'uniform asset info:mdl:sourceAsset = @OmniPBR.mdl@\n'
+        'uniform token info:mdl:sourceAsset:subIdentifier = "OmniPBR"\n'
+        'color3f inputs:diffuse_color_constant = (0.7, 0.2, 0.1)\n'
+        'float inputs:metallic_constant = 0.3\n'
+        'float inputs:reflection_roughness_constant = 0.6\n'
+        if mdl else
+        'uniform token info:id = "UsdPreviewSurface"\n'
+        'color3f inputs:diffuseColor = (0.7, 0.2, 0.1)\n'
+        'float inputs:metallic = 0.3\n'
+        'float inputs:roughness = 0.6\n'
+    )
+    if not authored_factors:
+        shader = "\n".join(line for line in shader.splitlines() if not line.startswith("float inputs:"))
+    text = USD.replace(
+        '"PhysicsCollisionAPI", "PhysicsMeshCollisionAPI"',
+        '"PhysicsCollisionAPI", "PhysicsMeshCollisionAPI", "MaterialBindingAPI"',
+    ).replace(
+        'bool physics:collisionEnabled = true',
+        'bool physics:collisionEnabled = true\nrel material:binding = </Paint>',
+    )
+    text += f'''\ndef Material "Paint" {{
+        token outputs:{surface}.connect = </Paint/Shader.outputs:out>
+        def Shader "Shader" {{
+            {shader}
+            token outputs:out
+        }}
+    }}\n'''
+    geom = load(tmp_path, text).articulation.visual_geoms[0]
+    np.testing.assert_allclose(geom.rgba, [1, 1, 1, 1])
+    np.testing.assert_allclose(xyz(geom.material.base_color), [.7, .2, .1])
+    assert geom.material.metallic == pytest.approx(.3 if authored_factors else 0.)
+    assert geom.material.roughness == pytest.approx(.6 if authored_factors else .5)
+
+
+@pytest.mark.parametrize("color_space", ["auto", "sRGB", "raw"])
+def test_omnipbr_direct_texture_replaces_constant_color(tmp_path, color_space):
+    texture = tmp_path / "paint.png"
+    texture.touch()
+    text = with_material(f'''
+        uniform token info:implementationSource = "sourceAsset"
+        uniform asset info:mdl:sourceAsset = @OmniPBR.mdl@
+        uniform token info:mdl:sourceAsset:subIdentifier = "OmniPBR"
+        color3f inputs:diffuse_color_constant = (0.2,0.2,0.2)
+        color3f inputs:diffuse_tint = (0.8,0.6,0.4)
+        asset inputs:diffuse_texture = @paint.png@ (colorSpace = "{color_space}")
+    ''', mdl=True)
+    result = load(tmp_path, text)
+    geom = result.articulation.visual_geoms[0]
+    material = geom.material
+    assert material.texture_paths == {"base_color_texture": str(texture)}
+    assert material.texture_srgb["base_color_texture"] == (color_space != "raw")
+    assert material.base_color_texture is None
+    np.testing.assert_allclose(xyz(material.base_color), [.8, .6, .4])
+    assert np.asarray(geom.mesh_data.uvs).max() == 1
+    assert not any("texture" in message.lower() for message in result.diagnostics.warnings)
+
+    # Static scene imports use the same material reader.
+    scene = asset.USDLoader.parse(str(tmp_path / "robot.usda"))
+    assert all(mesh.diffuse_texture_path == str(texture) for mesh in scene.meshes)
+
+
+@pytest.mark.parametrize("missing_file", [False, True])
+def test_omnipbr_default_color_and_missing_texture(tmp_path, missing_file):
+    texture_input = 'asset inputs:diffuse_texture = @missing.png@' if missing_file else ""
+    text = with_material(f'''
+        uniform token info:implementationSource = "sourceAsset"
+        uniform asset info:mdl:sourceAsset = @OmniPBR.mdl@
+        uniform token info:mdl:sourceAsset:subIdentifier = "OmniPBR"
+        {texture_input}
+    ''', mdl=True)
+    result = load(tmp_path, text)
+    material = result.articulation.visual_geoms[0].material
+    np.testing.assert_allclose(xyz(material.base_color), [.2, .2, .2])
+    assert material.texture_paths == {}
+    assert any("texture file missing" in msg for msg in result.diagnostics.warnings) == missing_file
+
+
+@pytest.mark.parametrize("packed", [False, True])
+@pytest.mark.parametrize("color_space", ["sRGB", "raw"])
+def test_preview_surface_articulation_texture_slots(tmp_path, packed, color_space):
+    texture = tmp_path / "paint.png"
+    texture.touch()
+    roughness, metallic = ("g", "b") if packed else ("r", "r")
+    text = with_material(f'''
+        uniform token info:id = "UsdPreviewSurface"
+        color3f inputs:diffuseColor.connect = </Paint/Texture.outputs:rgb>
+        color3f inputs:emissiveColor.connect = </Paint/Texture.outputs:rgb>
+        normal3f inputs:normal.connect = </Paint/Normal.outputs:rgb>
+        float inputs:roughness.connect = </Paint/Texture.outputs:{roughness}>
+        float inputs:metallic.connect = </Paint/Texture.outputs:{metallic}>
+    ''', textures=f'''
+    def Shader "Texture" {{
+        uniform token info:id = "UsdUVTexture"
+        asset inputs:file = @paint.png@
+        token inputs:sourceColorSpace = "{color_space}"
+        float4 inputs:scale = (0.2,0.4,0.6,1)
+        float3 outputs:rgb
+        float outputs:r
+        float outputs:g
+        float outputs:b
+    }}
+    def Shader "Normal" {{
+        uniform token info:id = "UsdUVTexture"
+        asset inputs:file = @paint.png@
+        float4 inputs:scale = (2,2,2,1)
+        float4 inputs:bias = (-1,-1,-1,0)
+        float3 outputs:rgb
+    }}
+    ''')
+    material = load(tmp_path, text).articulation.visual_geoms[0].material
+    slots = {"base_color_texture", "emissive_texture", "normal_texture"}
+    slots |= {"metallic_roughness_texture"} if packed else {"metallic_texture", "roughness_texture"}
+    assert material.texture_paths == {slot: str(texture) for slot in slots}
+    assert material.texture_srgb == {
+        "base_color_texture": color_space != "raw",
+        "emissive_texture": color_space != "raw",
+    }
+    np.testing.assert_allclose(xyz(material.base_color), [.2, .4, .6])
+    assert material.roughness == pytest.approx(.4 if packed else .2)
+    assert material.metallic == pytest.approx(.6 if packed else .2)
+
+
 def test_joint_frames_mass_units_and_instance_mesh(tmp_path):
     result = load(tmp_path)
     data = result.articulation

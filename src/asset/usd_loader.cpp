@@ -1,6 +1,7 @@
 #include "usd_loader.hpp"
 
 #include "asset/mesh_loader.hpp"
+#include "engine/graphics/material/material.hpp"
 #include "geometry/mesh_utils.hpp"
 
 #include <algorithm>
@@ -327,6 +328,43 @@ void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
             diagnostics.warnings.push_back(message + ": " + info.materialPath);
     };
     const auto shader = material.ComputeSurfaceSource();
+    if (!shader) {
+        const auto mdl = material.ComputeSurfaceSource(pxr::TfToken("mdl"));
+        pxr::TfToken identifier;
+        if (mdl && mdl.GetSourceAssetSubIdentifier(&identifier, pxr::TfToken("mdl")) &&
+            identifier == pxr::TfToken("OmniPBR")) {
+            // Read direct OmniPBR inputs without evaluating an MDL network.
+            pxr::GfVec3f color(0.2f);
+            if (const auto value = mdl.GetInput(pxr::TfToken("diffuse_color_constant")))
+                value.Get(&color);
+            if (const auto value = mdl.GetInput(pxr::TfToken("diffuse_texture"))) {
+                if (value.HasConnectedSource()) {
+                    warn("Connected OmniPBR diffuse textures are unsupported");
+                } else {
+                    pxr::SdfAssetPath file;
+                    value.Get(&file);
+                    const auto path = resolveUsdTexturePath(usdPath, assetPathString(file));
+                    if (!path.empty() && std::filesystem::exists(path)) {
+                        info.diffuseTexturePath = path;
+                        const auto colorSpace = value.GetAttr().GetColorSpace();
+                        info.diffuseTextureSrgb = colorSpace != pxr::TfToken("raw");
+                        // The map replaces the constant; diffuse_tint multiplies it.
+                        color = pxr::GfVec3f(1.f);
+                        if (const auto tint = mdl.GetInput(pxr::TfToken("diffuse_tint")))
+                            tint.Get(&color);
+                    } else if (!path.empty()) {
+                        warn("USD texture file missing: " + path);
+                    }
+                }
+            }
+            info.baseColor = glm::vec4(color[0], color[1], color[2], 1.f);
+            if (const auto value = mdl.GetInput(pxr::TfToken("metallic_constant")))
+                value.Get(&info.metallic);
+            if (const auto value = mdl.GetInput(pxr::TfToken("reflection_roughness_constant")))
+                value.Get(&info.roughness);
+            return;
+        }
+    }
     pxr::TfToken id;
     if (!shader || !shader.GetIdAttr().Get(&id) || id != pxr::TfToken("UsdPreviewSurface")) {
         warn("Unsupported USD surface (expected UsdPreviewSurface)");
@@ -935,6 +973,8 @@ USDLoader::parseArticulation(const std::string& usdPath,
         throw std::runtime_error("Disconnected USD bodies");
     out.skeletonTree = std::make_shared<Animation::SkeletonTree>(
         names, parents, positions, rotations, counts);
+    std::map<std::string, std::shared_ptr<Material>> visualMaterials;
+    std::unordered_set<std::string> inspectedMaterials;
     // 5. Attach mesh geometry to its nearest rigid-body ancestor. Geometry
     // outside a body is skipped; unsupported colliders fail explicitly.
     for (auto p : UsdPrimRange(root, UsdTraverseInstanceProxies())) {
@@ -973,6 +1013,8 @@ USDLoader::parseArticulation(const std::string& usdPath,
         if (mesh.vertices.empty() || mesh.indices.empty())
             throw std::runtime_error("Empty USD articulation mesh: " +
                                      p.GetPath().GetString());
+        // Normal maps need tangent frames in the same body-local space.
+        Geometry::computeTangents(mesh);
         // The same body-local mesh can serve collision and visualization.
         // Only authored convexHull colliders are accepted; no decomposition is done.
         auto data = std::make_shared<Scene::MeshData>(std::move(mesh));
@@ -996,6 +1038,38 @@ USDLoader::parseArticulation(const std::string& usdPath,
             d.bodyName = names[i];
             d.bodyIndex = i;
             d.meshData = data;
+            if (const auto material = boundMaterial(p)) {
+                const auto materialPath = material.GetPath().GetString();
+                auto& source = visualMaterials[materialPath];
+                if (!source) {
+                    USDMeshInfo info;
+                    assignMaterial(info, material, usdPath, result.diagnostics,
+                                   inspectedMaterials);
+                    auto pbr = std::make_shared<PBRMaterial>();
+                    pbr->baseColor = info.baseColor;
+                    pbr->metallic = info.metallic;
+                    pbr->roughness = info.roughness;
+                    pbr->emissiveColor = info.emissiveColor;
+                    pbr->emissiveStrength = 1.f;
+                    for (const auto& entry : {
+                             std::make_pair("base_color_texture", info.diffuseTexturePath),
+                             std::make_pair("normal_texture", info.normalTexturePath),
+                             std::make_pair("metallic_roughness_texture", info.metallicRoughnessTexturePath),
+                             std::make_pair("metallic_texture", info.metallicTexturePath),
+                             std::make_pair("roughness_texture", info.roughnessTexturePath),
+                             std::make_pair("emissive_texture", info.emissiveTexturePath)}) {
+                        if (!entry.second.empty())
+                            pbr->texturePaths[entry.first] = entry.second;
+                    }
+                    pbr->textureSrgb = {
+                        {"base_color_texture", info.diffuseTextureSrgb},
+                        {"emissive_texture", info.emissiveTextureSrgb},
+                    };
+                    source = std::move(pbr);
+                }
+                d.material = source;
+                d.rgba = Eigen::Vector4f::Ones();
+            }
             out.visualGeoms.push_back(d);
         }
     }
@@ -1004,8 +1078,8 @@ USDLoader::parseArticulation(const std::string& usdPath,
     result.diagnostics.warnings.push_back(
         "USD articulation: root pose, initial joint state, drive targets, "
         "damping, solver settings and self-collision are supplied by the "
-        "caller. Physics material bindings, rest offsets, collision filtering "
-        "and mesh material appearance are not imported.");
+        "caller. Physics material bindings, rest offsets, collision filtering, "
+        "opacity maps/cutout and per-face materials are not imported.");
     return result;
 #endif
 }

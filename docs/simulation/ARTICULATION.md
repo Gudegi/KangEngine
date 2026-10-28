@@ -19,6 +19,8 @@ data = world.load_usd("robot.usd", order="DFS")
 
 USD requires a native build with `USE_USD` enabled. It selects the default
 prim; pass `prim_path="/Robot"` to select a different robot subtree.
+For material support and limitations, see
+[USD scenes](../scene_rendering/LOAD_ASSETS.md#usd-scenes).
 
 | Format | Supported joints | 3-axis rotation |
 | --- | --- | --- |
