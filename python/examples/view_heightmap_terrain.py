@@ -4,11 +4,13 @@ Typical usage:
 
     python ./python/examples/view_heightmap_terrain.py
     python ./python/examples/view_heightmap_terrain.py assets/external/iceland_heightmap.png --sample-stride 4
+    python python/examples/view_heightmap_terrain.py --texture path/to/albedo.png --texture-repeat-m 512
 """
 
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 
 import kangengine as ke
@@ -32,6 +34,13 @@ def parse_up_axis(value: str):
     raise ValueError(f"unsupported up axis: {value}")
 
 
+def positive_float(value: str) -> float:
+    result = float(value)
+    if not math.isfinite(result) or result <= 0:
+        raise argparse.ArgumentTypeError("must be a finite positive number")
+    return result
+
+
 class HeightmapTerrainViewer(ke.App):
     def __init__(
         self,
@@ -42,6 +51,8 @@ class HeightmapTerrainViewer(ke.App):
         height_scale: float = 64.0,
         height_offset: float = -16.0,
         sample_stride: int = 8,
+        texture_path: Path | None = None,
+        texture_repeat_m: float = 4.0,
         collision_test: bool = False,
         test_radius: float = 2.0,
         title: str | None = None,
@@ -53,6 +64,10 @@ class HeightmapTerrainViewer(ke.App):
         self.height_scale = float(height_scale)
         self.height_offset = float(height_offset)
         self.sample_stride = int(sample_stride)
+        self.texture_path = Path(texture_path) if texture_path is not None else None
+        self.texture_repeat_m = float(texture_repeat_m)
+        if not math.isfinite(self.texture_repeat_m) or self.texture_repeat_m <= 0:
+            raise ValueError("texture_repeat_m must be finite and positive")
         self.collision_test = bool(collision_test)
         self.test_radius = float(test_radius)
         self.title = title or f"Heightmap Terrain: {self.heightmap_path.name}"
@@ -72,12 +87,34 @@ class HeightmapTerrainViewer(ke.App):
             height_offset=self.height_offset,
             sample_stride=self.sample_stride,
         )
-        self.material = self.create_phong_material(
-            ambient=ke.Vec3(0.12, 0.16, 0.12),
-            diffuse=ke.Vec3(0.35, 0.55, 0.32),
-            specular=ke.Vec3(0.08, 0.08, 0.08),
-            shininess=16.0,
-        )
+        self.texture: ke.render.Texture | None = None
+        self.material: ke.material.Material
+        if self.texture_path is not None:
+            # Author world-scale planar UVs before the mesh is registered.
+            # Vertices and collision height samples remain unchanged.
+            self.mesh.uvs = [
+                ke.Vec2(
+                    vertex.x / self.texture_repeat_m,
+                    (vertex.y if self.up_axis == ke.UpAxis.Z else vertex.z)
+                    / self.texture_repeat_m,
+                )
+                for vertex in self.mesh.vertices
+            ]
+            self.texture = self.load_texture(path=str(self.texture_path), srgb=True)
+            white = ke.ColorLibrary.get(ke.ColorType.WHITE)
+            self.material = self.create_pbr_material(
+                base_color=ke.Vec4(white.r, white.g, white.b, white.a),
+                metallic=0.0,
+                roughness=0.95,
+                base_color_texture=self.texture,
+            )
+        else:
+            self.material = self.create_phong_material(
+                ambient=ke.Vec3(0.12, 0.16, 0.12),
+                diffuse=ke.Vec3(0.35, 0.55, 0.32),
+                specular=ke.Vec3(0.08, 0.08, 0.08),
+                shininess=16.0,
+            )
         self.terrain = self.scene.add_mesh("/terrain", self.mesh, self.material)
         self.terrain.set_double_sided(True)
 
@@ -141,6 +178,9 @@ class HeightmapTerrainViewer(ke.App):
         imgui.text(f"horizontal scale: {self.horizontal_scale:.3f}")
         imgui.text(f"height scale: {self.height_scale:.3f}")
         imgui.text(f"height offset: {self.height_offset:.3f}")
+        if self.texture_path is not None:
+            imgui.text(f"texture: {self.texture_path.name}")
+            imgui.text(f"texture repeat: {self.texture_repeat_m:g} m")
         imgui.text(f"heightfield collision: {'on' if self.collision_added else 'off'}")
         if self.test_actor is not None:
             imgui.text("collision test sphere: active")
@@ -221,9 +261,7 @@ class HeightmapTerrainViewer(ke.App):
         self.test_view.prim.set_local_translation(
             ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
         )
-        self.test_view.prim.set_local_quat_wxyz(
-            ke.Quat.from_xyzw(quat_xyzw)
-        )
+        self.test_view.prim.set_local_quat_wxyz(ke.Quat.from_xyzw(quat_xyzw))
 
     def _setup_camera(self):
         camera = self.get_camera()
@@ -260,6 +298,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--height-offset", type=float, default=-16.0)
     parser.add_argument("--up-axis", choices=("Y", "Z"), default="Y")
     parser.add_argument(
+        "--texture",
+        type=Path,
+        default=None,
+        help="Optional tileable albedo image; omitted keeps the plain green terrain.",
+    )
+    parser.add_argument(
+        "--texture-repeat-m",
+        type=positive_float,
+        default=4.0,
+        metavar="METERS",
+        help="Positive world meters per texture repeat (default: 4).",
+    )
+    parser.add_argument(
         "--collision-test",
         action="store_true",
         help="Drop a dynamic sphere onto the heightfield to visualize collision.",
@@ -276,6 +327,9 @@ def main():
     heightmap = args.heightmap.expanduser().resolve()
     if not heightmap.exists():
         raise FileNotFoundError(heightmap)
+    texture_path = args.texture.expanduser().resolve() if args.texture else None
+    if texture_path is not None and not texture_path.is_file():
+        raise FileNotFoundError(texture_path)
 
     up_axis = parse_up_axis(args.up_axis)
     app = HeightmapTerrainViewer(
@@ -285,6 +339,8 @@ def main():
         height_scale=args.height_scale,
         height_offset=args.height_offset,
         sample_stride=args.sample_stride,
+        texture_path=texture_path,
+        texture_repeat_m=args.texture_repeat_m,
         collision_test=args.collision_test,
         test_radius=args.test_radius,
         title=args.title,
