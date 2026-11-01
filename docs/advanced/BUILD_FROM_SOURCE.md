@@ -422,8 +422,9 @@ Common make targets:
 | `make build_usd_python` | Python CPU | local | development extension |
 | `make build_all` | Python CPU on macOS, CUDA on Linux | local | executable and development extension |
 | `make build_wheel` | Python CPU on macOS, CUDA on Linux | vcpkg | wheel extension under `build/wheel` |
-| `make wheel` | platform default | bundled vcpkg | `python/dist/*.whl` |
-| `make validate_wheel` | platform default | bundled vcpkg | isolated wheel validation |
+| `make pack_wheel` | platform default | bundled vcpkg | release wheels from the existing build |
+| `make validate_wheel` | platform default | bundled vcpkg | fresh-environment validation of packaged wheels |
+| `make wheel` | platform default | bundled vcpkg | build, package, and validate in order |
 | `make validate_physx_gpu` | Python CUDA | disabled | GPU regression tests |
 | `make validate_physx_gpu_cpp` | C++ CUDA | disabled | native GPU smoke test |
 | `make run2` | current release configuration | current cache | build and run executable |
@@ -498,19 +499,44 @@ platform, and architecture.
 
 Build on each target OS using the development environment above.
 macOS uses PhysX CPU; Linux uses CUDA. Both include OpenUSD.
-Linux builds require `patchelf` on `PATH`.
+Install the release tools into the Python environment used by Make:
 
 ```bash
-make wheel           # Output: python/dist
-make validate_wheel  # Isolated install, API/stubs, USD checks
+uv sync --project python --group release
+make wheel
 ```
+
+This runs three stages in order, including when using `make -j`. You can also
+run each stage separately; individual stages do not run earlier stages:
+
+```bash
+make build_wheel     # Build the native extension under build/wheel
+make pack_wheel      # Package release wheels under python/dist/release
+make validate_wheel  # Install and test those exact wheels in a fresh environment
+```
+
+`pack_wheel` performs Linux manylinux repair and checks release metadata. Its
+`wheel-manifest.json` records the current artifacts so validation does not pick
+up older wheels in the directory. Linux packaging requires `patchelf` on `PATH`.
+If you change source code, start again from the build stage. A failed validation
+leaves the artifacts available for diagnosis; only publish after validation passes.
+
+Use the same commands on both platforms. Validation runs PhysX CPU checks
+on macOS and CPU plus GPU checks on Linux. Linux validation requires an NVIDIA
+GPU and CUDA-enabled PyTorch; GPU failures are not silently skipped.
+Each physics check runs in a separate process without opening a viewer.
+Validation creates a temporary virtual environment, installs the wheel and its
+declared dependencies, and checks dependency compatibility before running tests.
+It does not reuse installed development packages. Dependency downloads may be
+needed on the first run. Validation uses the final packaged files, including
+the repaired Linux wheels. None of these commands uploads a release.
 
 Linux produces two wheels: `kangengine` and `kangengine-physx-gpu`.
 Install the engine wheel in a fresh Python 3.12 environment; pip finds the
 PhysX GPU wheel in the same directory:
 
 ```bash
-python -m pip install --find-links python/dist python/dist/<kangengine-wheel>.whl
+python -m pip install --find-links python/dist/release python/dist/release/<kangengine-wheel>.whl
 ```
 
 Optional Pyroki development dependencies: `uv sync --project python --group pyroki`.

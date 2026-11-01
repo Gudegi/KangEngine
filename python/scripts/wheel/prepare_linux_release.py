@@ -5,6 +5,7 @@ from email.parser import BytesParser
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipfile
 
@@ -32,6 +33,8 @@ def main() -> None:
         for wheel in args.wheels:
             subprocess.run(
                 [
+                    sys.executable,
+                    "-m",
                     "auditwheel",
                     "repair",
                     "--plat",
@@ -51,7 +54,10 @@ def main() -> None:
         for wheel in repaired:
             if wheel.stat().st_size > 100_000_000:
                 raise ValueError(f"Wheel exceeds 100 MB: {wheel.name}")
-        subprocess.run(["twine", "check", "--strict", *map(str, repaired)], check=True)
+        subprocess.run(
+            [sys.executable, "-m", "twine", "check", "--strict", *map(str, repaired)],
+            check=True,
+        )
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for wheel in repaired:
             output = args.output_dir / wheel.name
