@@ -757,27 +757,32 @@ for supported features and platform test coverage.</p>
 <td><p>vcpkg</p></td>
 <td><p>wheel extension under <code class="docutils literal notranslate"><span class="pre">build/wheel</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">wheel</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">pack_wheel</span></code></p></td>
 <td><p>platform default</p></td>
 <td><p>bundled vcpkg</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">python/dist/*.whl</span></code></p></td>
+<td><p>release wheels from the existing build</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_wheel</span></code></p></td>
 <td><p>platform default</p></td>
 <td><p>bundled vcpkg</p></td>
-<td><p>isolated wheel validation</p></td>
+<td><p>fresh-environment validation of packaged wheels</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_physx_gpu</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">wheel</span></code></p></td>
+<td><p>platform default</p></td>
+<td><p>bundled vcpkg</p></td>
+<td><p>build, package, and validate in order</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_physx_gpu</span></code></p></td>
 <td><p>Python CUDA</p></td>
 <td><p>disabled</p></td>
 <td><p>GPU regression tests</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_physx_gpu_cpp</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_physx_gpu_cpp</span></code></p></td>
 <td><p>C++ CUDA</p></td>
 <td><p>disabled</p></td>
 <td><p>native GPU smoke test</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">run2</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">run2</span></code></p></td>
 <td><p>current release configuration</p></td>
 <td><p>current cache</p></td>
 <td><p>build and run executable</p></td>
@@ -849,15 +854,36 @@ platform, and architecture.</p>
 <h2>Python Wheels<a class="headerlink" href="#python-wheels" title="Link to this heading">¶</a></h2>
 <p>Build on each target OS using the development environment above.
 macOS uses PhysX CPU; Linux uses CUDA. Both include OpenUSD.
-Linux builds require <code class="docutils literal notranslate"><span class="pre">patchelf</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>wheel<span class="w">           </span><span class="c1"># Output: python/dist</span>
-make<span class="w"> </span>validate_wheel<span class="w">  </span><span class="c1"># Isolated install, API/stubs, USD checks</span>
+Install the release tools into the Python environment used by Make:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync<span class="w"> </span>--project<span class="w"> </span>python<span class="w"> </span>--group<span class="w"> </span>release
+make<span class="w"> </span>wheel
 </pre></div>
 </div>
+<p>This runs three stages in order, including when using <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j</span></code>. You can also
+run each stage separately; individual stages do not run earlier stages:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build_wheel<span class="w">     </span><span class="c1"># Build the native extension under build/wheel</span>
+make<span class="w"> </span>pack_wheel<span class="w">      </span><span class="c1"># Package release wheels under python/dist/release</span>
+make<span class="w"> </span>validate_wheel<span class="w">  </span><span class="c1"># Install and test those exact wheels in a fresh environment</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">pack_wheel</span></code> performs Linux manylinux repair and checks release metadata. Its
+<code class="docutils literal notranslate"><span class="pre">wheel-manifest.json</span></code> records the current artifacts so validation does not pick
+up older wheels in the directory. Linux packaging requires <code class="docutils literal notranslate"><span class="pre">patchelf</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>.
+If you change source code, start again from the build stage. A failed validation
+leaves the artifacts available for diagnosis; only publish after validation passes.</p>
+<p>Use the same commands on both platforms. Validation runs PhysX CPU checks
+on macOS and CPU plus GPU checks on Linux. Linux validation requires an NVIDIA
+GPU and CUDA-enabled PyTorch; GPU failures are not silently skipped.
+Each physics check runs in a separate process without opening a viewer.
+Validation creates a temporary virtual environment, installs the wheel and its
+declared dependencies, and checks dependency compatibility before running tests.
+It does not reuse installed development packages. Dependency downloads may be
+needed on the first run. Validation uses the final packaged files, including
+the repaired Linux wheels. None of these commands uploads a release.</p>
 <p>Linux produces two wheels: <code class="docutils literal notranslate"><span class="pre">kangengine</span></code> and <code class="docutils literal notranslate"><span class="pre">kangengine-physx-gpu</span></code>.
 Install the engine wheel in a fresh Python 3.12 environment; pip finds the
 PhysX GPU wheel in the same directory:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--find-links<span class="w"> </span>python/dist<span class="w"> </span>python/dist/&lt;kangengine-wheel&gt;.whl
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--find-links<span class="w"> </span>python/dist/release<span class="w"> </span>python/dist/release/&lt;kangengine-wheel&gt;.whl
 </pre></div>
 </div>
 <p>Optional Pyroki development dependencies: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span> <span class="pre">--project</span> <span class="pre">python</span> <span class="pre">--group</span> <span class="pre">pyroki</span></code>.</p>

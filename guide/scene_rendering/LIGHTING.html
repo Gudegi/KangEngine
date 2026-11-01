@@ -426,6 +426,19 @@ inactive lights, including those under hidden or inactive parents, are excluded.
 For Python, use <code class="docutils literal notranslate"><span class="pre">define_prim()</span></code> to create a light and <code class="docutils literal notranslate"><span class="pre">get_prim_at_path()</span></code> to
 look up an existing one. An existing prim at the requested path is reused by
 <code class="docutils literal notranslate"><span class="pre">define_prim()</span></code>.</p>
+<section id="selected-light-guides">
+<h3>Selected light guides<a class="headerlink" href="#selected-light-guides" title="Link to this heading">¶</a></h3>
+<p>Select a light in the scene hierarchy to show yellow guides, including through
+walls and floors. Hidden or inactive lights do not show guides.</p>
+<ul class="simple">
+<li><p>Directional: an arrow along the emitted rays.</p></li>
+<li><p>Point: a sphere at the light’s <code class="docutils literal notranslate"><span class="pre">range</span></code>.</p></li>
+<li><p>Spot: the outer cone with a curved end at <code class="docutils literal notranslate"><span class="pre">range</span></code> from the source.</p></li>
+<li><p>Rect: the transformed emitting rectangle and its outward direction.</p></li>
+<li><p>Dome: a small sphere with incoming arrows. This is an icon for infinite
+environment illumination, not a finite range; moving it does not change lighting.</p></li>
+</ul>
+</section>
 <section id="coordinates-and-updates">
 <h3>Coordinates and updates<a class="headerlink" href="#coordinates-and-updates" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper colwidths-auto docutils container">
@@ -783,6 +796,7 @@ different result from another renderer even with matching input values.</p></li>
 <li><a class="reference internal" href="#">Scene Lighting</a><ul>
 <li><a class="reference internal" href="#choose-a-light">Choose a light</a></li>
 <li><a class="reference internal" href="#common-rules">Common rules</a><ul>
+<li><a class="reference internal" href="#selected-light-guides">Selected light guides</a></li>
 <li><a class="reference internal" href="#coordinates-and-updates">Coordinates and updates</a></li>
 <li><a class="reference internal" href="#brightness">Brightness</a></li>
 </ul>

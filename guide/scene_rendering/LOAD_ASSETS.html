@@ -793,6 +793,15 @@ and packed G-roughness / B-metallic maps. Unsupported shader connections produce
 diagnostics. Color maps use sRGB decoding unless <code class="docutils literal notranslate"><span class="pre">sourceColorSpace</span></code> is <code class="docutils literal notranslate"><span class="pre">raw</span></code>; normal and scalar
 maps remain linear. For manually loaded textures, see
 <a class="reference internal" href="MATERIALS_TEXTURES.html#load-and-attach-textures"><span class="std std-ref">Materials and Textures</span></a>.</p>
+<p>OmniPBR materials retain constant diffuse color, metallic, and roughness values,
+plus a directly assigned <code class="docutils literal notranslate"><span class="pre">diffuse_texture</span></code> and its <code class="docutils literal notranslate"><span class="pre">diffuse_tint</span></code>. The texture
+replaces the constant color; <code class="docutils literal notranslate"><span class="pre">colorSpace</span> <span class="pre">=</span> <span class="pre">&quot;raw&quot;</span></code> disables sRGB decoding.
+Other OmniPBR maps, albedo adjustments, and connected MDL networks are unsupported.</p>
+<p>Articulation imports retain these mesh-bound materials and their base-color,
+normal, metallic, roughness, packed metallic-roughness, and emissive maps.
+Textures are loaded by the App when visuals are attached, preserving color-space
+settings and sharing cached textures across instances. Articulation opacity maps,
+alpha cutout, and per-face material assignments are not imported.</p>
 <p>The parsing snippet uses <code class="docutils literal notranslate"><span class="pre">usd_file</span></code>, the path to your root USD layer:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
 
