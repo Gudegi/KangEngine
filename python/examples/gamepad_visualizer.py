@@ -26,7 +26,7 @@ class GamepadVisualizerApp(ke.App):
         self.previous_sphere_pos = self.sphere_pos.copy()
         self.sphere.set_local_translation(self.sphere_pos)
 
-        self.scene.debug_geometry.add_axes(
+        self.debug.geometry.add_axes(
             "/debug_geometry/axes",
             origin=np.array([0.0, 0.0, 0.01]),
             rotation=np.eye(3),

@@ -1772,24 +1772,25 @@ void App::logDebugLines(const std::string& path,
                         const std::vector<glm::vec3>& starts,
                         const std::vector<glm::vec3>& ends,
                         const std::vector<glm::vec4>& colors, float width,
-                        bool hidden) {
+                        bool hidden, bool overlay) {
     if (_rasterizer)
-        _rasterizer->logDebugLines(path, starts, ends, colors, width, hidden);
+        _rasterizer->logDebugLines(path, starts, ends, colors, width, hidden,
+                                 overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::mat4& transform,
-                       float length, float width, bool hidden) {
+                       float length, float width, bool hidden, bool overlay) {
     if (_rasterizer)
-        _rasterizer->logDebugAxes(path, transform, length, width, hidden);
+        _rasterizer->logDebugAxes(path, transform, length, width, hidden, overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::vec3& origin,
                        const glm::vec3& xAxis, const glm::vec3& yAxis,
                        const glm::vec3& zAxis, float length, float width,
-                       bool hidden) {
+                       bool hidden, bool overlay) {
     if (_rasterizer)
         _rasterizer->logDebugAxes(path, origin, xAxis, yAxis, zAxis, length,
-                                  width, hidden);
+                                  width, hidden, overlay);
 }
 
 void App::clearDebugLines(const std::string& path) {
@@ -1809,6 +1810,21 @@ void App::logDebugPoints(const std::string& path,
 void App::clearDebugPoints(const std::string& path) {
     if (_rasterizer)
         _rasterizer->clearDebugPoints(path);
+}
+
+void App::setDebugVisible(const std::string& path, bool visible) {
+    if (_rasterizer)
+        _rasterizer->setDebugVisible(path, visible);
+}
+
+void App::removeDebug(const std::string& path) {
+    if (_rasterizer)
+        _rasterizer->removeDebug(path);
+}
+
+void App::removeAllDebug() {
+    if (_rasterizer)
+        _rasterizer->removeAllDebug();
 }
 
 void App::setWorldText(const std::string& path, const WorldTextDesc& desc) {

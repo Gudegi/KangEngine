@@ -61,19 +61,19 @@ class DiagonalRaycastViewer(ke.App):
         line_colors = np.where(valid.numpy()[:, None], self.colors[0], self.colors[1])
         self.hit_count = int(valid.sum())
 
-        self.debug_overlay.lines(
+        self.debug.overlay.lines(
             path="/scan/rays",
             starts=root.expand_as(ends).numpy(),
             ends=ends.numpy(),
             colors=line_colors,
         )
-        self.debug_overlay.points(
+        self.debug.overlay.points(
             path="/scan/hits",
             points=hits[valid].numpy(),
             colors=self.colors[2:3],
             size=6.0,
         )
-        self.debug_overlay.points(
+        self.debug.overlay.points(
             path="/scan/root",
             points=root[None].numpy(),
             colors=self.colors[2:3],

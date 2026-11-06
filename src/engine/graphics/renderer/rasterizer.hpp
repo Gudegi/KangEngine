@@ -374,11 +374,12 @@ class Rasterizer : public RenderPipeline {
                        bool overlay = false);
     void logDebugAxes(const std::string& path, const glm::mat4& transform,
                       float length = 1.0f, float width = 1.0f,
-                      bool hidden = false);
+                      bool hidden = false, bool overlay = false);
     void logDebugAxes(const std::string& path, const glm::vec3& origin,
                       const glm::vec3& xAxis, const glm::vec3& yAxis,
                       const glm::vec3& zAxis, float length = 1.0f,
-                      float width = 1.0f, bool hidden = false);
+                      float width = 1.0f, bool hidden = false,
+                      bool overlay = false);
     void clearDebugLines(const std::string& path);
     void logDebugPoints(const std::string& path,
                         const std::vector<glm::vec3>& points,
@@ -386,6 +387,9 @@ class Rasterizer : public RenderPipeline {
                         float size = 6.0f, bool hidden = false,
                         bool overlay = false);
     void clearDebugPoints(const std::string& path);
+    void setDebugVisible(const std::string& path, bool visible);
+    void removeDebug(const std::string& path);
+    void removeAllDebug();
     void setWorldText(const std::string& path, const WorldTextDesc& desc);
     void setWorldTextString(const std::string& path, std::string text);
     void setWorldTextPosition(const std::string& path,

@@ -115,7 +115,7 @@ def draw_trajectory(app, points, directions, look_direction):
     points = points.copy()
     points[:, up] = 0.06
     orange = ke.preset_rgba(ke.ColorType.ORANGE)
-    app.debug_overlay.lines(
+    app.debug.overlay.lines(
         path="/motion_matching/desired_trajectory",
         starts=points[:-1],
         ends=points[1:],
@@ -140,7 +140,7 @@ def draw_trajectory(app, points, directions, look_direction):
     arrows = getattr(app, "_look_arrows", None)
     if arrows is None:
         if len(starts):
-            app._look_arrows = app.scene.debug_geometry.add_arrows(
+            app._look_arrows = app.debug.geometry.add_arrows(
                 path="/motion_matching/look_arrows",
                 starts=starts,
                 ends=ends,

@@ -442,7 +442,7 @@ class DebugGeometry:
 
 
 class DebugOverlay:
-    """OpenGL debug overlay that does not create SceneGraph prims."""
+    """Persistent debug batches; repeat a draw call at the same path to replace data."""
 
     def __init__(self, app: "App"):
         self._app = app
@@ -456,9 +456,69 @@ class DebugOverlay:
         *,
         width: float = 1.0,
         hidden: bool = False,
+        overlay: bool = False,
     ):
-        self._app.log_debug_lines(path, starts, ends, colors, width, hidden)
+        self._app.log_debug_lines(path, starts, ends, colors, width, hidden, overlay)
         return self
+
+    def arrows(
+        self,
+        path: str,
+        starts,
+        ends,
+        colors=None,
+        *,
+        width: float = 1.0,
+        hidden: bool = False,
+        overlay: bool = False,
+    ):
+        """Draw world-space arrows using line segments.
+
+        Args:
+            path: Debug line batch to replace; delete with ``remove``.
+            starts: Arrow origins, shape (N, 3).
+            ends: Arrow tips, shape (N, 3). Lengths at most 1e-8 are omitted.
+            colors: RGBA colors, shape (N, 4), (1, 4), or (4,), or None for white.
+            width: Line width in pixels.
+            hidden: Keep the batch hidden.
+            overlay: Draw through scene geometry; defaults to False.
+
+        Heads occupy 20% of each arrow's length, with an 8% half-width.
+        """
+        import numpy as np
+
+        starts = np.asarray(starts, dtype=np.float32)
+        ends = np.asarray(ends, dtype=np.float32)
+        # Reject broadcasting that would silently change the arrow count.
+        if starts.ndim != 2 or starts.shape[1] != 3 or starts.shape != ends.shape:
+            raise ValueError("starts and ends must have matching shape (N, 3)")
+        vectors = ends - starts
+        lengths = np.linalg.norm(vectors, axis=1)
+        active = lengths > 1e-8
+        starts, ends = starts[active], ends[active]
+        vectors, lengths = vectors[active], lengths[active]
+
+        directions = vectors / lengths[:, None]
+        reference = np.eye(3)[np.argmin(np.abs(directions), axis=1)]
+        sides = np.cross(directions, reference)
+        sides /= np.linalg.norm(sides, axis=1)[:, None]
+        other_sides = np.cross(directions, sides)
+        bases = ends - vectors * 0.2
+        sides *= lengths[:, None] * 0.08
+        other_sides *= lengths[:, None] * 0.08
+        line_starts = np.concatenate([starts, ends, ends, ends, ends])
+        line_ends = np.concatenate([
+            ends, bases + sides, bases - sides,
+            bases + other_sides, bases - other_sides,
+        ]).astype(np.float32)
+        if colors is not None:
+            colors = np.asarray(colors, dtype=np.float32)
+            if colors.ndim == 2 and len(colors) > 1:
+                colors = np.tile(colors[active], (5, 1))
+        return self.lines(
+            path, line_starts, line_ends, colors,
+            width=width, hidden=hidden, overlay=overlay,
+        )
 
     def points(
         self,
@@ -482,25 +542,43 @@ class DebugOverlay:
         length: float = 1.0,
         width: float = 1.0,
         hidden: bool = False,
+        overlay: bool = False,
     ):
         import numpy as np
 
         transform = np.eye(4, dtype=np.float32)
         transform[:3, :3] = _rotation_matrix(rotation)
         transform[:3, 3] = np.asarray(origin, dtype=np.float32).reshape(3)
-        self._app.log_debug_axes(path, transform, length, width, hidden)
+        self._app.log_debug_axes(path, transform, length, width, hidden, overlay)
+        return self
+
+    def set_visible(self, path: str, visible: bool):
+        """Show or hide existing batches at an exact path without resending data."""
+        self._app.set_debug_visible(path, visible)
+        return self
+
+    def remove(self, path: str):
+        """Delete line/axis/arrow and point batches at an exact path, releasing buffers."""
+        self._app.remove_debug(path)
+        return self
+
+    def remove_all(self):
+        """Delete all debug batches and release their buffers."""
+        self._app.remove_all_debug()
         return self
 
     def clear_lines(self, path: str):
+        """Empty line/axis/arrow data at an exact path, retaining reusable buffers."""
         self._app.clear_debug_lines(path)
         return self
 
     def clear_points(self, path: str):
+        """Empty point data at an exact path, retaining reusable buffers."""
         self._app.clear_debug_points(path)
         return self
 
     def clear(self, path: str):
-        """Clear both line/axis and point overlay batches at a path."""
+        """Empty line and point data at an exact path, retaining reusable buffers."""
         self._app.clear_debug_lines(path)
         self._app.clear_debug_points(path)
         return self
@@ -554,7 +632,11 @@ class WorldText:
         return self
 
     def set_hidden(self, path: str, hidden: bool):
-        self._app.set_world_text_hidden(path, bool(hidden))
+        """Compatibility spelling; prefer set_visible(path, visible)."""
+        return self.set_visible(path, not hidden)
+
+    def set_visible(self, path: str, visible: bool):
+        self._app.set_world_text_hidden(path, not visible)
         return self
 
     def remove(self, path: str):
@@ -562,6 +644,10 @@ class WorldText:
         return self
 
     def clear(self):
+        """Compatibility spelling; prefer remove_all()."""
+        return self.remove_all()
+
+    def remove_all(self):
         self._app.clear_world_text()
         return self
 
@@ -624,7 +710,11 @@ class ScreenText:
         return self
 
     def set_hidden(self, path: str, hidden: bool):
-        self._app.set_screen_text_hidden(path, bool(hidden))
+        """Compatibility spelling; prefer set_visible(path, visible)."""
+        return self.set_visible(path, not hidden)
+
+    def set_visible(self, path: str, visible: bool):
+        self._app.set_screen_text_hidden(path, not visible)
         return self
 
     def remove(self, path: str):
@@ -632,8 +722,27 @@ class ScreenText:
         return self
 
     def clear(self):
+        """Compatibility spelling; prefer remove_all()."""
+        return self.remove_all()
+
+    def remove_all(self):
         self._app.clear_screen_text()
         return self
+
+
+class DebugContext:
+    """Access existing debug helpers without changing their scene ownership."""
+
+    overlay: DebugOverlay
+    geometry: DebugGeometry
+    world_text: WorldText
+    screen_text: ScreenText
+
+    def __init__(self, app: "App"):
+        self.overlay = app.debug_overlay
+        self.geometry = app.scene.debug_geometry
+        self.world_text = app.world_text
+        self.screen_text = app.screen_text
 
 
 class SceneContext:
@@ -897,6 +1006,7 @@ class App(_NativeApp):
         self.debug_overlay = DebugOverlay(self)
         self.world_text = WorldText(self)
         self.screen_text = ScreenText(self)
+        self.debug = DebugContext(self)
         self.resources = self.get_scene_resource_manager()
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0

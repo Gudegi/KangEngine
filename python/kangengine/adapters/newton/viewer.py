@@ -818,7 +818,7 @@ class ViewerKE(_ViewerBase):
         )
         view = self._points.get(key)
         if view is None:
-            view = self.app.scene.debug_geometry.add_spheres(
+            view = self.app.debug.geometry.add_spheres(
                 _path(name, "Points"),
                 point_values,
                 radius_values,

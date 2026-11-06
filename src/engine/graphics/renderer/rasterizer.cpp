@@ -434,16 +434,16 @@ void Rasterizer::logDebugLines(const std::string& path,
 
 void Rasterizer::logDebugAxes(const std::string& path,
                               const glm::mat4& transform, float length,
-                              float width, bool hidden) {
-    _debugRenderer.logAxes(path, transform, length, width, hidden);
+                              float width, bool hidden, bool overlay) {
+    _debugRenderer.logAxes(path, transform, length, width, hidden, overlay);
 }
 
 void Rasterizer::logDebugAxes(const std::string& path, const glm::vec3& origin,
                               const glm::vec3& xAxis, const glm::vec3& yAxis,
                               const glm::vec3& zAxis, float length, float width,
-                              bool hidden) {
+                              bool hidden, bool overlay) {
     _debugRenderer.logAxes(path, origin, xAxis, yAxis, zAxis, length, width,
-                           hidden);
+                           hidden, overlay);
 }
 
 void Rasterizer::clearDebugLines(const std::string& path) {
@@ -459,6 +459,18 @@ void Rasterizer::logDebugPoints(const std::string& path,
 
 void Rasterizer::clearDebugPoints(const std::string& path) {
     _debugRenderer.clearPoints(path);
+}
+
+void Rasterizer::setDebugVisible(const std::string& path, bool visible) {
+    _debugRenderer.setVisible(path, visible);
+}
+
+void Rasterizer::removeDebug(const std::string& path) {
+    _debugRenderer.remove(path);
+}
+
+void Rasterizer::removeAllDebug() {
+    _debugRenderer.removeAll();
 }
 
 void Rasterizer::setWorldText(const std::string& path,

@@ -1470,7 +1470,7 @@ py::class_<glm::vec3>(m, "Vec3")
             "log_debug_lines",
             [](App* self, const std::string& path, const FloatArray& starts,
                const FloatArray& ends, py::object colors, float width,
-               bool hidden) {
+               bool hidden, bool overlay) {
                 auto s = vec3Array(starts, "starts");
                 auto e = vec3Array(ends, "ends");
                 if (s.size() != e.size()) {
@@ -1486,16 +1486,16 @@ py::class_<glm::vec3>(m, "Vec3")
                             "colors must be empty, length 1, or match lines");
                     }
                 }
-                self->logDebugLines(path, s, e, c, width, hidden);
+                self->logDebugLines(path, s, e, c, width, hidden, overlay);
             },
             py::arg("path"), py::arg("starts"), py::arg("ends"),
             py::arg("colors") = py::none(), py::arg("width") = 1.0f,
-            py::arg("hidden") = false,
-            "Draw persistent debug line segments at a debug path.")
+            py::arg("hidden") = false, py::arg("overlay") = false,
+            "Draw persistent debug line segments, optionally over scene depth.")
         .def(
             "log_debug_axes",
             [](App* self, const std::string& path, const FloatArray& transform,
-               float length, float width, bool hidden) {
+               float length, float width, bool hidden, bool overlay) {
                 auto t = mat4ArrayView(transform, "transform");
                 if (t.count != 1) {
                     throw py::value_error(
@@ -1509,11 +1509,12 @@ py::class_<glm::vec3>(m, "Vec3")
                     for (int col = 0; col < 4; ++col)
                         m[col][row] = p[row * 4 + col];
                 }
-                self->logDebugAxes(path, m, length, width, hidden);
+                self->logDebugAxes(path, m, length, width, hidden, overlay);
             },
             py::arg("path"), py::arg("transform"), py::arg("length") = 1.0f,
             py::arg("width") = 1.0f, py::arg("hidden") = false,
-            "Draw XYZ debug axes from a transform matrix.")
+            py::arg("overlay") = false,
+            "Draw XYZ debug axes from a transform matrix, optionally over scene depth.")
         .def("clear_debug_lines", &App::clearDebugLines, py::arg("path"),
              "Clear debug lines stored at a debug path.")
         .def(
@@ -1538,6 +1539,13 @@ py::class_<glm::vec3>(m, "Vec3")
             "Draw persistent debug points, optionally over scene depth.")
         .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"),
              "Clear debug points stored at a debug path.")
+        .def("set_debug_visible", &App::setDebugVisible,
+             py::arg("path"), py::arg("visible"),
+             "Show or hide existing line and point batches at an exact path.")
+        .def("remove_debug", &App::removeDebug, py::arg("path"),
+             "Remove line and point batches and release their buffers at an exact path.")
+        .def("remove_all_debug", &App::removeAllDebug,
+             "Remove all debug line and point batches and release their buffers.")
         .def(
             "set_world_text",
             [](App& self, const std::string& path, const std::string& text,

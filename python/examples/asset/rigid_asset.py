@@ -67,13 +67,13 @@ class RigidAssetViewer(ke.App):
         )
         valid = torch.isfinite(distances)
         starts = self.starts[:, None, :].expand_as(hits)
-        self.debug_overlay.lines(
+        self.debug.overlay.lines(
             path="/scan/rays",
             starts=starts[valid].numpy(),
             ends=hits[valid].numpy(),
             colors=self.ray_color,
         )
-        self.debug_overlay.points(
+        self.debug.overlay.points(
             path="/scan/hits",
             points=hits[valid].numpy(),
             colors=self.ray_color2,

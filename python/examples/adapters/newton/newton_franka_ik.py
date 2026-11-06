@@ -73,7 +73,7 @@ def log_target_axes(
     axes = quaternion_matrix_xyzw(rotation)
     starts = np.repeat(position.reshape(1, 3), 3, axis=0)
     ends = starts + 0.12 * axes.T
-    viewer.app.debug_overlay.lines(
+    viewer.app.debug.overlay.lines(
         "/ik/target_axes",
         starts,
         ends,

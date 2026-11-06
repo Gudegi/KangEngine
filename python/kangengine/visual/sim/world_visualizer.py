@@ -615,7 +615,7 @@ class SimWorldVisualizer:
             return self
         for config in self._frame_axes.values():
             for path in config["paths"]:
-                self.app.debug_overlay.clear(path)
+                self.app.debug.overlay.clear(path)
         self._frame_axes.clear()
         batches = (
             list(self.visual_batches.values())
@@ -1231,7 +1231,7 @@ class SimWorldVisualizer:
         old = self._frame_axes.pop(key, None)
         if old is not None:
             for path in old["paths"]:
-                self.app.debug_overlay.clear(path)
+                self.app.debug.overlay.clear(path)
         if visible and names:
             self._frame_axes[key] = {
                 "names": names, "length": float(length),
@@ -1248,7 +1248,7 @@ class SimWorldVisualizer:
             pos = pos[env_id].detach().cpu().numpy()
             rot = rot[env_id].detach().cpu().numpy()
             for path, p, q in zip(config["paths"], pos, rot):
-                self.app.debug_overlay.axes(path, p, quat_xyzw_to_wxyz(q), length=config["length"])
+                self.app.debug.overlay.axes(path, p, quat_xyzw_to_wxyz(q), length=config["length"])
 
     def get_visual_articulation_scene_graph(
         self,

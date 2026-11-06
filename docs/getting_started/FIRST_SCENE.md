@@ -89,7 +89,7 @@ For array conversion, use `ke.utils.quat_xyzw_to_wxyz()` and
 For a lightweight render overlay that does not create a scene prim:
 
 ```python
-self.debug_overlay.axes(
+self.debug.overlay.axes(
     "/debug/world_axes",
     origin=np.array([0.0, 1.0, 0.0]),
     rotation=np.eye(3),
@@ -100,7 +100,7 @@ self.debug_overlay.axes(
 To create axes that appear in the SceneGraph, use the scene-backed helper:
 
 ```python
-self.scene.debug_geometry.add_axes(
+self.debug.geometry.add_axes(
     "/debug/box2_axes",
     box2.get_world_translation(),
     box2.get_world_quat(),
@@ -109,8 +109,8 @@ self.scene.debug_geometry.add_axes(
 )
 ```
 
-`debug_overlay` draws directly through the graphics debug renderer and does not
-create scene prims. `scene.debug_geometry` creates mesh-based renderables that
+`debug.overlay` draws directly through the graphics debug renderer and does not
+create scene prims. `debug.geometry` creates mesh-based renderables that
 appear in the SceneGraph and returns a `DebugPrimitiveView`.
 
 To run the complete example below, clone the repository and run from its root

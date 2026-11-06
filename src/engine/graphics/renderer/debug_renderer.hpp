@@ -79,17 +79,21 @@ class DebugRenderer {
                   const std::vector<glm::vec4>& colors = {}, float width = 1.0f,
                   bool hidden = false, bool overlay = false);
     void logAxes(const std::string& path, const glm::mat4& transform,
-                 float length = 1.0f, float width = 1.0f, bool hidden = false);
+                 float length = 1.0f, float width = 1.0f, bool hidden = false,
+                 bool overlay = false);
     void logAxes(const std::string& path, const glm::vec3& origin,
                  const glm::vec3& xAxis, const glm::vec3& yAxis,
                  const glm::vec3& zAxis, float length = 1.0f,
-                 float width = 1.0f, bool hidden = false);
+                 float width = 1.0f, bool hidden = false, bool overlay = false);
     void clearLines(const std::string& path);
     void logPoints(const std::string& path,
                    const std::vector<glm::vec3>& points,
                    const std::vector<glm::vec4>& colors = {}, float size = 6.0f,
                    bool hidden = false, bool overlay = false);
     void clearPoints(const std::string& path);
+    void setVisible(const std::string& path, bool visible);
+    void remove(const std::string& path);
+    void removeAll();
     bool hasDraws() const;
     void record(Backend::RenderPassEncoder& pass) const;
 };

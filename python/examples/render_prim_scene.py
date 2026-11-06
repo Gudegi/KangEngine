@@ -12,7 +12,7 @@ class MyApp(ke.App):
     def setup(self):
         self.standard_materials = self.create_standard_materials()
 
-        self.debug_overlay.axes(
+        self.debug.overlay.axes(
             "/debug/box_axes",  # is not shown in the scene graph.
             origin=np.array([0.0, 1.0, 0.0]),
             rotation=np.eye(3),
@@ -46,7 +46,7 @@ class MyApp(ke.App):
 
         w_trans = box2.get_world_translation()
         w_ori = box2.get_world_quat()
-        self.scene.debug_geometry.add_axes(
+        self.debug.geometry.add_axes(
             "/debug/box2_axes",
             w_trans,
             w_ori,

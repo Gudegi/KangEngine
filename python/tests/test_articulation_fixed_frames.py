@@ -215,10 +215,10 @@ def test_frame_axes_query_only_while_enabled(tmp_path, monkeypatch):
     draws, cleared, queries = [], [], []
     app = SimpleNamespace(
         get_native_scene=lambda: None,
-        debug_overlay=SimpleNamespace(
+        debug=SimpleNamespace(overlay=SimpleNamespace(
             axes=lambda path, p, q, **kw: draws.append((path, p.copy(), q.copy())),
             clear=cleared.append,
-        ),
+        )),
     )
     visual = SimWorldVisualizer(app, world)
     try:

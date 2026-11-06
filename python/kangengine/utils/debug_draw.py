@@ -13,9 +13,9 @@ def log_debug_axes(
     alpha: float = 0.95,
     hidden: bool = False,
 ) -> None:
-    """Compatibility wrapper for ``app.debug_overlay.axes(...)``."""
-    if hasattr(app, "debug_overlay"):
-        app.debug_overlay.axes(
+    """Compatibility wrapper for ``app.debug.overlay.axes(...)``."""
+    if hasattr(app, "debug"):
+        app.debug.overlay.axes(
             path,
             origin,
             rotation,

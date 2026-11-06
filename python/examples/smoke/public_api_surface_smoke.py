@@ -34,6 +34,10 @@ def main() -> None:
     assert ke.DebugGeometry.__module__ == "kangengine"
     assert ke.DebugOverlay is app_application.DebugOverlay
     assert ke.DebugOverlay.__module__ == "kangengine"
+    assert ke.app.DebugContext is app_application.DebugContext
+    assert ke.app.DebugContext.__module__ == "kangengine.app"
+    assert "DebugContext" in ke.app.__all__
+    assert not hasattr(ke, "DebugContext")
     assert ke.RenderablePrimView is app_application.RenderablePrimView
     assert ke.RenderablePrimView.__module__ == "kangengine"
     for method_name in (

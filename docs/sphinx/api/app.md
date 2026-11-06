@@ -2,6 +2,15 @@
 
 Application lifecycle, camera access, and viewport interaction.
 
+Use `app.debug.overlay`, `app.debug.geometry`, `app.debug.world_text`, and
+`app.debug.screen_text` for debug visualization. These reference existing
+helpers; only `geometry` creates SceneGraph objects.
+
+```{eval-rst}
+.. autoclass:: kangengine.app.DebugContext
+   :members:
+```
+
 ```{eval-rst}
 .. currentmodule:: kangengine
 

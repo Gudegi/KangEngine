@@ -202,16 +202,16 @@ void DebugRenderer::logLines(const std::string& path,
 }
 
 void DebugRenderer::logAxes(const std::string& path, const glm::mat4& transform,
-                            float length, float width, bool hidden) {
+                            float length, float width, bool hidden, bool overlay) {
     logAxes(path, glm::vec3(transform[3]), glm::vec3(transform[0]),
             glm::vec3(transform[1]), glm::vec3(transform[2]), length, width,
-            hidden);
+            hidden, overlay);
 }
 
 void DebugRenderer::logAxes(const std::string& path, const glm::vec3& origin,
                             const glm::vec3& xAxis, const glm::vec3& yAxis,
                             const glm::vec3& zAxis, float length, float width,
-                            bool hidden) {
+                            bool hidden, bool overlay) {
     const float safeLength = std::max(0.0f, length);
     const std::vector<glm::vec3> starts{origin, origin, origin};
     const std::vector<glm::vec3> ends{
@@ -224,7 +224,7 @@ void DebugRenderer::logAxes(const std::string& path, const glm::vec3& origin,
         presetColor(ColorType::GREEN),
         presetColor(ColorType::BLUE),
     };
-    logLines(path, starts, ends, colors, width, hidden);
+    logLines(path, starts, ends, colors, width, hidden, overlay);
 }
 
 void DebugRenderer::clearLines(const std::string& path) {
@@ -260,6 +260,23 @@ void DebugRenderer::clearPoints(const std::string& path) {
     if (it == _pointBatches.end())
         return;
     it->second.vertices.clear();
+}
+
+void DebugRenderer::setVisible(const std::string& path, bool visible) {
+    if (auto it = _lineBatches.find(path); it != _lineBatches.end())
+        it->second.hidden = !visible;
+    if (auto it = _pointBatches.find(path); it != _pointBatches.end())
+        it->second.hidden = !visible;
+}
+
+void DebugRenderer::remove(const std::string& path) {
+    _lineBatches.erase(path);
+    _pointBatches.erase(path);
+}
+
+void DebugRenderer::removeAll() {
+    _lineBatches.clear();
+    _pointBatches.clear();
 }
 
 bool DebugRenderer::hasDraws() const {

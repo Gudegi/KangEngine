@@ -23,7 +23,7 @@ class DebugVisualizationApp(ke.App):
         self.box.set_local_translation(ke.Vec3(0.0, 0.5, 0.0))
 
         # Lightweight overlay: no SceneGraph prims are created.
-        self.debug_overlay.lines(
+        self.debug.overlay.lines(
             "/overlay/lines",
             np.array([[-3.0, 0.05, -1.0], [-3.0, 0.05, 0.0]]),
             np.array([[-1.5, 1.0, -1.0], [-1.5, 1.0, 0.0]]),
@@ -35,7 +35,7 @@ class DebugVisualizationApp(ke.App):
             ),
             width=3.0,
         )
-        self.debug_overlay.points(
+        self.debug.overlay.points(
             "/overlay/points",
             np.array([[-3.0, 0.1, 1.0], [-2.5, 0.5, 1.0], [-2.0, 0.9, 1.0]]),
             np.array(
@@ -47,7 +47,7 @@ class DebugVisualizationApp(ke.App):
             ),
             size=10.0,
         )
-        self.debug_overlay.axes(
+        self.debug.overlay.axes(
             "/overlay/axes",
             origin=np.array([-2.0, 0.05, 2.0]),
             rotation=np.eye(3),
@@ -55,7 +55,7 @@ class DebugVisualizationApp(ke.App):
             width=3.0,
         )
         # Mesh-based debug geometry: visible as ordinary SceneGraph objects.
-        self.scene.debug_geometry.add_lines(
+        self.debug.geometry.add_lines(
             "/debug_geometry/lines",
             np.array([[1.5, 0.05, -1.0], [1.5, 0.05, 0.0]]),
             np.array([[3.0, 1.0, -1.0], [3.0, 1.0, 0.0]]),
@@ -68,7 +68,7 @@ class DebugVisualizationApp(ke.App):
             material=materials.debug,
             radius=0.025,
         )
-        self.scene.debug_geometry.add_arrows(
+        self.debug.geometry.add_arrows(
             "/debug_geometry/arrows",
             np.array([[1.5, 0.05, 1.0], [1.5, 0.05, 2.0]]),
             np.array([[3.0, 1.0, 1.0], [3.0, 1.0, 2.0]]),
@@ -81,7 +81,7 @@ class DebugVisualizationApp(ke.App):
             material=materials.debug,
             radius=0.04,
         )
-        self.scene.debug_geometry.add_axes(
+        self.debug.geometry.add_axes(
             "/debug_geometry/axes",
             origin=np.array([2.0, 0.05, 3.0]),
             rotation=np.eye(3),
@@ -105,7 +105,7 @@ class DebugVisualizationApp(ke.App):
                 [0.5, 1.0, 0.35, 1.0],
             ]
         )
-        self.debug_spheres = self.scene.debug_geometry.add_spheres(
+        self.debug_spheres = self.debug.geometry.add_spheres(
             "/debug_geometry/spheres",
             centers=self.debug_sphere_centers,
             radii=self.debug_sphere_radii,
@@ -113,32 +113,32 @@ class DebugVisualizationApp(ke.App):
             material=materials.debug,
         )
 
-        self.world_text.set(
+        self.debug.world_text.set(
             "/labels/overlay",
             "Debug overlay",
             ke.Vec3(-2.3, 1.5, 0.0),
             pixel_size=24.0,
             depth_test=False,
         )
-        self.world_text.set(
+        self.debug.world_text.set(
             "/labels/geometry",
             "Scene debug geometry",
             ke.Vec3(2.3, 1.5, 0.0),
             pixel_size=24.0,
         )
-        self.world_text.set(
+        self.debug.world_text.set(
             "/labels/box",
             "Moving box",
             ke.Vec3(0.0, 1.7, 0.0),
             pixel_size=24.0,
         )
-        self.screen_text.set(
+        self.debug.screen_text.set(
             "/screen/title",
             "Debug Visualization {}".format(self.count),
             ke.Vec2(30.0, 30.0),
             pixel_size=28.0,
         )
-        self.screen_text.set(
+        self.debug.screen_text.set(
             "/screen/anchor",
             "TopCenter",
             ke.Vec2(30.0, 30.0),
@@ -147,7 +147,7 @@ class DebugVisualizationApp(ke.App):
             color=ke.Vec4(0.3, 0.9, 1.0, 1.0),
             pixel_size=25.0,
         )
-        self.screen_text.set(
+        self.debug.screen_text.set(
             "/screen/anchor2",
             "CenterLeft",
             ke.Vec2(0.0, 0.0),
@@ -172,7 +172,18 @@ class DebugVisualizationApp(ke.App):
 
         box_pos = self.box.get_world_translation()
         box_quat = self.box.get_world_quat()
-        self.world_text.set_position(
+        # Reusing this path updates the arrow; overlay keeps its buried shaft visible.
+        yellow = ke.ColorLibrary.get(ke.ColorType.YELLOW)
+        self.debug.overlay.arrows(
+            path="/overlay/box_direction",
+            starts=np.array([[box_pos.x, box_pos.y, box_pos.z]]),
+            ends=np.array([[box_pos.x, box_pos.y + 0.9, box_pos.z]]),
+            colors=np.array([[yellow.r, yellow.g, yellow.b, yellow.a]]),
+            width=3.0,
+            overlay=True,
+        )
+
+        self.debug.world_text.set_position(
             "/labels/box",
             box_pos + box_quat * ke.Vec3(0.0, 1.2, 0.0),
         )
@@ -187,7 +198,7 @@ class DebugVisualizationApp(ke.App):
             self.debug_sphere_colors,
         )
 
-        self.screen_text.set_text(
+        self.debug.screen_text.set_text(
             "/screen/title",
             "Debug Visualization {}".format(self.count),
         )
