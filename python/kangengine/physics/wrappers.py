@@ -189,15 +189,19 @@ class PhysicsWorld(_NativeWrapper):
     def num_contacts(self) -> int:
         return self._native.num_contacts()
 
-    def get_contacts(self) -> Sequence[ContactPoint]:
-        """Return the latest contact records from the native physics backend.
+    def get_contacts(self, rigid: RigidDynamic | None = None) -> Sequence[ContactPoint]:
+        """Return contact snapshots from the latest CPU simulation step.
 
-        Treat the returned data conservatively: depending on the active backend,
-        contact records may reference native buffers or describe only the most
-        recent simulation synchronization point. Do not assume they remain
-        unchanged after later step(), sync(), or clear_contacts() calls.
+        Args:
+            rigid: Select one body and orient normals and impulses onto it.
+                None returns all pairs, oriented onto each pair's first actor.
+
+        Returns:
+            World-space positions in meters and impulses in N*s. Divide impulse
+            by the simulation dt to obtain average force in N. Sleeping pairs
+            may report no contacts; this is not a persistent overlap query.
         """
-        return self._native.get_contacts()
+        return self._native.get_contacts(unwrap_native(rigid))
 
     def clear_contacts(self) -> None:
         self._native.clear_contacts()

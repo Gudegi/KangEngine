@@ -685,6 +685,8 @@ void bind_physics(py::module& m) {
             },
             "Return root angular velocity.")
         .def("get_mass", &PxRigidDynamic::getMass, "Return rigid body mass.")
+        .def("is_sleeping", &PxRigidDynamic::isSleeping,
+             "Return whether this rigid body is sleeping.")
         .def("set_mass", [](PxRigidDynamic& self, float mass) {
             KE::Physics::validateMass(mass);
             self.setMass(mass);
@@ -1056,9 +1058,25 @@ void bind_physics(py::module& m) {
              "Return the number of dynamic body actors.")
         .def("num_contacts", &PhysicsWorld::numContacts,
              "Return the number of collected contact points.")
-        .def("get_contacts", &PhysicsWorld::getContacts,
-             py::return_value_policy::reference_internal,
-             "Return contact points collected during the last step.")
+        .def("get_contacts", [](const PhysicsWorld& self,
+                                const PxRigidDynamic* rigid) {
+            std::vector<ContactPoint> contacts;
+            for (const auto& source : self.getContacts()) {
+                if (rigid && source.actor0 != rigid && source.actor1 != rigid)
+                    continue;
+                ContactPoint contact = source;
+                if (rigid && source.actor1 == rigid) {
+                    contact.actor0 = source.actor1;
+                    contact.actor1 = source.actor0;
+                    contact.normal = -source.normal;
+                    contact.impulse = -source.impulse;
+                }
+                contacts.push_back(contact);
+            }
+            return contacts;
+        }, py::arg("rigid") = nullptr,
+           "Return last-step contact snapshots. With rigid, filter contacts "
+           "and orient normals and impulses onto that body.")
         .def("clear_contacts", &PhysicsWorld::clearContacts,
              "Clear collected contact points.")
         .def(

@@ -72,3 +72,28 @@ The second command requires Linux/NVIDIA CUDA/OpenGL interop.
 </details>
 
 ![GPU contact points and force arrows](../images/simulation/contact.png)
+
+## CPU contact reports
+
+With `PhysicsConfig.enable_contact_reports=True`, read individual contacts after
+each CPU physics step. Select a rigid body to get impulses acting on that body:
+
+```python
+physics: ke.physics.PhysicsWorld = world.physics
+contacts = physics.get_contacts(rigid=rigids.first.rigid)
+for contact in contacts:
+    position_w = contact.position  # meters, world frame
+    force_w = contact.impulse / world.sim_dt  # average force in N
+```
+
+`get_contacts()` without a body returns all reported pairs, with each impulse
+oriented onto the pair's first actor. Results are snapshots. Sleeping bodies may
+stop producing reports; `rigid.is_sleeping()` distinguishes sleeping state from
+an active body reporting no contacts. Saved pre-sleep contacts are historical
+samples, not new force measurements.
+
+`python/examples/compare_convex_collisions.py` displays contacts and force arrows
+for both the single hull and decomposed compound. Yellow identifies the single
+hull and cyan the decomposition. Both use the same adjustable meters-per-newton
+scale. The viewer retains and labels the last sample while a body sleeps and
+clears it when the body wakes without contacts or is reset.

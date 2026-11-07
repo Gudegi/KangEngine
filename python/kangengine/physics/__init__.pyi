@@ -5,7 +5,7 @@ from typing import Any, ClassVar, overload
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from torch import Tensor
-from .. import Quat
+from .. import Quat, Vec3
 from ..asset import ArticulationDesc, RigidDesc
 from .articulation_builder import ArticulationBuilder as ArticulationBuilder
 
@@ -132,7 +132,11 @@ class CollisionMaterialOverride:
 
 def mjcf_friction_to_physx(friction: Sequence[float]) -> PhysicsMaterialDesc: ...
 
-class ContactPoint: ...
+class ContactPoint:
+    position: Vec3
+    normal: Vec3
+    impulse: Vec3
+    separation: float
 
 class ConvexMeshPart:
     vertices: Any
@@ -172,6 +176,7 @@ class RigidDynamic:
     def get_root_linear_velocity(self) -> Any: ...
     def get_root_angular_velocity(self) -> Any: ...
     def get_mass(self) -> float: ...
+    def is_sleeping(self) -> bool: ...
     def set_mass(self, mass: float) -> None: ...
     def set_mass_space_inertia(self, inertia: ArrayLike) -> None: ...
     def get_local_com_pose(self) -> NDArray[np.float32]: ...
@@ -360,13 +365,11 @@ class PhysicsWorld:
     ) -> RigidStatic: ...
     def num_body_actors(self) -> int: ...
     def num_contacts(self) -> int: ...
-    def get_contacts(self) -> Sequence[ContactPoint]:
-        """Return the latest contact records from the native physics backend.
+    def get_contacts(self, rigid: RigidDynamic | None = None) -> Sequence[ContactPoint]:
+        """Return last-step snapshots; select rigid to orient impulses onto it.
 
-        Treat the returned data conservatively: depending on the active backend,
-        contact records may reference native buffers or describe only the most
-        recent simulation synchronization point. Do not assume they remain
-        unchanged after later step(), sync(), or clear_contacts() calls.
+        Positions are world-space meters; impulses are N*s. Sleeping pairs may
+        report no contacts. Divide impulse by simulation dt for force in N.
         """
         ...
     def clear_contacts(self) -> None: ...

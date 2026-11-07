@@ -1,7 +1,9 @@
 """Saved decomposition results remain usable independently of their backend."""
 
 from pathlib import Path
+import runpy
 import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -131,3 +133,33 @@ def test_without_result_path_runs_each_time(mesh, backend):
         _, metadata = decomposition.decompose_mesh(*mesh, backend="test")
         assert not metadata["cache_hit"]
     assert len(backend.calls) == 2
+
+
+def test_viewer_uses_saved_metadata_without_decomposer(tmp_path, mesh, backend, monkeypatch):
+    path = tmp_path / "result.npz"
+    decomposition.decompose_mesh(
+        *mesh, backend="test", options={"offset": 3}, result_path=path
+    )
+    monkeypatch.setattr(decomposition, "_BACKENDS", {})
+    source = tmp_path / "tetra.obj"
+    source.write_text(
+        "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\n"
+        "f 1 3 2\nf 1 2 4\nf 1 4 3\nf 2 3 4\n"
+    )
+    example = Path(__file__).resolve().parents[2] / "examples/compare_convex_collisions.py"
+    main = runpy.run_path(str(example))["main"]
+    captured = {}
+
+    def viewer(args, input_mesh, physx_part, parts, metadata):
+        captured.update(parts=parts, metadata=metadata)
+        return SimpleNamespace(initialize=lambda **kwargs: None, start=lambda: None)
+
+    monkeypatch.setitem(main.__globals__, "ConvexCollisionViewer", viewer)
+    monkeypatch.setattr(
+        sys, "argv", [str(example), str(source), "--result", str(path), "--threshold", "0.9"]
+    )
+    main()
+    assert len(captured["parts"]) == 2
+    assert captured["metadata"]["backend"] == "test"
+    assert captured["metadata"]["options"] == {"offset": 3}
+    assert captured["metadata"]["cache_hit"]
