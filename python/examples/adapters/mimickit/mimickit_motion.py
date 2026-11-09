@@ -105,7 +105,7 @@ class KangEngineMimicKitMotionApp(ke.App):
         )
         adapter = PhysXMotionAdapter(self.layout)
         adapter.validate_articulation(self.robot.articulation)
-        self.library = ke.animation.MotionLibrary(
+        self._motion_lib = ke.animation.MotionLibrary(
             [self.motion], adapter=adapter, device="cpu"
         )
         self.sim_visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
@@ -123,22 +123,19 @@ class KangEngineMimicKitMotionApp(ke.App):
         self._apply_frame()
 
     def _apply_frame(self) -> None:
-        sample = self.library.sample(0, self.playback_time)
-        if sample.backend_state is None:
-            raise RuntimeError("PhysX MotionLibrary adapter produced no state")
-        backend_state = sample.backend_state
+        backend_state = self._motion_lib.sample_arti_state(0, self.playback_time)
         self.robot.set_root_state(
             None,
-            backend_state.root_positions,
-            backend_state.root_rotations_xyzw,
-            backend_state.root_linear_velocities,
-            backend_state.root_angular_velocities,
+            backend_state.root_pos,
+            backend_state.root_quat_xyzw,
+            backend_state.root_vel,
+            backend_state.root_ang_vel,
             immediate=True,
         )
         self.robot.set_dof_state(
             None,
-            backend_state.joint_positions,
-            backend_state.joint_velocities,
+            backend_state.joint_pos,
+            backend_state.joint_vel,
             immediate=True,
         )
         self.world.step(substeps=0, apply_commands=False)
@@ -176,7 +173,9 @@ def _run_newton(mjcf_path: Path, motion, layout, args) -> None:
 
     newton.use_coord_layout_targets = True
     adapter = NewtonMotionAdapter(layout)
-    library = ke.animation.MotionLibrary([motion], adapter=adapter, device=args.device)
+    motion_lib = ke.animation.MotionLibrary(
+        [motion], adapter=adapter, device=args.device
+    )
     parse_meshes = importlib.util.find_spec("trimesh") is not None
     if not parse_meshes:
         print("Newton: trimesh is unavailable; showing collision geometry only")
@@ -207,15 +206,9 @@ def _run_newton(mjcf_path: Path, motion, layout, args) -> None:
                 else:
                     playback_time += current_tick - previous_tick
             previous_tick = current_tick
-            sample = library.sample(0, playback_time)
-            if sample.backend_state is None:
-                raise RuntimeError("Newton MotionLibrary adapter produced no state")
-            model.joint_q.assign(
-                wp.from_torch(sample.backend_state.joint_q.contiguous())
-            )
-            model.joint_qd.assign(
-                wp.from_torch(sample.backend_state.joint_qd.contiguous())
-            )
+            sample = motion_lib.sample_arti_state(0, playback_time)
+            model.joint_q.assign(wp.from_torch(sample.joint_q.contiguous()))
+            model.joint_qd.assign(wp.from_torch(sample.joint_qd.contiguous()))
             newton.eval_fk(model, model.joint_q, model.joint_qd, state)
             viewer.begin_frame(playback_time)
             viewer.log_state(state)
@@ -234,7 +227,7 @@ def _run_mujoco(mjcf_path: Path, motion, layout, args) -> None:
     from kangengine.adapters.mujoco import MuJoCoMotionAdapter
 
     adapter = MuJoCoMotionAdapter(layout)
-    library = ke.animation.MotionLibrary([motion], adapter=adapter, device="cpu")
+    motion_lib = ke.animation.MotionLibrary([motion], adapter=adapter, device="cpu")
     model = _load_model_with_floor(mjcf_path, mujoco)
     data = mujoco.MjData(model)
     adapter.validate_model(model)
@@ -244,11 +237,9 @@ def _run_mujoco(mjcf_path: Path, motion, layout, args) -> None:
         while viewer.is_running():
             started = time.perf_counter()
             playback_time = started - playback_started
-            sample = library.sample(0, playback_time)
-            if sample.backend_state is None:
-                raise RuntimeError("MuJoCo MotionLibrary adapter produced no state")
-            data.qpos[:] = sample.backend_state.qpos.numpy()
-            data.qvel[:] = sample.backend_state.qvel.numpy()
+            sample = motion_lib.sample_arti_state(0, playback_time)
+            data.qpos[:] = sample.qpos.numpy()
+            data.qvel[:] = sample.qvel.numpy()
             mujoco.mj_forward(model, data)
             viewer.sync()
             rendered_frames += 1

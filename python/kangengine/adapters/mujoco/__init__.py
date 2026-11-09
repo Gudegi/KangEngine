@@ -1,11 +1,11 @@
 """MuJoCo motion buffer adapters."""
 
 from ._dependency import MuJoCoUnavailableError
-from .motion import MuJoCoMotionAdapter, MuJoCoMotionBuffers, MuJoCoMotionTensorSample
+from .motion import MuJoCoMotionAdapter, MuJoCoMotionBuffers, MuJoCoMotionState
 
 __all__ = [
     "MuJoCoMotionAdapter",
     "MuJoCoMotionBuffers",
-    "MuJoCoMotionTensorSample",
+    "MuJoCoMotionState",
     "MuJoCoUnavailableError",
 ]

@@ -9,13 +9,13 @@ from kangengine.animation import (
     MotionMatch,
     MotionMatchingController,
     MotionMatchingDatabase,
-    MotionMatchingIndex,
+    MotionMatchingSearch,
 )
 from test_motion_matching import make_config, make_motion
 
 
-def make_index(features, counts=(4, 3), fps=(30.0, 60.0)):
-    return MotionMatchingIndex(
+def make_search(features, counts=(4, 3), fps=(30.0, 60.0)):
+    return MotionMatchingSearch(
         features,
         clip_frame_counts=[count + 3 for count in counts],
         clip_candidate_counts=counts,
@@ -23,15 +23,15 @@ def make_index(features, counts=(4, 3), fps=(30.0, 60.0)):
     )
 
 
-class MotionMatchingIndexTests(unittest.TestCase):
+class MotionMatchingSearchTests(unittest.TestCase):
     def test_owned_contiguous_copy_and_noncontiguous_query(self):
         original = np.arange(42.0).reshape(7, 6)[:, ::2]
         query = original[5].copy()
-        index = make_index(original)
+        search = make_search(original)
         original[:] = -1000
-        result = index.search(np.repeat(query, 2)[::2])
+        result = search.search(np.repeat(query, 2)[::2])
         self.assertEqual(
-            (index.num_frames, index.feature_dimension, index.num_motions), (7, 3, 2)
+            (search.num_frames, search.feature_dimension, search.num_motions), (7, 3, 2)
         )
         self.assertEqual(
             (result.row, result.motion_index, result.frame_index), (5, 1, 1)
@@ -40,9 +40,9 @@ class MotionMatchingIndexTests(unittest.TestCase):
         self.assertEqual(result.cost, 0.0)
 
     def test_ties_bias_half_frame_clip_tail_and_filters(self):
-        index = make_index(np.zeros((7, 3)))
-        self.assertEqual(index.search([0, 0, 0]).row, 0)
-        result = index.search(
+        search = make_search(np.zeros((7, 3)))
+        self.assertEqual(search.search([0, 0, 0]).row, 0)
+        result = search.search(
             [0, 0, 0],
             current_motion_index=1,
             current_time=1.5 / 60,
@@ -52,7 +52,7 @@ class MotionMatchingIndexTests(unittest.TestCase):
         self.assertEqual(result.cost, -0.1)
         for time in (2.5 / 60, 5 / 60):
             self.assertEqual(
-                index.search(
+                search.search(
                     [0, 0, 0],
                     current_motion_index=1,
                     current_time=time,
@@ -60,12 +60,12 @@ class MotionMatchingIndexTests(unittest.TestCase):
                 ).row,
                 0,
             )
-        self.assertEqual(index.search([0, 0, 0], allowed_motion_indices=[1]).row, 4)
+        self.assertEqual(search.search([0, 0, 0], allowed_motion_indices=[1]).row, 4)
         self.assertEqual(
-            index.search([0, 0, 0], allowed_motion_indices=[1, 0, 1]).row, 0
+            search.search([0, 0, 0], allowed_motion_indices=[1, 0, 1]).row, 0
         )
         self.assertEqual(
-            index.search(
+            search.search(
                 [0, 0, 0],
                 current_motion_index=0,
                 current_time=0,
@@ -84,7 +84,7 @@ class MotionMatchingIndexTests(unittest.TestCase):
             np.full((7, 3), np.nan),
         ):
             with self.subTest(shape=np.shape(features)), self.assertRaises(ValueError):
-                make_index(features)
+                make_search(features)
         for kwargs in (
             dict(clip_frame_counts=[4], clip_candidate_counts=[4], clip_fps=[30]),
             dict(clip_frame_counts=[4], clip_candidate_counts=[0], clip_fps=[30]),
@@ -93,13 +93,13 @@ class MotionMatchingIndexTests(unittest.TestCase):
             dict(clip_frame_counts=[4], clip_candidate_counts=[3], clip_fps=[np.nan]),
         ):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
-                MotionMatchingIndex(np.zeros((3, 2)), **kwargs)
+                MotionMatchingSearch(np.zeros((3, 2)), **kwargs)
 
     def test_search_rejects_invalid_inputs_and_distance_overflow(self):
-        index = make_index(np.zeros((7, 3)))
+        search = make_search(np.zeros((7, 3)))
         for query in ([0, 0], [[0, 0, 0]], [0, np.nan, 0], [1e308, 0, 0]):
             with self.subTest(query=query), self.assertRaises(ValueError):
-                index.search(query)
+                search.search(query)
         for kwargs in (
             dict(current_motion_index=0),
             dict(current_time=0),
@@ -114,15 +114,15 @@ class MotionMatchingIndexTests(unittest.TestCase):
             dict(allowed_motion_indices=[2]),
         ):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
-                index.search([0, 0, 0], **kwargs)
+                search.search([0, 0, 0], **kwargs)
 
-    def test_large_index_matches_independent_brute_force_and_parallel_queries(self):
+    def test_large_search_matches_independent_brute_force_and_parallel_queries(self):
         rng = np.random.default_rng(124)
         features = rng.normal(size=(10003, 27))
         queries = rng.normal(size=(24, 27))
-        index = make_index(features, counts=(5000, 5003))
+        search = make_search(features, counts=(5000, 5003))
         with ThreadPoolExecutor(max_workers=4) as executor:
-            results = list(executor.map(index.search, queries))
+            results = list(executor.map(search.search, queries))
         for query, result in zip(queries, results):
             costs = np.sum((features - query) ** 2, axis=1)
             row = int(np.argmin(costs))

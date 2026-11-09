@@ -105,12 +105,17 @@ def test_scene_local_and_world_quaternion_frames(component):
     assert not hasattr(child, "add_rotate_quaternion_op")
 
 
-def test_tensor_order_conversion_keeps_dtype_device_and_gradients():
-    quaternion = torch.tensor([[1., 2., 3., 4.]], dtype=torch.float64, requires_grad=True)
+@pytest.mark.parametrize("device", ["cpu", "cuda:0"])
+def test_tensor_order_conversion_keeps_dtype_device_and_gradients(device):
+    if device.startswith("cuda") and not torch.cuda.is_available():
+        pytest.skip("CUDA is unavailable")
+    quaternion = torch.tensor(
+        [[1., 2., 3., 4.]], dtype=torch.float64, device=device, requires_grad=True
+    )
     converted = batched_rotations.quat_wxyz_to_xyzw(quaternion)
     assert converted.device == quaternion.device
     assert converted.dtype == quaternion.dtype
-    torch.testing.assert_close(converted, torch.tensor([[2., 3., 4., 1.]], dtype=torch.float64))
+    torch.testing.assert_close(converted, quaternion.new_tensor([[2., 3., 4., 1.]]))
     torch.testing.assert_close(batched_rotations.quat_xyzw_to_wxyz(converted), quaternion)
-    (converted * torch.tensor([10., 20., 30., 40.])).sum().backward()
-    torch.testing.assert_close(quaternion.grad, torch.tensor([[40., 10., 20., 30.]], dtype=torch.float64))
+    (converted * quaternion.new_tensor([10., 20., 30., 40.])).sum().backward()
+    torch.testing.assert_close(quaternion.grad, quaternion.new_tensor([[40., 10., 20., 30.]]))

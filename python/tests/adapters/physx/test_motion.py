@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
+import torch
 
 import kangengine as ke
 from kangengine.adapters.physx import PhysXMotionAdapter, PhysXMotionBuffers
@@ -16,6 +18,48 @@ class _LogicalArticulation:
 
     def get_dof_names(self):
         return self._names
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda:0"])
+def test_joint_mapping_reuses_device_indices_and_preserves_gradients(device):
+    if device.startswith("cuda") and not torch.cuda.is_available():
+        pytest.skip("CUDA is unavailable")
+    path = Path(__file__).parents[4] / "assets/characters/kw/kw5.xml"
+    data = ke.asset.MJCFLoader.load(str(path), order="DFS")
+    layout = ke.animation.ArticulationCoordinateLayout.from_data(
+        data=data, free_root=True
+    )
+    adapter = PhysXMotionAdapter(layout)
+    count = len(adapter.joint_names)
+    mapping = tuple(reversed(range(count)))
+    values = torch.arange(2 * count, device=device, dtype=torch.float32).reshape(
+        2, count
+    )
+    values.requires_grad_()
+
+    def reorder_and_restore():
+        reordered = adapter.reorder_joint_values(values, mapping)
+        return reordered, adapter.restore_joint_values_order(reordered, mapping)
+
+    reorder_and_restore()
+    if device.startswith("cuda"):
+        previous = torch.cuda.get_sync_debug_mode()
+        torch.cuda.set_sync_debug_mode("error")
+        try:
+            reordered, restored = reorder_and_restore()
+        finally:
+            torch.cuda.set_sync_debug_mode(previous)
+    else:
+        reordered, restored = reorder_and_restore()
+    torch.testing.assert_close(reordered, values.flip(-1))
+    torch.testing.assert_close(restored, values)
+    restored.sum().backward()
+    torch.testing.assert_close(values.grad, torch.ones_like(values))
+
+    subset = adapter.reorder_joint_values(values, mapping[:2])
+    torch.testing.assert_close(subset, values.flip(-1)[..., :2])
+    with pytest.raises(ValueError, match="complete DOF mapping"):
+        adapter.restore_joint_values_order(subset, mapping[:2])
 
 
 def test_physx_adapter_round_trips_kw5_logical_dofs_and_root():
@@ -44,7 +88,7 @@ def test_physx_adapter_round_trips_kw5_logical_dofs_and_root():
     buffers = adapter.pack(motion)
     expected_root_xyzw = quaternion[:, [1, 2, 3, 0]]
     assert np.allclose(
-        np.abs(np.sum(buffers.root_rotations_xyzw * expected_root_xyzw, axis=1)),
+        np.abs(np.sum(buffers.root_quat_xyzw * expected_root_xyzw, axis=1)),
         1.0,
         atol=1e-6,
     )
@@ -57,18 +101,18 @@ def test_physx_adapter_round_trips_kw5_logical_dofs_and_root():
     # PhysX represents the three authored hinges as one spherical joint, so
     # its coordinates are not copied canonical XYZ hinge angles.
     assert not np.allclose(
-        buffers.joint_positions[:, :3],
+        buffers.joint_pos[:, :3],
         np.stack([motion.q[:, block.q_offset] for block in first_body_blocks], axis=1),
     )
 
     restored = adapter.unpack(
-        buffers.joint_positions,
-        buffers.joint_velocities,
+        buffers.joint_pos,
+        buffers.joint_vel,
         fps=motion.fps(),
-        root_positions=buffers.root_positions,
-        root_rotations_xyzw=buffers.root_rotations_xyzw,
-        root_linear_velocities=buffers.root_linear_velocities,
-        root_angular_velocities=buffers.root_angular_velocities,
+        root_pos=buffers.root_pos,
+        root_quat_xyzw=buffers.root_quat_xyzw,
+        root_vel=buffers.root_vel,
+        root_ang_vel=buffers.root_ang_vel,
         motion_name=motion.motion_name(),
     )
     root_slice = slice(root.q_offset + 3, root.q_offset + 7)
@@ -125,17 +169,17 @@ def test_physx_adapter_reorders_body_grouped_joint_state():
         frames, len(mapping)
     )
     state = PhysXMotionBuffers(
-        joint_positions=values,
-        joint_velocities=-values,
-        root_positions=None,
-        root_rotations_xyzw=None,
-        root_linear_velocities=None,
-        root_angular_velocities=None,
+        joint_pos=values,
+        joint_vel=-values,
+        root_pos=None,
+        root_quat_xyzw=None,
+        root_vel=None,
+        root_ang_vel=None,
     )
     assert adapter.reorder_joint_state(state) is state
 
     reordered = adapter.reorder_joint_state(state, mapping)
-    np.testing.assert_array_equal(reordered.joint_positions, values[:, mapping])
+    np.testing.assert_array_equal(reordered.joint_pos, values[:, mapping])
     restored = adapter.restore_joint_state_order(reordered, mapping)
-    np.testing.assert_array_equal(restored.joint_positions, state.joint_positions)
-    np.testing.assert_array_equal(restored.joint_velocities, state.joint_velocities)
+    np.testing.assert_array_equal(restored.joint_pos, state.joint_pos)
+    np.testing.assert_array_equal(restored.joint_vel, state.joint_vel)

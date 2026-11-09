@@ -26,7 +26,7 @@
 #include "animation/skeleton_motion_player.hpp"
 #include "animation/skeleton_pose_smoother.hpp"
 #include "animation/trajectory_spring.hpp"
-#include "animation/motion_matching_index.hpp"
+#include "animation/motion_matching_search.hpp"
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/material/colors.hpp"
 

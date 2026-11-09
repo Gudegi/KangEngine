@@ -1,8 +1,8 @@
-"""Compare native SkeletonMotion with KELab's original MotionLib through PhysX.
+"""Compare direct PhysX motion conversion with MotionLibrary frame buffers.
 
 Run with::
 
-    PYTHONPATH=python KELab-private/.venv/bin/python \
+    PYTHONPATH=python python \
         python/examples/adapters/physx/physx_articulation_motion.py
 """
 
@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import sys
-import tempfile
 
 import numpy as np
 
@@ -29,55 +27,6 @@ def _default_motion() -> Path:
     return (
         Path(ke.__file__).resolve().parent / "assets/characters/kw/motions/Walking.npy"
     )
-
-
-def _original_motion_lib_type():
-    root = Path(__file__).resolve().parents[4]
-    for source in (
-        root / "KELab-private/source/ke_lab",
-        root / "KELab-private/source/ke_lab_tasks",
-    ):
-        if not source.is_dir():
-            raise FileNotFoundError(source)
-        source_text = str(source)
-        if source_text not in sys.path:
-            sys.path.insert(0, source_text)
-    from ke_lab_tasks.direct.amp.motion import MotionLib
-
-    return MotionLib
-
-
-def _motion_lib_input(path: Path, dfs_body_names: list[str]) -> Path:
-    """Reorder a legacy DFS clip into the original MotionLib policy order."""
-
-    policy_names = (
-        "Hips",
-        "LeftHip",
-        "RightHip",
-        "Chest",
-        "LeftKnee",
-        "RightKnee",
-        "LeftShoulder",
-        "RightShoulder",
-        "Neck",
-        "LeftAnkle",
-        "RightAnkle",
-        "LeftElbow",
-        "RightElbow",
-    )
-    saved = np.load(path, allow_pickle=True).item()
-    rotations = np.asarray(saved["localRotations"])
-    indices = [dfs_body_names.index(name) for name in policy_names]
-    converted = dict(saved)
-    converted["localRotations"] = rotations[:, indices].copy()
-    converted["skeleton_tree"] = {"node_names": list(policy_names)}
-    handle = tempfile.NamedTemporaryFile(
-        prefix="kangengine_kw_motionlib_", suffix=".npy", delete=False
-    )
-    handle.close()
-    output = Path(handle.name)
-    np.save(output, converted, allow_pickle=True)
-    return output
 
 
 def _load_kw_motion(path: Path, tree) -> ke.animation.SkeletonMotion:
@@ -148,7 +97,6 @@ class PhysXArticulationMotionApp(ke.App):
             name="kw_physx_motion",
             config=ke.physics.ArticulationConfig.free_base(),
         )
-        body_names = data.skeleton_tree.node_names()
         if self.motion_source == "canonical":
             layout = ke.animation.ArticulationCoordinateLayout.from_data(
                 data=data, free_root=True
@@ -156,76 +104,36 @@ class PhysXArticulationMotionApp(ke.App):
             adapter = PhysXMotionAdapter(layout)
             adapter.validate_articulation(self.robot.articulation)
             buffers = adapter.pack_skeleton_motion(self.source_motion)
-            self.root_positions = buffers.root_positions
-            self.root_rotations = buffers.root_rotations_xyzw
-            self.root_velocities = buffers.root_linear_velocities
-            self.root_angular_velocities = buffers.root_angular_velocities
-            self.dof_positions = buffers.joint_positions
-            self.dof_velocities = buffers.joint_velocities
+            self.root_pos = buffers.root_pos
+            self.root_quat_xyzw = buffers.root_quat_xyzw
+            self.root_vel = buffers.root_vel
+            self.root_ang_vel = buffers.root_ang_vel
+            self.dof_pos = buffers.joint_pos
+            self.dof_vel = buffers.joint_vel
             self.num_frames = self.source_motion.num_frames()
             self.motion_fps = self.source_motion.fps()
             self.max_residual = 0.0
         else:
-            motion_lib_type = _original_motion_lib_type()
-            dof_offsets = (0, 3, 6, 9, 10, 11, 14, 17, 20, 23, 26, 27, 28)
-            policy_body_names = (
-                "LeftHip",
-                "RightHip",
-                "Chest",
-                "LeftKnee",
-                "RightKnee",
-                "LeftShoulder",
-                "RightShoulder",
-                "Neck",
-                "LeftAnkle",
-                "RightAnkle",
-                "LeftElbow",
-                "RightElbow",
+            layout = ke.animation.ArticulationCoordinateLayout.from_data(
+                data=data, free_root=True
             )
-            motion_lib_path = _motion_lib_input(self.motion_path, body_names)
-            try:
-                self.motion_lib = motion_lib_type(
-                    motion_lib_path,
-                    data,
-                    self.robot.articulation,
-                    "cpu",
-                    key_body_ids=(),
-                    dof_body_ids=tuple(range(1, 13)),
-                    dof_offsets=dof_offsets,
-                    dof_obs_size=52,
-                    local_root_obs=True,
-                    is_T_pose=True,
-                )
-            finally:
-                motion_lib_path.unlink(missing_ok=True)
-            physical_spans = {}
-            physical_offset = 0
-            for body_id in sorted(data.joints):
-                size = len(data.joints[body_id])
-                physical_spans[body_names[body_id]] = range(
-                    physical_offset, physical_offset + size
-                )
-                physical_offset += size
-            dof_indices = []
-            for name in policy_body_names:
-                dof_indices.extend(physical_spans[name])
-            self.root_positions = self.motion_lib._root_pos.clone()
-            self.root_rotations = self.motion_lib._root_rot
-            self.root_velocities = self.motion_lib._root_vel
-            self.root_angular_velocities = self.motion_lib._root_ang_vel
-            self.dof_positions = self.motion_lib._dof_pos.new_empty(
-                self.motion_lib._dof_pos.shape
+            adapter = PhysXMotionAdapter(layout)
+            adapter.validate_articulation(self.robot.articulation)
+            self._motion_lib = ke.animation.MotionLibrary(
+                [self.source_motion], adapter=adapter, device="cpu"
             )
-            self.dof_velocities = self.motion_lib._dof_vel.new_empty(
-                self.motion_lib._dof_vel.shape
-            )
-            self.dof_positions[:, dof_indices] = self.motion_lib._dof_pos
-            self.dof_velocities[:, dof_indices] = self.motion_lib._dof_vel
-            self.num_frames = self.motion_lib.num_frames
-            self.motion_fps = self.motion_lib._fps
+            buffers = self._motion_lib.adapted_buffers()
+            self.root_pos = buffers.root_pos.clone()
+            self.root_quat_xyzw = buffers.root_quat_xyzw
+            self.root_vel = buffers.root_vel
+            self.root_ang_vel = buffers.root_ang_vel
+            self.dof_pos = buffers.joint_pos
+            self.dof_vel = buffers.joint_vel
+            self.num_frames = self.source_motion.num_frames()
+            self.motion_fps = self.source_motion.fps()
             self.max_residual = 0.0
 
-        self.root_positions[:, 0] += 0.5 * self.separation
+        self.root_pos[:, 0] += 0.5 * self.separation
         self.sim_visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
         self.sim_visual.add_articulation_scene_graph(
             0,
@@ -262,16 +170,16 @@ class PhysXArticulationMotionApp(ke.App):
         index = self.frame
         self.robot.set_root_state(
             None,
-            self.root_positions[index],
-            self.root_rotations[index],
-            self.root_velocities[index],
-            self.root_angular_velocities[index],
+            self.root_pos[index],
+            self.root_quat_xyzw[index],
+            self.root_vel[index],
+            self.root_ang_vel[index],
             immediate=True,
         )
         self.robot.set_dof_state(
             None,
-            self.dof_positions[index],
-            self.dof_velocities[index],
+            self.dof_pos[index],
+            self.dof_vel[index],
             immediate=True,
         )
         self.world.step(substeps=0, apply_commands=False)

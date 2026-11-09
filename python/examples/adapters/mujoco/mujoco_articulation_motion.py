@@ -89,7 +89,7 @@ def main() -> None:
     )
     motion = _load_kw_motion(motion_path, articulation_data.skeleton_tree)
     adapter = MuJoCoMotionAdapter(layout)
-    library = ke.animation.MotionLibrary([motion], adapter=adapter, device="cpu")
+    motion_lib = ke.animation.MotionLibrary([motion], adapter=adapter, device="cpu")
 
     model = _load_model_with_example_floor(mjcf_path, mujoco)
     data = mujoco.MjData(model)
@@ -108,11 +108,9 @@ def main() -> None:
     with mujoco.viewer.launch_passive(model, data) as viewer:
         while viewer.is_running():
             started = time.perf_counter()
-            sample = library.sample_frames(0, frame)
-            if sample.backend_state is None:
-                raise RuntimeError("MuJoCo MotionLibrary adapter produced no state")
-            data.qpos[:] = sample.backend_state.qpos.numpy()
-            data.qvel[:] = sample.backend_state.qvel.numpy()
+            sample = motion_lib.sample_arti_state(0, frame_ids=frame)
+            data.qpos[:] = sample.qpos.numpy()
+            data.qvel[:] = sample.qvel.numpy()
             mujoco.mj_forward(model, data)
             viewer.sync()
 

@@ -15,13 +15,14 @@ from ...animation.articulation_motion import (
     ArticulationMotion,
     ArticulationMotionMapper,
 )
-from ...utils.math import quat_wxyz_to_xyzw, quat_xyzw_to_wxyz
 from ...utils import batched_rotations
-from ...utils.batched_rotations import quat_wxyz_conjugate, quat_wxyz_multiply
+from ...utils.math import quat_wxyz_to_xyzw, quat_xyzw_to_wxyz
 from ._dependency import load_newton
 
 if TYPE_CHECKING:
     import newton
+
+    from .transition import NewtonMotionTransition
 
 
 FloatArray = npt.NDArray[np.float32]
@@ -36,8 +37,8 @@ class NewtonMotionBuffers:
 
 
 @dataclass(frozen=True)
-class NewtonMotionTensorSample:
-    """Sample-major Newton generalized-coordinate tensors."""
+class NewtonMotionState:
+    """Newton generalized-coordinate tensors for stored frames or queries."""
 
     joint_q: torch.Tensor
     joint_qd: torch.Tensor
@@ -62,15 +63,25 @@ class NewtonMotionAdapter:
                 ArticulationCoordinateType.SPHERICAL,
             )
         )
-        self._revolute_blocks = tuple(
-            block
-            for block in layout.blocks
-            if block.type == ArticulationCoordinateType.REVOLUTE
-        )
+        offsets = [
+            block.q_offset + (3 if block.type == ArticulationCoordinateType.FREE else 0)
+            for block in self._quaternion_blocks
+        ]
+        self._quaternion_ids = {
+            torch.device("cpu"): torch.tensor(offsets, dtype=torch.long).unsqueeze(-1)
+            + torch.arange(4)
+        }
 
     @property
     def layout(self) -> ArticulationCoordinateLayout:
         return self._layout
+
+    def _create_transition(
+        self, native, buffers, num_envs, rate
+    ) -> NewtonMotionTransition:
+        from .transition import NewtonMotionTransition
+
+        return NewtonMotionTransition(self._layout, native, buffers, num_envs, rate)
 
     def validate_model(self, model: newton.Model, *, strict: bool = True) -> None:
         """Verify an unreplicated Newton model against the canonical layout."""
@@ -209,7 +220,7 @@ class NewtonMotionAdapter:
         return NewtonMotionBuffers(joint_q=joint_q, joint_qd=joint_qd)
 
     def prepare_motion(self, motion) -> FloatArray:
-        """Precompute Newton q/qd frames used for sampled velocities and translation."""
+        """Precompute native Newton coordinates and velocities for device sampling."""
 
         articulation_motion = (
             motion
@@ -221,63 +232,53 @@ class NewtonMotionAdapter:
         buffers = self.pack(articulation_motion)
         return np.concatenate((buffers.joint_q, buffers.joint_qd), axis=1)
 
+    def prepare_body_motion(self, data: FloatArray, *, fps: float):
+        """Reconstruct robot-representable poses from prepared CPU frames."""
+        motion = self.unpack(
+            data[:, : self._layout.nq], data[:, self._layout.nq :], fps=fps
+        )
+        return ArticulationMotionMapper(self._layout).to_skeleton_motion(motion)
+
+    def frame_buffers(self, data: torch.Tensor) -> NewtonMotionState:
+        """Borrow typed Newton frame buffers without copying."""
+        return NewtonMotionState(
+            data[..., : self._layout.nq], data[..., self._layout.nq :]
+        )
+
     def pack_sample(
         self,
         *,
-        root_positions: torch.Tensor,
-        root_rotations_wxyz: torch.Tensor,
-        root_linear_velocities: torch.Tensor,
-        root_angular_velocities: torch.Tensor,
-        local_rotations_wxyz: torch.Tensor,
         backend_frame_data: torch.Tensor,
         next_backend_frame_data: torch.Tensor,
         blend: torch.Tensor,
-    ) -> NewtonMotionTensorSample:
-        """Convert sampled quaternion poses to Newton joint_q/joint_qd tensors."""
+    ) -> NewtonMotionState:
+        """Interpolate prepared coordinates and native velocities."""
+        first = backend_frame_data[..., : self._layout.nq]
+        following = next_backend_frame_data[..., : self._layout.nq]
+        joint_q = first + (following - first) * blend.unsqueeze(-1)
+        joint_qd = torch.lerp(
+            backend_frame_data[..., self._layout.nq :],
+            next_backend_frame_data[..., self._layout.nq :],
+            blend.unsqueeze(-1),
+        )
 
-        first_q = backend_frame_data[..., : self._layout.nq]
-        next_q = next_backend_frame_data[..., : self._layout.nq]
-        joint_q = first_q + (next_q - first_q) * blend.unsqueeze(-1)
-        joint_qd = backend_frame_data[..., self._layout.nq :].clone()
-        for block in self._revolute_blocks:
-            delta = (
-                torch.remainder(
-                    next_q[..., block.q_offset]
-                    - first_q[..., block.q_offset]
-                    + torch.pi,
-                    2.0 * torch.pi,
-                )
-                - torch.pi
+        # Reuse device indices and interpolate all quaternion joints together.
+        if first.device not in self._quaternion_ids:
+            self._quaternion_ids[first.device] = self._quaternion_ids[
+                torch.device("cpu")
+            ].to(first.device)
+        ids = self._quaternion_ids[first.device]
+        first_rotation = first[..., ids]
+        next_rotation = following[..., ids]
+        rotation = batched_rotations.quat_wxyz_to_xyzw(
+            batched_rotations.quat_wxyz_slerp(
+                batched_rotations.quat_xyzw_to_wxyz(first_rotation),
+                batched_rotations.quat_xyzw_to_wxyz(next_rotation),
+                blend.unsqueeze(-1),
             )
-            joint_q[..., block.q_offset] = first_q[..., block.q_offset] + blend * delta
-
-        for block in self._quaternion_blocks:
-            if block.type == ArticulationCoordinateType.FREE:
-                joint_q[..., block.q_offset : block.q_offset + 3] = root_positions
-                quaternion = root_rotations_wxyz
-                joint_qd[..., block.qd_offset : block.qd_offset + 3] = (
-                    root_linear_velocities
-                )
-                joint_qd[..., block.qd_offset + 3 : block.qd_offset + 6] = (
-                    root_angular_velocities
-                )
-            else:
-                reference = torch.as_tensor(
-                    np.asarray(block.reference_rotation, dtype=np.float32),
-                    dtype=local_rotations_wxyz.dtype,
-                    device=local_rotations_wxyz.device,
-                )
-                quaternion = quat_wxyz_multiply(
-                    quat_wxyz_conjugate(reference),
-                    local_rotations_wxyz[..., block.body_index, :],
-                )
-            offset = (
-                block.q_offset + 3
-                if block.type == ArticulationCoordinateType.FREE
-                else block.q_offset
-            )
-            joint_q[..., offset : offset + 4] = batched_rotations.quat_wxyz_to_xyzw(quaternion)
-        return NewtonMotionTensorSample(joint_q=joint_q, joint_qd=joint_qd)
+        )
+        joint_q[..., ids] = rotation
+        return NewtonMotionState(joint_q=joint_q, joint_qd=joint_qd)
 
     def unpack(
         self,

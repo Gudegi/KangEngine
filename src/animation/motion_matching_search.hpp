@@ -30,11 +30,11 @@ struct MotionMatchingSearchOptions {
 };
 
 // Owns normalized, weighted row-major features. Safe for concurrent searches.
-class MotionMatchingIndex {
+class MotionMatchingSearch {
   public:
-    MotionMatchingIndex(std::vector<double> features,
-                        std::size_t featureDimension,
-                        std::vector<MotionMatchingClipInfo> clips);
+    MotionMatchingSearch(std::vector<double> features,
+                         std::size_t featureDimension,
+                         std::vector<MotionMatchingClipInfo> clips);
 
     MotionMatch search(const std::vector<double>& query,
                        const MotionMatchingSearchOptions& options = {}) const;

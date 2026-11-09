@@ -243,7 +243,7 @@ class MotionMatchingDatabase:
     motion_indices: np.ndarray
     frame_indices: np.ndarray
     _clips: tuple[_ClipFeatures, ...]
-    _native: _ke.animation.MotionMatchingIndex
+    _native: _ke.animation.MotionMatchingSearch
     _schema: dict
     _feature_builder: object
     _feature_spec: dict
@@ -275,7 +275,7 @@ class MotionMatchingDatabase:
                 None restores WalkingFeatures and its saved filter settings.
 
         Returns:
-            A database with restored clips and caches, and a rebuilt search index.
+            A database with restored clips and caches, and a rebuilt search backend.
 
         Raises:
             ValueError: The archive version or feature schema is incompatible.
@@ -304,7 +304,7 @@ class MotionMatchingDatabase:
                 Explicit reference positions must be supplied for all clips or none.
 
         Returns:
-            A database with normalized features and a native search index.
+            A database with normalized features and a native search backend.
 
         Raises:
             ValueError: Clips are incompatible or motion/feature data is invalid.
@@ -453,7 +453,7 @@ class MotionMatchingDatabase:
         object.__setattr__(
             result,
             "_native",
-            _ke.animation.MotionMatchingIndex(
+            _ke.animation.MotionMatchingSearch(
                 result.features,
                 clip_frame_counts=[len(clip.roots) for clip in clips],
                 clip_candidate_counts=[clip.candidate_count for clip in clips],
@@ -529,8 +529,8 @@ class MotionMatchingDatabase:
         return len(self.features)
 
     @property
-    def native(self) -> _ke.animation.MotionMatchingIndex:
-        """Shared native index with its own float64 copy; accepts normalized queries."""
+    def native(self) -> _ke.animation.MotionMatchingSearch:
+        """Shared native search backend with its own float64 copy; accepts normalized queries."""
         return self._native
 
     @property

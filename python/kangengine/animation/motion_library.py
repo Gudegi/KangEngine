@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from operator import index as integer_index
 from pathlib import Path
 from typing import Callable, Generic, Iterable, Protocol, Sequence, TypeVar
 
@@ -24,9 +25,9 @@ SkeletonMotion = _ke.animation.SkeletonMotion
 SkeletonTree = _ke.animation.SkeletonTree
 
 BackendSample = TypeVar("BackendSample")
-# Newton adapter -> NewtonMotionTensorSample
-# PhysX adapter  -> PhysXMotionTensorSample
-# MuJoCo adapter -> MuJoCoMotionTensorSample
+# Newton adapter -> NewtonMotionState
+# PhysX adapter  -> PhysXMotionState
+# MuJoCo adapter -> MuJoCoMotionState
 
 
 class MotionAdapter(Protocol[BackendSample]):
@@ -37,31 +38,31 @@ class MotionAdapter(Protocol[BackendSample]):
     ) -> torch.Tensor | np.ndarray:
         """Precompute frame data needed by simulator-native sampling."""
 
+    def frame_buffers(self, data: torch.Tensor) -> BackendSample:
+        """Expose prepared frame-major coordinates without copying."""
+
+    def prepare_body_motion(self, data: np.ndarray, *, fps: float) -> SkeletonMotion:
+        """Reconstruct robot poses from prepared CPU frames before upload."""
+
     def pack_sample(
         self,
         *,
-        root_positions: torch.Tensor,
-        root_rotations_wxyz: torch.Tensor,
-        root_linear_velocities: torch.Tensor,
-        root_angular_velocities: torch.Tensor,
-        local_rotations_wxyz: torch.Tensor,
         backend_frame_data: torch.Tensor,
         next_backend_frame_data: torch.Tensor,
         blend: torch.Tensor,
     ) -> BackendSample:
-        """Convert interpolated quaternion poses to simulator-native tensors."""
+        """Interpolate prepared engine-coordinate frames on their device."""
 
 
 @dataclass(frozen=True)
-class MotionSample(Generic[BackendSample]):
-    """Quaternion pose and optional backend state sampled on one device."""
+class SkeletonMotionState:
+    """Skeleton pose and root velocities sampled on one device."""
 
-    root_positions: torch.Tensor
-    root_rotations_wxyz: torch.Tensor
-    root_linear_velocities: torch.Tensor
-    root_angular_velocities: torch.Tensor
-    local_rotations_wxyz: torch.Tensor
-    backend_state: BackendSample | None
+    root_pos: torch.Tensor
+    root_quat_wxyz: torch.Tensor
+    root_vel: torch.Tensor
+    root_ang_vel: torch.Tensor
+    local_quat_wxyz: torch.Tensor
     motion_ids: torch.Tensor
     frame_indices: torch.Tensor
     next_frame_indices: torch.Tensor
@@ -69,37 +70,44 @@ class MotionSample(Generic[BackendSample]):
 
 
 @dataclass(frozen=True)
-class MotionKinematics:
-    """Robot-body transforms produced by sampled-pose FK."""
+class BodyMotionState:
+    """World-space body poses and optional frame velocities.
 
-    body_positions: torch.Tensor
-    body_rotations_wxyz: torch.Tensor
+    Positions and velocities use [..., bodies, 3]; WXYZ rotations use
+    [..., bodies, 4]. Velocities require precomputed kinematics.
+    The _w suffix denotes world coordinates; wxyz denotes quaternion order.
+    Units are meters, meters/second, and radians/second.
+    """
+
+    body_pos_w: torch.Tensor
+    body_quat_wxyz_w: torch.Tensor
+    body_vel_w: torch.Tensor | None = None
+    body_ang_vel_w: torch.Tensor | None = None
+
+
+_BODY_FIELDS = ("body_pos_w", "body_quat_wxyz_w", "body_vel_w", "body_ang_vel_w")
 
 
 @dataclass(frozen=True)
 class MotionLibraryBuffers:
-    """Borrowed view of frame-major buffers owned by a MotionLibrary.
+    """Read-only, frame-major tensors shared with the owning MotionLibrary.
 
-    The tensors remain owned by the library and can therefore be shared with
-    another GPU runtime without copying. Treat them as read-only. Adding a
-    motion or moving the library to another device invalidates previously
-    acquired views.
+    No data is copied. Reacquire views after adding clips or changing devices.
     """
 
-    root_positions: torch.Tensor
-    root_linear_velocities: torch.Tensor
-    root_angular_velocities: torch.Tensor
-    local_rotations_wxyz: torch.Tensor
+    root_pos: torch.Tensor
+    root_vel: torch.Tensor
+    root_ang_vel: torch.Tensor
+    local_quat_wxyz: torch.Tensor
     frame_offsets: torch.Tensor
     frame_counts: torch.Tensor
     fps: torch.Tensor
     durations: torch.Tensor
     weights: torch.Tensor
-    global_positions: torch.Tensor | None
-    global_rotations_wxyz: torch.Tensor | None
-    global_linear_velocities: torch.Tensor | None
-    global_angular_velocities: torch.Tensor | None
-    backend_frame_data: torch.Tensor | None
+    body_pos_w: torch.Tensor | None
+    body_quat_wxyz_w: torch.Tensor | None
+    body_vel_w: torch.Tensor | None
+    body_ang_vel_w: torch.Tensor | None
 
 
 @dataclass(frozen=True)
@@ -110,19 +118,49 @@ class _PreparedMotion:
     count: int
     fps: float
     duration: float
-    root_positions: torch.Tensor
-    root_linear_velocities: torch.Tensor
-    root_angular_velocities: torch.Tensor
-    local_rotations_wxyz: torch.Tensor
-    global_positions: torch.Tensor | None
-    global_rotations_wxyz: torch.Tensor | None
-    global_linear_velocities: torch.Tensor | None
-    global_angular_velocities: torch.Tensor | None
+    root_pos: torch.Tensor
+    root_vel: torch.Tensor
+    root_ang_vel: torch.Tensor
+    local_quat_wxyz: torch.Tensor
+    source_body_frames: BodyMotionState | None
     backend_frame_data: torch.Tensor | None
+    body_frames: BodyMotionState | None
+    body_root_pos: torch.Tensor | None
+    body_local_quat_wxyz: torch.Tensor | None
+
+
+class MotionView(Generic[BackendSample]):
+    """Access one clip's frames without copying its buffers.
+
+    Keeps the library alive. Indexing returns (adapted motion, body motion)
+    and requires an adapter. Negative indices count from the end; no slices.
+    """
+
+    def __init__(self, library: MotionLibrary[BackendSample], motion_id: int) -> None:
+        self._library = library
+        self._motion_id = motion_id
+
+    def __len__(self) -> int:
+        return self._library._frame_counts_cpu[self._motion_id]
+
+    def __getitem__(self, frame_idx: int) -> tuple[BackendSample, BodyMotionState]:
+        frame_idx = integer_index(frame_idx)
+        count = len(self)
+        if frame_idx < 0:
+            frame_idx += count
+        if not 0 <= frame_idx < count:
+            raise IndexError("motion frame index out of range")
+        return self._library.sample_robot_state(
+            self._motion_id, frame_ids=frame_idx, loop=False
+        )
 
 
 class MotionLibrary(Generic[BackendSample]):
-    """Pack quaternion clips and sample them on one Torch device."""
+    """Store motion clips and sample skeleton, adapted, or body data on one device.
+
+    Body tracks use adapter-converted poses when an adapter is present; source
+    skeleton tracks remain unchanged. Disable precompute_kinematics to store
+    local body poses and run FK when queried instead of caching world tracks."""
 
     def __init__(
         self,
@@ -133,7 +171,7 @@ class MotionLibrary(Generic[BackendSample]):
         weights: torch.Tensor | np.ndarray | list[float] | None = None,
         device: str | torch.device = "cpu",
         keep_source_motions: bool = False,
-        precompute_kinematics: bool = False,
+        precompute_kinematics: bool = True,
     ) -> None:
         self._device = torch.device(device)
         self._adapter = adapter
@@ -145,20 +183,24 @@ class MotionLibrary(Generic[BackendSample]):
         self._node_names: tuple[str, ...] | None = None
         self._parent_indices: tuple[int, ...] | None = None
         self._body_local_offsets = torch.empty((0, 3), device=self._device)
-        self._root_positions = torch.empty((0, 3), device=self._device)
-        self._root_linear_velocities = torch.empty((0, 3), device=self._device)
-        self._root_angular_velocities = torch.empty((0, 3), device=self._device)
-        self._local_rotations = torch.empty((0, 0, 4), device=self._device)
-        self._global_positions: torch.Tensor | None = None
-        self._global_rotations: torch.Tensor | None = None
-        self._global_linear_velocities: torch.Tensor | None = None
-        self._global_angular_velocities: torch.Tensor | None = None
+        self._robot_body_local_offsets: torch.Tensor | None = None
+        self._fk_levels: list[tuple[torch.Tensor, torch.Tensor]] = []
+        self._root_pos = torch.empty((0, 3), device=self._device)
+        self._root_vel = torch.empty((0, 3), device=self._device)
+        self._root_ang_vel = torch.empty((0, 3), device=self._device)
+        self._local_quat_wxyz = torch.empty((0, 0, 4), device=self._device)
+        self._source_body_frames: BodyMotionState | None = None
         self._backend_frame_data: torch.Tensor | None = None
+        self._body_frames: BodyMotionState | None = None
+        self._body_root_pos: torch.Tensor | None = None
+        self._body_local_quat_wxyz: torch.Tensor | None = None
         self._frame_offsets = torch.empty(0, dtype=torch.long, device=self._device)
         self._frame_counts = torch.empty(0, dtype=torch.long, device=self._device)
+        self._frame_counts_cpu: list[int] = []
         self._fps = torch.empty(0, device=self._device)
         self._durations = torch.empty(0, device=self._device)
         self._weights = torch.empty(0, device=self._device)
+        self._compiled: dict[tuple[str, type], Callable] | None = None
 
         self._add_loaded_motions((motion, None, 1.0) for motion in motions)
         if weights is not None:
@@ -176,7 +218,7 @@ class MotionLibrary(Generic[BackendSample]):
         fallback_joint_names: Sequence[str] | None = None,
         device: str | torch.device = "cpu",
         keep_source_motions: bool = False,
-        precompute_kinematics: bool = False,
+        precompute_kinematics: bool = True,
     ) -> MotionLibrary[BackendSample]:
         """Load one motion or a weighted YAML motion collection.
 
@@ -218,6 +260,11 @@ class MotionLibrary(Generic[BackendSample]):
         return self._device
 
     @property
+    def adapter(self) -> MotionAdapter[BackendSample] | None:
+        """Adapter that owns this library's native coordinate layout."""
+        return self._adapter
+
+    @property
     def num_motions(self) -> int:
         return len(self._names)
 
@@ -254,14 +301,13 @@ class MotionLibrary(Generic[BackendSample]):
         self._device = resolved
         for name in (
             "_body_local_offsets",
-            "_root_positions",
-            "_root_linear_velocities",
-            "_root_angular_velocities",
-            "_local_rotations",
-            "_global_positions",
-            "_global_rotations",
-            "_global_linear_velocities",
-            "_global_angular_velocities",
+            "_root_pos",
+            "_root_vel",
+            "_root_ang_vel",
+            "_local_quat_wxyz",
+            "_body_root_pos",
+            "_body_local_quat_wxyz",
+            "_robot_body_local_offsets",
             "_frame_offsets",
             "_frame_counts",
             "_fps",
@@ -271,9 +317,54 @@ class MotionLibrary(Generic[BackendSample]):
             value = getattr(self, name)
             if value is not None:
                 setattr(self, name, value.to(resolved))
+        self._fk_levels = [
+            (ids.to(resolved), parents.to(resolved)) for ids, parents in self._fk_levels
+        ]
         if self._backend_frame_data is not None:
             self._backend_frame_data = self._backend_frame_data.to(resolved)
+        body_tracks = (
+            ("_source_body_frames", "_body_frames")
+            if self._adapter is not None
+            else ("_source_body_frames",)
+        )
+        for name in body_tracks:
+            frames = getattr(self, name)
+            if frames is not None:
+                setattr(
+                    self,
+                    name,
+                    BodyMotionState(
+                        *(getattr(frames, field).to(resolved) for field in _BODY_FIELDS)
+                    ),
+                )
+        if self._adapter is None:
+            self._body_frames = self._source_body_frames
+        if self._compiled is not None:
+            self._compiled.clear()
         return self
+
+    def compile(self) -> None:
+        """Compile sampling and FK on first use; disabled by default.
+
+        Call after loading clips and choosing a device; first calls can take seconds.
+        Uses torch.compile with dynamic batch sizes and fullgraph=True.
+        Use device tensors; new ranks, dtypes, or query options may recompile.
+        Adding clips or moving devices clears the cache but keeps compilation on.
+        Compilation errors propagate without an eager fallback.
+        """
+        if self._compiled is None:
+            self._compiled = {}
+
+    def _evaluate(self, function, *args, **kwargs):
+        if self._compiled is None:
+            return function(*args, **kwargs)
+
+        name = (function.__name__, type(args[0]))
+        if name not in self._compiled:
+            # Populate adapter metadata outside the full tensor graph.
+            function(*args, **kwargs)
+            self._compiled[name] = torch.compile(function, dynamic=True, fullgraph=True)
+        return self._compiled[name](*args, **kwargs)
 
     def add_motion(
         self,
@@ -314,53 +405,54 @@ class MotionLibrary(Generic[BackendSample]):
             return []
 
         first_id = self.num_motions
-        frame_offset = int(self._local_rotations.shape[0])
+        frame_offset = int(self._local_quat_wxyz.shape[0])
         frame_offsets = []
         for item in prepared:
             frame_offsets.append(frame_offset)
             frame_offset += item.count
 
-        self._root_positions = torch.cat(
-            (self._root_positions, *(item.root_positions for item in prepared))
+        self._root_pos = torch.cat(
+            (self._root_pos, *(item.root_pos for item in prepared))
         )
-        self._root_linear_velocities = torch.cat(
+        self._root_vel = torch.cat(
             (
-                self._root_linear_velocities,
-                *(item.root_linear_velocities for item in prepared),
+                self._root_vel,
+                *(item.root_vel for item in prepared),
             )
         )
-        self._root_angular_velocities = torch.cat(
+        self._root_ang_vel = torch.cat(
             (
-                self._root_angular_velocities,
-                *(item.root_angular_velocities for item in prepared),
+                self._root_ang_vel,
+                *(item.root_ang_vel for item in prepared),
             )
         )
-        self._local_rotations = torch.cat(
-            (self._local_rotations, *(item.local_rotations_wxyz for item in prepared))
+        self._local_quat_wxyz = torch.cat(
+            (self._local_quat_wxyz, *(item.local_quat_wxyz for item in prepared))
         )
 
         if self._precompute_kinematics:
-            self._global_positions = self._pack_optional(
-                self._global_positions,
-                [item.global_positions for item in prepared],
-            )
-            self._global_rotations = self._pack_optional(
-                self._global_rotations,
-                [item.global_rotations_wxyz for item in prepared],
-            )
-            self._global_linear_velocities = self._pack_optional(
-                self._global_linear_velocities,
-                [item.global_linear_velocities for item in prepared],
-            )
-            self._global_angular_velocities = self._pack_optional(
-                self._global_angular_velocities,
-                [item.global_angular_velocities for item in prepared],
+            self._source_body_frames = self._pack_body_frames(
+                self._source_body_frames, [item.source_body_frames for item in prepared]
             )
         if self._adapter is not None:
             self._backend_frame_data = self._pack_optional(
                 self._backend_frame_data,
                 [item.backend_frame_data for item in prepared],
             )
+            if self._precompute_kinematics:
+                self._body_frames = self._pack_body_frames(
+                    self._body_frames, [item.body_frames for item in prepared]
+                )
+            else:
+                self._body_root_pos = self._pack_optional(
+                    self._body_root_pos, [item.body_root_pos for item in prepared]
+                )
+                self._body_local_quat_wxyz = self._pack_optional(
+                    self._body_local_quat_wxyz,
+                    [item.body_local_quat_wxyz for item in prepared],
+                )
+        else:
+            self._body_frames = self._source_body_frames
 
         self._frame_offsets = self._pack_metadata(
             self._frame_offsets, frame_offsets, torch.long
@@ -378,8 +470,11 @@ class MotionLibrary(Generic[BackendSample]):
             self._weights, [item.weight for item in prepared], torch.float32
         )
         self._names.extend(item.name for item in prepared)
+        self._frame_counts_cpu.extend(item.count for item in prepared)
         if self._source_motions is not None:
             self._source_motions.extend(item.skeleton_motion for item in prepared)
+        if self._compiled is not None:
+            self._compiled.clear()
         return list(range(first_id, first_id + len(prepared)))
 
     def _prepare_motion(
@@ -398,6 +493,28 @@ class MotionLibrary(Generic[BackendSample]):
         if self._node_names is None:
             self._node_names = names
             self._parent_indices = parents
+            depths = [0] * len(parents)
+            levels = []
+            for body_idx, parent in enumerate(parents[1:], start=1):
+                if parent < 0 or parent >= body_idx:
+                    raise RuntimeError(
+                        "MotionLibrary FK requires parent-before-child joint order"
+                    )
+                depths[body_idx] = depths[parent] + 1
+                if len(levels) < depths[body_idx]:
+                    levels.append([])
+                levels[depths[body_idx] - 1].append(body_idx)
+            self._fk_levels = [
+                (
+                    torch.tensor(ids, dtype=torch.long, device=self._device),
+                    torch.tensor(
+                        [parents[idx] for idx in ids],
+                        dtype=torch.long,
+                        device=self._device,
+                    ),
+                )
+                for ids in levels
+            ]
             tree = skeleton_motion.skeleton_tree
             self._body_local_offsets = self._tensor(
                 [
@@ -409,7 +526,7 @@ class MotionLibrary(Generic[BackendSample]):
                     for index in range(len(names))
                 ]
             )
-            self._local_rotations = torch.empty((0, len(names), 4), device=self._device)
+            self._local_quat_wxyz = torch.empty((0, len(names), 4), device=self._device)
         elif names != self._node_names or parents != self._parent_indices:
             raise ValueError("all MotionLibrary clips must share one skeleton topology")
 
@@ -423,21 +540,38 @@ class MotionLibrary(Generic[BackendSample]):
         root_angular = self._angular_velocities(
             rotations[:, 0, :], skeleton_motion.fps()
         )
-        global_positions = None
-        global_rotations = None
-        global_linear = None
-        global_angular = None
-        if self._precompute_kinematics:
-            global_positions = self._tensor(skeleton_motion.global_positions())
-            global_rotations = self._tensor(skeleton_motion.global_rotations_wxyz())
-            global_linear = self._tensor(skeleton_motion.global_linear_velocities())
-            global_angular = self._tensor(skeleton_motion.global_angular_velocities())
+        source_body_frames = (
+            self._prepare_body_frames(skeleton_motion)
+            if self._precompute_kinematics
+            else None
+        )
 
         backend_data = None
+        body_frames = None
+        body_root_pos = None
+        body_local_quat_wxyz = None
         if self._adapter is not None:
-            backend_data = self._tensor(self._adapter.prepare_motion(motion))
+            # Project the motion onto the robot's joint axes before computing body tracks.
+            native_frames = self._adapter.prepare_motion(motion)
+            body_motion = self._adapter.prepare_body_motion(
+                native_frames, fps=skeleton_motion.fps()
+            )
+            if self._robot_body_local_offsets is None:
+                tree = body_motion.skeleton_tree
+                self._robot_body_local_offsets = self._tensor(
+                    [
+                        [getattr(tree.local_translation(idx), axis) for axis in "xyz"]
+                        for idx in range(len(names))
+                    ]
+                )
+            backend_data = self._tensor(native_frames)
             if backend_data.shape[0] != count:
                 raise ValueError("adapter frame data must match the motion frame count")
+            if self._precompute_kinematics:
+                body_frames = self._prepare_body_frames(body_motion)
+            else:
+                body_root_pos = self._tensor(body_motion.root_translations())
+                body_local_quat_wxyz = self._tensor(body_motion.local_rotations_wxyz())
         return _PreparedMotion(
             skeleton_motion=skeleton_motion,
             name=resolved_name,
@@ -445,36 +579,55 @@ class MotionLibrary(Generic[BackendSample]):
             count=count,
             fps=skeleton_motion.fps(),
             duration=skeleton_motion.duration(),
-            root_positions=roots,
-            root_linear_velocities=root_linear,
-            root_angular_velocities=root_angular,
-            local_rotations_wxyz=rotations,
-            global_positions=global_positions,
-            global_rotations_wxyz=global_rotations,
-            global_linear_velocities=global_linear,
-            global_angular_velocities=global_angular,
+            root_pos=roots,
+            root_vel=root_linear,
+            root_ang_vel=root_angular,
+            local_quat_wxyz=rotations,
+            source_body_frames=source_body_frames,
             backend_frame_data=backend_data,
+            body_frames=body_frames,
+            body_root_pos=body_root_pos,
+            body_local_quat_wxyz=body_local_quat_wxyz,
         )
 
-    def packed_buffers(self) -> MotionLibraryBuffers:
-        """Return tensor views suitable for persistent Torch/Warp interop."""
+    def source_buffers(self) -> MotionLibraryBuffers:
+        """Borrow source skeleton frames, source body frames, and clip metadata.
+
+        Body frames are source FK results before projection onto robot joints.
+        These are library-owned tensors, not the original input-file arrays.
+        Reacquire the view after adding clips or moving the library's device.
+        """
 
         return MotionLibraryBuffers(
-            root_positions=self._root_positions,
-            root_linear_velocities=self._root_linear_velocities,
-            root_angular_velocities=self._root_angular_velocities,
-            local_rotations_wxyz=self._local_rotations,
+            root_pos=self._root_pos,
+            root_vel=self._root_vel,
+            root_ang_vel=self._root_ang_vel,
+            local_quat_wxyz=self._local_quat_wxyz,
             frame_offsets=self._frame_offsets,
             frame_counts=self._frame_counts,
             fps=self._fps,
             durations=self._durations,
             weights=self._weights,
-            global_positions=self._global_positions,
-            global_rotations_wxyz=self._global_rotations,
-            global_linear_velocities=self._global_linear_velocities,
-            global_angular_velocities=self._global_angular_velocities,
-            backend_frame_data=self._backend_frame_data,
+            **{
+                field: getattr(self._source_body_frames, field)
+                if self._source_body_frames is not None
+                else None
+                for field in _BODY_FIELDS
+            },
         )
+
+    def body_buffers(self) -> BodyMotionState:
+        """Borrow precomputed world body poses and velocities in skeleton body order.
+
+        With an adapter, FK uses motion projected onto the robot's joints;
+        otherwise it uses the source skeleton. This call does not run FK.
+        Use sample_robot_state() for time-sampled joint and body targets.
+        Adding clips or moving devices invalidates these read-only views.
+        Requires precompute_kinematics=True.
+        """
+        if self._body_frames is None:
+            raise RuntimeError("body buffers require precomputed kinematics and a clip")
+        return self._body_frames
 
     def set_weights(self, weights: torch.Tensor | np.ndarray | list[float]) -> None:
         """Replace motion-selection weights."""
@@ -486,7 +639,11 @@ class MotionLibrary(Generic[BackendSample]):
             raise ValueError("weights must be non-negative with a positive sum")
         self._weights = values
 
-    def motion(self, motion_id: int) -> SkeletonMotion:
+    def motion(self, motion_id: int) -> MotionView[BackendSample]:
+        """Reference one clip without copying; index it to sample robot frames."""
+        return MotionView(self, self._validate_motion_id(motion_id))
+
+    def source_motion(self, motion_id: int) -> SkeletonMotion:
         """Return a retained source clip when source retention is enabled."""
 
         index = self._validate_motion_id(motion_id)
@@ -515,7 +672,11 @@ class MotionLibrary(Generic[BackendSample]):
     def sample_motion_times(
         self, count: int, *, truncate_time: float = 0.0
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Sample weighted motion IDs and valid times for those motions."""
+        """Sample weighted motion IDs and valid times for those motions.
+
+        truncate_time must be nonnegative and no greater than any selectable
+        clip's duration. This input contract is not checked during sampling.
+        """
 
         motion_ids = self.sample_motion_ids(count)
         return motion_ids, self.sample_times(
@@ -529,43 +690,216 @@ class MotionLibrary(Generic[BackendSample]):
         *,
         truncate_time: float = 0.0,
     ) -> torch.Tensor:
-        """Sample random valid times for supplied motion IDs."""
+        """Sample random times in [0, duration - truncate_time).
+
+        Args:
+            motion_ids: Valid clip IDs in [0, num_motions).
+            truncate_time: Seconds reserved at the end of each clip. Must lie in
+                [0, duration] for every selected clip; not checked during sampling.
+
+        Returns:
+            Times with the same shape as motion_ids on the library device.
+            When truncate_time equals a clip's duration, its sampled time is zero.
+        """
 
         ids = self._motion_ids(motion_ids)
         durations = self._durations[ids]
-        if truncate_time < 0.0 or bool(torch.any(durations < truncate_time)):
-            raise ValueError("truncate_time must lie within every selected motion")
         return torch.rand_like(durations) * (durations - truncate_time)
 
-    def sample_frames(
+    def sample_skel_state(
         self,
         motion_ids: torch.Tensor | np.ndarray | list[int] | int,
-        frame_indices: torch.Tensor | np.ndarray | list[int] | int,
+        times: torch.Tensor | np.ndarray | list[float] | float | None = None,
         *,
-        loop: bool = True,
-    ) -> MotionSample[BackendSample]:
-        """Sample exact frames with broadcastable device inputs."""
-
-        ids = self._motion_ids(motion_ids)
-        frames = torch.as_tensor(frame_indices, dtype=torch.long, device=self._device)
-        ids, frames = torch.broadcast_tensors(ids, frames)
-        counts = self._frame_counts[ids]
-        resolved = torch.remainder(frames, counts) if loop else frames.clamp_min(0)
-        if not loop:
-            resolved = torch.minimum(resolved, counts - 1)
-        return self._make_sample(ids, resolved, resolved, torch.zeros_like(ids).float())
-
-    def sample(
-        self,
-        motion_ids: torch.Tensor | np.ndarray | list[int] | int,
-        times: torch.Tensor | np.ndarray | list[float] | float,
-        *,
+        frame_ids: torch.Tensor | np.ndarray | list[int] | int | None = None,
         loop: bool = True,
         interpolate: bool = True,
-    ) -> MotionSample[BackendSample]:
-        """Sample clips at broadcastable device times in seconds."""
+    ) -> SkeletonMotionState:
+        """Sample skeleton poses and root velocities without adapter conversion.
 
+        Args:
+            motion_ids: IDs in [0, num_motions), broadcastable with times or frame_ids.
+            times: Times in seconds. Supply exactly one of times and frame_ids.
+            frame_ids: Integer clip-local frames, selected without interpolation.
+            loop: Wrap times/frames; otherwise clamp to the clip endpoints.
+            interpolate: Interpolate time queries; ignored for explicit frames.
+
+        Returns:
+            Root positions [..., 3], local WXYZ rotations [..., joints, 4],
+            and world-space root velocities [..., 3] on the library device.
+            Velocities interpolate linearly for interpolated time queries.
+        """
+        return self._evaluate(
+            self._query_skel_state,
+            motion_ids,
+            times,
+            frame_ids=frame_ids,
+            loop=loop,
+            interpolate=interpolate,
+        )
+
+    def _query_skel_state(
+        self, motion_ids, times, *, frame_ids=None, loop=True, interpolate=True
+    ):
+        frames = self._resolve_frames(
+            motion_ids, times, frame_ids=frame_ids, loop=loop, interpolate=interpolate
+        )
+        return self._sample_skel_state(*frames)
+
+    def sample_arti_state(
+        self,
+        motion_ids: torch.Tensor | np.ndarray | list[int] | int,
+        times: torch.Tensor | np.ndarray | list[float] | float | None = None,
+        *,
+        frame_ids: torch.Tensor | np.ndarray | list[int] | int | None = None,
+        loop: bool = True,
+        interpolate: bool = True,
+    ) -> BackendSample:
+        """Sample adapter-native coordinates and velocities, including a free root.
+
+        Args:
+            motion_ids: IDs in [0, num_motions), broadcastable with times or frame_ids.
+            times: Times in seconds. Supply exactly one of times and frame_ids.
+            frame_ids: Integer clip-local frames, selected without interpolation.
+            loop: Wrap times/frames; otherwise clamp to the clip endpoints.
+            interpolate: Interpolate time queries; ignored for explicit frames.
+
+        Returns:
+            Adapter-native tensors. The adapter defines coordinate order and
+            velocity frames. Requires an adapter.
+        """
+        return self._evaluate(
+            self._query_arti_state,
+            motion_ids,
+            times,
+            frame_ids=frame_ids,
+            loop=loop,
+            interpolate=interpolate,
+        )
+
+    def _query_arti_state(
+        self, motion_ids, times, *, frame_ids=None, loop=True, interpolate=True
+    ):
+        frames = self._resolve_frames(
+            motion_ids, times, frame_ids=frame_ids, loop=loop, interpolate=interpolate
+        )
+        return self._sample_arti_state(*frames)
+
+    def sample_body_state(
+        self,
+        motion_ids: torch.Tensor | np.ndarray | list[int] | int,
+        times: torch.Tensor | np.ndarray | list[float] | float | None = None,
+        *,
+        frame_ids: torch.Tensor | np.ndarray | list[int] | int | None = None,
+        loop: bool = True,
+        interpolate: bool = True,
+    ) -> BodyMotionState:
+        """Sample world body tracks prepared from robot poses, or source poses without an adapter.
+
+        Args:
+            motion_ids: IDs in [0, num_motions), broadcastable with times or frame_ids.
+            times: Times in seconds. Supply exactly one of times and frame_ids.
+            frame_ids: Integer clip-local frames, selected without interpolation.
+            loop: Wrap times/frames; otherwise clamp to the clip endpoints.
+            interpolate: Interpolate time queries; ignored for explicit frames.
+
+        Returns:
+            Body frames are computed from converted robot poses at load time.
+            World poses and velocities interpolate between those frames;
+            interpolated body poses need not equal FK of interpolated joints.
+            With precompute_kinematics=False, interpolated local robot poses
+            are evaluated with FK and body velocities are None.
+        """
+        return self._evaluate(
+            self._query_body_state,
+            motion_ids,
+            times,
+            frame_ids=frame_ids,
+            loop=loop,
+            interpolate=interpolate,
+        )
+
+    def _query_body_state(
+        self, motion_ids, times, *, frame_ids=None, loop=True, interpolate=True
+    ):
+        frames = self._resolve_frames(
+            motion_ids, times, frame_ids=frame_ids, loop=loop, interpolate=interpolate
+        )
+        return self._sample_body_state(*frames)
+
+    def sample_robot_state(
+        self,
+        motion_ids: torch.Tensor | np.ndarray | list[int] | int,
+        times: torch.Tensor | np.ndarray | list[float] | float | None = None,
+        *,
+        frame_ids: torch.Tensor | np.ndarray | list[int] | int | None = None,
+        loop: bool = True,
+        interpolate: bool = True,
+    ) -> tuple[BackendSample, BodyMotionState]:
+        """Return (adapted motion, body motion) using one shared frame lookup.
+
+        Args:
+            motion_ids: IDs in [0, num_motions), broadcastable with times or frame_ids.
+            times: Times in seconds. Supply exactly one of times and frame_ids.
+            frame_ids: Integer clip-local frames, selected without interpolation.
+            loop: Wrap times/frames; otherwise clamp to the clip endpoints.
+            interpolate: Interpolate time queries; ignored for explicit frames.
+
+        Returns:
+            Body tracks follow sample_body_state(): converted robot frames,
+            interpolated in world space by default. Disabling precomputation
+            uses FK of interpolated local robot poses and no body velocities.
+            The first result uses adapter-native coordinates; requires an adapter.
+        """
+        return self._evaluate(
+            self._query_robot_state,
+            motion_ids,
+            times,
+            frame_ids=frame_ids,
+            loop=loop,
+            interpolate=interpolate,
+        )
+
+    def _query_robot_state(
+        self, motion_ids, times, *, frame_ids=None, loop=True, interpolate=True
+    ):
+        frames = self._resolve_frames(
+            motion_ids, times, frame_ids=frame_ids, loop=loop, interpolate=interpolate
+        )
+        return self._sample_arti_state(*frames), self._sample_body_state(*frames)
+
+    def adapted_buffers(self) -> BackendSample:
+        """Borrow motion frames converted to the engine's joint order and coordinates.
+
+        Requires an adapter. Fields follow its native state format.
+        Treat them as read-only. Adding clips or moving devices invalidates them.
+        """
+        if self._adapter is None or self._backend_frame_data is None:
+            raise RuntimeError("adapted buffers require a motion adapter")
+        return self._adapter.frame_buffers(self._backend_frame_data)
+
+    def _resolve_frames(
+        self, motion_ids, times, *, frame_ids=None, loop=True, interpolate=True
+    ):
+        if (times is None) == (frame_ids is None):
+            raise ValueError("supply exactly one of times and frame_ids")
         ids = self._motion_ids(motion_ids)
+        if frame_ids is not None:
+            frames = torch.as_tensor(frame_ids, device=self._device)
+            if (
+                frames.dtype.is_floating_point
+                or frames.dtype.is_complex
+                or frames.dtype == torch.bool
+            ):
+                raise TypeError("frame_ids must contain integers")
+            ids, frames = torch.broadcast_tensors(ids, frames.long())
+            counts = self._frame_counts[ids]
+            resolved = torch.remainder(frames, counts) if loop else frames.clamp_min(0)
+            if not loop:
+                resolved = torch.minimum(resolved, counts - 1)
+            # Sharing the index tensor marks exact queries for the samplers.
+            return ids, resolved, resolved, torch.zeros_like(ids, dtype=torch.float32)
+
         values = torch.as_tensor(times, dtype=torch.float32, device=self._device)
         ids, values = torch.broadcast_tensors(ids, values)
         counts = self._frame_counts[ids]
@@ -583,99 +917,152 @@ class MotionLibrary(Generic[BackendSample]):
         if not interpolate:
             following = first
             blend = torch.zeros_like(blend)
-        return self._make_sample(ids, first, following, blend)
+        return ids, first, following, blend
+
+    def _sample_arti_state(self, ids, first, following, blend):
+        if self._adapter is None or self._backend_frame_data is None:
+            raise RuntimeError("articulation sampling requires a motion adapter")
+        offsets = self._frame_offsets[ids]
+        if first is following:
+            return self._adapter.frame_buffers(
+                self._backend_frame_data[offsets + first]
+            )
+        return self._adapter.pack_sample(
+            backend_frame_data=self._backend_frame_data[offsets + first],
+            next_backend_frame_data=self._backend_frame_data[offsets + following],
+            blend=blend,
+        )
 
     def forward_kinematics(
-        self, sample: MotionSample[BackendSample]
-    ) -> MotionKinematics:
-        """Run batched FK on the library's robot skeleton after pose sampling."""
+        self, sample: SkeletonMotionState | BackendSample
+    ) -> BodyMotionState:
+        """Compute world body poses from a skeleton or supported adapter state.
+
+        PhysXMotionState uses the library adapter's logical joint order. Other
+        adapter states are currently unsupported. Leading batch dimensions and
+        device are preserved; body velocities are None.
+        """
+        return self._evaluate(self._forward_kinematics, sample)
+
+    def _forward_kinematics(self, sample):
+        # TODO: Implement PhysX-state batched FK in C++ as well.
 
         if self._parent_indices is None:
             raise RuntimeError("cannot run FK on an empty MotionLibrary")
-        rotations = sample.local_rotations_wxyz
-        body_positions = [sample.root_positions]
-        body_rotations = [rotations[..., 0, :]]
-        for joint in range(1, len(self._parent_indices)):
-            parent = self._parent_indices[joint]
-            if parent < 0 or parent >= joint:
-                raise RuntimeError(
-                    "MotionLibrary FK requires parent-before-child joint order"
+        if isinstance(sample, SkeletonMotionState):
+            root_pos, rotations = sample.root_pos, sample.local_quat_wxyz
+            offsets = self._body_local_offsets
+        else:
+            to_pose = getattr(self._adapter, "to_skeleton_pose", None)
+            if to_pose is None:
+                raise NotImplementedError(
+                    "this motion adapter does not support state FK"
                 )
-            parent_rotation = body_rotations[parent]
-            offset = quat_wxyz_rotate(parent_rotation, self._body_local_offsets[joint])
-            body_positions.append(body_positions[parent] + offset)
-            body_rotations.append(
-                quat_wxyz_multiply(parent_rotation, rotations[..., joint, :])
+            root_pos, rotations = to_pose(sample)
+            offsets = self._robot_body_local_offsets
+
+        return self._pose_fk(root_pos, rotations, offsets)
+
+    def _pose_fk(self, root_pos, rotations, offsets):
+        # Parents are complete before all children at the next depth are evaluated.
+        body_pos_w = root_pos.new_empty((*rotations.shape[:-1], 3))
+        body_rotations = torch.empty_like(rotations)
+        body_pos_w[..., 0, :] = root_pos
+        body_rotations[..., 0, :] = rotations[..., 0, :]
+        for ids, parents in self._fk_levels:
+            parent_rotation = body_rotations[..., parents, :]
+            offset = quat_wxyz_rotate(parent_rotation, offsets[ids])
+            body_pos_w[..., ids, :] = body_pos_w[..., parents, :] + offset
+            body_rotations[..., ids, :] = quat_wxyz_multiply(
+                parent_rotation, rotations[..., ids, :]
             )
-        return MotionKinematics(
-            body_positions=torch.stack(body_positions, dim=-2),
-            body_rotations_wxyz=torch.stack(body_rotations, dim=-2),
+        return BodyMotionState(body_pos_w=body_pos_w, body_quat_wxyz_w=body_rotations)
+
+    def _sample_body_state(self, ids, first, following, blend):
+        frames = self._body_frames
+        if frames is None:
+            if self._adapter is not None:
+                start = self._frame_offsets[ids] + first
+                end = self._frame_offsets[ids] + following
+                roots = torch.lerp(
+                    self._body_root_pos[start],
+                    self._body_root_pos[end],
+                    blend.unsqueeze(-1),
+                )
+                rotations = quat_wxyz_slerp(
+                    self._body_local_quat_wxyz[start],
+                    self._body_local_quat_wxyz[end],
+                    blend.unsqueeze(-1),
+                )
+                return self._pose_fk(roots, rotations, self._robot_body_local_offsets)
+            return self._forward_kinematics(
+                self._sample_skel_state(ids, first, following, blend)
+            )
+        positions, rotations = frames.body_pos_w, frames.body_quat_wxyz_w
+        velocities, angular = frames.body_vel_w, frames.body_ang_vel_w
+        offsets = self._frame_offsets[ids]
+        if first is following:
+            frame = offsets + first
+            return BodyMotionState(
+                positions[frame],
+                rotations[frame],
+                velocities[frame],
+                angular[frame],
+            )
+        first = offsets + first
+        following = offsets + following
+        position_blend = blend.unsqueeze(-1).unsqueeze(-1)
+        return BodyMotionState(
+            body_pos_w=torch.lerp(
+                positions[first], positions[following], position_blend
+            ),
+            body_quat_wxyz_w=quat_wxyz_slerp(
+                rotations[first], rotations[following], blend.unsqueeze(-1)
+            ),
+            body_vel_w=torch.lerp(
+                velocities[first], velocities[following], position_blend
+            ),
+            body_ang_vel_w=torch.lerp(
+                angular[first],
+                angular[following],
+                position_blend,
+            ),
         )
 
-    def sample_kinematics(
-        self, sample: MotionSample[BackendSample]
-    ) -> MotionKinematics:
-        """Interpolate precomputed global transforms for a motion sample."""
-
-        if self._global_positions is None or self._global_rotations is None:
-            return self.forward_kinematics(sample)
-        offsets = self._frame_offsets[sample.motion_ids]
-        first = offsets + sample.frame_indices
-        following = offsets + sample.next_frame_indices
-        position_blend = sample.blend.unsqueeze(-1).unsqueeze(-1)
-        positions = (
-            self._global_positions[first]
-            + (self._global_positions[following] - self._global_positions[first])
-            * position_blend
-        )
-        rotations = quat_wxyz_slerp(
-            self._global_rotations[first],
-            self._global_rotations[following],
-            sample.blend.unsqueeze(-1),
-        )
-        return MotionKinematics(
-            body_positions=positions,
-            body_rotations_wxyz=rotations,
-        )
-
-    def _make_sample(self, ids, first, following, blend):
+    def _sample_skel_state(self, ids, first, following, blend):
         offsets = self._frame_offsets[ids]
         first_packed = offsets + first
         next_packed = offsets + following
-        blend_column = blend.unsqueeze(-1)
-        roots = (
-            self._root_positions[first_packed]
-            + (self._root_positions[next_packed] - self._root_positions[first_packed])
-            * blend_column
-        )
-        local_rotations = quat_wxyz_slerp(
-            self._local_rotations[first_packed],
-            self._local_rotations[next_packed],
-            blend.unsqueeze(-1),
-        )
-        root_rotations = local_rotations[..., 0, :]
-        root_linear = self._root_linear_velocities[first_packed]
-        root_angular = self._root_angular_velocities[first_packed]
-        backend_state = None
-        if self._adapter is not None:
-            assert self._backend_frame_data is not None
-            backend_state = self._adapter.pack_sample(
-                root_positions=roots,
-                root_rotations_wxyz=root_rotations,
-                root_linear_velocities=root_linear,
-                root_angular_velocities=root_angular,
-                local_rotations_wxyz=local_rotations,
-                backend_frame_data=self._backend_frame_data[first_packed],
-                next_backend_frame_data=self._backend_frame_data[next_packed],
-                blend=blend,
+        if first is following:
+            roots = self._root_pos[first_packed]
+            local_rotations = self._local_quat_wxyz[first_packed]
+            root_linear = self._root_vel[first_packed]
+            root_angular = self._root_ang_vel[first_packed]
+        else:
+            blend_column = blend.unsqueeze(-1)
+            roots = torch.lerp(
+                self._root_pos[first_packed], self._root_pos[next_packed], blend_column
             )
-        return MotionSample(
-            root_positions=roots,
-            root_rotations_wxyz=root_rotations,
-            root_linear_velocities=root_linear,
-            root_angular_velocities=root_angular,
-            local_rotations_wxyz=local_rotations,
-            backend_state=backend_state,
+            local_rotations = quat_wxyz_slerp(
+                self._local_quat_wxyz[first_packed],
+                self._local_quat_wxyz[next_packed],
+                blend.unsqueeze(-1),
+            )
+            root_linear = torch.lerp(
+                self._root_vel[first_packed], self._root_vel[next_packed], blend_column
+            )
+            root_angular = torch.lerp(
+                self._root_ang_vel[first_packed],
+                self._root_ang_vel[next_packed],
+                blend_column,
+            )
+        root_rotations = local_rotations[..., 0, :]
+        return SkeletonMotionState(
+            root_pos=roots,
+            root_quat_wxyz=root_rotations,
+            root_vel=root_linear,
+            root_ang_vel=root_angular,
+            local_quat_wxyz=local_rotations,
             motion_ids=ids,
             frame_indices=first,
             next_frame_indices=following,
@@ -761,8 +1148,8 @@ class MotionLibrary(Generic[BackendSample]):
     def _motion_on_skeleton(
         path: Path,
         skeleton_tree: SkeletonTree,
-        root_positions: np.ndarray,
-        local_rotations_wxyz: np.ndarray,
+        root_pos: np.ndarray,
+        local_quat_wxyz: np.ndarray,
         fps: float,
         joint_names: Sequence[str] | None,
         fallback_joint_names: Sequence[str] | None,
@@ -771,28 +1158,28 @@ class MotionLibrary(Generic[BackendSample]):
         names = list(joint_names) if joint_names is not None else None
         if names is None:
             if fallback_joint_names is None:
-                if local_rotations_wxyz.shape[1] != len(target_names):
+                if local_quat_wxyz.shape[1] != len(target_names):
                     raise ValueError(
                         "unnamed motion rotations do not match the target skeleton"
                     )
                 names = target_names
             else:
                 names = [target_names[0], *fallback_joint_names]
-        if len(names) != local_rotations_wxyz.shape[1]:
+        if len(names) != local_quat_wxyz.shape[1]:
             raise ValueError("motion joint names do not match the rotation count")
         if len(set(names)) != len(names) or not set(names).issubset(target_names):
             raise ValueError("motion joint names do not match the target skeleton")
 
         rotations = np.zeros(
-            (local_rotations_wxyz.shape[0], len(target_names), 4),
+            (local_quat_wxyz.shape[0], len(target_names), 4),
             dtype=np.float32,
         )
         rotations[..., 0] = 1.0
         for source_id, name in enumerate(names):
-            rotations[:, target_names.index(name)] = local_rotations_wxyz[:, source_id]
+            rotations[:, target_names.index(name)] = local_quat_wxyz[:, source_id]
         return SkeletonMotion.from_arrays(
             skeleton_tree,
-            root_positions,
+            root_pos,
             rotations,
             fps,
             path.stem,
@@ -835,6 +1222,27 @@ class MotionLibrary(Generic[BackendSample]):
     def _tensor(self, value) -> torch.Tensor:
         return torch.as_tensor(value, dtype=torch.float32, device=self._device)
 
+    def _prepare_body_frames(self, motion: SkeletonMotion) -> BodyMotionState:
+        return BodyMotionState(
+            self._tensor(motion.global_positions()),
+            self._tensor(motion.global_rotations_wxyz()),
+            self._tensor(motion.global_linear_velocities()),
+            self._tensor(motion.global_angular_velocities()),
+        )
+
+    def _pack_body_frames(
+        self, current: BodyMotionState | None, chunks: list[BodyMotionState]
+    ) -> BodyMotionState:
+        return BodyMotionState(
+            *(
+                self._pack_optional(
+                    getattr(current, field) if current is not None else None,
+                    [getattr(chunk, field) for chunk in chunks],
+                )
+                for field in _BODY_FIELDS
+            )
+        )
+
     @staticmethod
     def _angular_velocities(rotations: torch.Tensor, fps: float) -> torch.Tensor:
         """Differentiate WXYZ rotations with MotionLib's forward convention."""
@@ -868,10 +1276,8 @@ class MotionLibrary(Generic[BackendSample]):
         return torch.cat((current, appended))
 
     def _motion_ids(self, motion_ids) -> torch.Tensor:
-        ids = torch.as_tensor(motion_ids, dtype=torch.long, device=self._device)
-        if bool(torch.any(ids < 0)) or bool(torch.any(ids >= self.num_motions)):
-            raise IndexError("motion_ids contain an out-of-range ID")
-        return ids
+        # Trust clip IDs during batch queries to avoid CUDA-to-host synchronization.
+        return torch.as_tensor(motion_ids, dtype=torch.long, device=self._device)
 
     def _validate_motion_id(self, motion_id: int) -> int:
         motion_id = int(motion_id)

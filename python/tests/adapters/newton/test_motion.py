@@ -88,13 +88,10 @@ def test_motion_library_samples_newton_native_state():
     library = ke.animation.MotionLibrary([motion], adapter=adapter)
     expected = adapter.pack(motion)
 
-    sample = library.sample_frames(0, 1)
-    assert sample.backend_state is not None
+    sample = library.sample_arti_state(0, frame_ids=1)
+    np.testing.assert_allclose(sample.joint_q, expected.joint_q[1], atol=1e-6)
     np.testing.assert_allclose(
-        sample.backend_state.joint_q, expected.joint_q[1], atol=1e-6
-    )
-    np.testing.assert_allclose(
-        sample.backend_state.joint_qd,
+        sample.joint_qd,
         expected.joint_qd[1],
         atol=1e-6,
     )

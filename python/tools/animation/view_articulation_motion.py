@@ -85,7 +85,7 @@ class ArticulationMotionViewer(ke.App):
         adapter = PhysXMotionAdapter(layout)
         adapter.validate_articulation(self.robot.articulation)
         self.buffers = adapter.pack(self.motion)
-        if self.buffers.root_positions is None:
+        if self.buffers.root_pos is None:
             raise ValueError(
                 "viewer currently requires a free-root articulation motion"
             )
@@ -173,16 +173,16 @@ class ArticulationMotionViewer(ke.App):
         buffers = self.buffers
         self.robot.set_root_state(
             None,
-            buffers.root_positions[index],
-            buffers.root_rotations_xyzw[index],
-            buffers.root_linear_velocities[index],
-            buffers.root_angular_velocities[index],
+            buffers.root_pos[index],
+            buffers.root_quat_xyzw[index],
+            buffers.root_vel[index],
+            buffers.root_ang_vel[index],
             immediate=True,
         )
         self.robot.set_dof_state(
             None,
-            buffers.joint_positions[index],
-            buffers.joint_velocities[index],
+            buffers.joint_pos[index],
+            buffers.joint_vel[index],
             immediate=True,
         )
         self.world.step(substeps=0, apply_commands=False)

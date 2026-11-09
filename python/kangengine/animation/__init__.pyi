@@ -50,12 +50,16 @@ from .retarget import (
     scale_skeleton_motion as scale_skeleton_motion,
 )
 from .motion_library import (
-    MotionKinematics as MotionKinematics,
+    BodyMotionState as BodyMotionState,
+    MotionView as MotionView,
     MotionLibrary as MotionLibrary,
     MotionLibraryBuffers as MotionLibraryBuffers,
-    MotionSample as MotionSample,
+    SkeletonMotionState as SkeletonMotionState,
 )
 from .matching import (
+    MotionMatchBatch as MotionMatchBatch,
+    MotionMatchingBatchSearch as MotionMatchingBatchSearch,
+    MotionMatchingBatchController as MotionMatchingBatchController,
     MotionMatchingConfig as MotionMatchingConfig,
     MotionMatchingDatabase as MotionMatchingDatabase,
     MotionMatchingController as MotionMatchingController,
@@ -326,7 +330,7 @@ class MotionMatch:
     def __eq__(self, other: object) -> bool: ...
     def __hash__(self) -> int: ...
 
-class MotionMatchingIndex:
+class MotionMatchingSearch:
     """Owned float64 feature storage with exact nearest-candidate search."""
 
     def __init__(

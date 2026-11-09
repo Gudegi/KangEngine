@@ -80,7 +80,7 @@ def main() -> None:
     )
     skeleton_motion = _load_kw_motion(motion_path, articulation_data.skeleton_tree)
     adapter = NewtonMotionAdapter(layout)
-    library = ke.animation.MotionLibrary(
+    motion_lib = ke.animation.MotionLibrary(
         [skeleton_motion],
         adapter=adapter,
         device=args.device,
@@ -109,7 +109,7 @@ def main() -> None:
     print(
         f"Newton articulation motion: {mjcf_path}\n"
         f"source={motion_path}\n"
-        f"frames={library.frame_counts[0].item()} fps={skeleton_motion.fps():g} "
+        f"frames={motion_lib.frame_counts[0].item()} fps={skeleton_motion.fps():g} "
         f"canonical nq/nv={layout.nq}/{layout.nv} device={args.device}\n"
         "viewer=Newton ViewerGL, source=MotionLibrary -> Newton native"
     )
@@ -117,15 +117,9 @@ def main() -> None:
         while viewer.is_running():
             if viewer.should_step():
                 frame = (frame + 1) % skeleton_motion.num_frames()
-            sample = library.sample_frames(0, frame)
-            if sample.backend_state is None:
-                raise RuntimeError("Newton MotionLibrary adapter produced no state")
-            model.joint_q.assign(
-                wp.from_torch(sample.backend_state.joint_q.contiguous())
-            )
-            model.joint_qd.assign(
-                wp.from_torch(sample.backend_state.joint_qd.contiguous())
-            )
+            sample = motion_lib.sample_arti_state(0, frame_ids=frame)
+            model.joint_q.assign(wp.from_torch(sample.joint_q.contiguous()))
+            model.joint_qd.assign(wp.from_torch(sample.joint_qd.contiguous()))
             newton.eval_fk(model, model.joint_q, model.joint_qd, state)
 
             viewer.begin_frame(frame / skeleton_motion.fps())

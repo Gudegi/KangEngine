@@ -15,12 +15,14 @@ from ...animation.articulation_motion import (
     ArticulationMotion,
     ArticulationMotionMapper,
 )
-from ...utils.batched_rotations import quat_wxyz_conjugate, quat_wxyz_multiply
+from ...utils import batched_rotations
 from ...utils.math import quat_wxyz_rotate_numpy
 from ._dependency import load_mujoco
 
 if TYPE_CHECKING:
     import mujoco
+
+    from .transition import MuJoCoMotionTransition
 
 
 FloatArray = npt.NDArray[np.float32]
@@ -35,7 +37,7 @@ class MuJoCoMotionBuffers:
 
 
 @dataclass(frozen=True)
-class MuJoCoMotionTensorSample:
+class MuJoCoMotionState:
     """Sample-major MuJoCo qpos/qvel tensors."""
 
     qpos: torch.Tensor
@@ -57,15 +59,25 @@ class MuJoCoMotionAdapter:
                 ArticulationCoordinateType.SPHERICAL,
             )
         )
-        self._revolute_blocks = tuple(
-            block
-            for block in layout.blocks
-            if block.type == ArticulationCoordinateType.REVOLUTE
-        )
+        offsets = [
+            block.q_offset + (3 if block.type == ArticulationCoordinateType.FREE else 0)
+            for block in self._rotation_blocks
+        ]
+        self._quaternion_ids = {
+            torch.device("cpu"): torch.tensor(offsets, dtype=torch.long).unsqueeze(-1)
+            + torch.arange(4)
+        }
 
     @property
     def layout(self) -> ArticulationCoordinateLayout:
         return self._layout
+
+    def _create_transition(
+        self, native, buffers, num_envs, rate
+    ) -> MuJoCoMotionTransition:
+        from .transition import MuJoCoMotionTransition
+
+        return MuJoCoMotionTransition(self._layout, native, buffers, num_envs, rate)
 
     def validate_model(self, model: mujoco.MjModel, *, strict: bool = True) -> None:
         """Verify that a compiled MjModel uses the canonical offsets."""
@@ -168,79 +180,49 @@ class MuJoCoMotionAdapter:
         buffers = self.pack(articulation_motion)
         return np.concatenate((buffers.qpos, buffers.qvel), axis=1)
 
+    def prepare_body_motion(self, data: FloatArray, *, fps: float):
+        """Reconstruct robot-representable poses from prepared CPU frames."""
+        motion = self.unpack(
+            data[:, : self._layout.nq], data[:, self._layout.nq :], fps=fps
+        )
+        return ArticulationMotionMapper(self._layout).to_skeleton_motion(motion)
+
+    def frame_buffers(self, data: torch.Tensor) -> MuJoCoMotionState:
+        """Borrow typed MuJoCo frame buffers without copying."""
+        return MuJoCoMotionState(
+            data[..., : self._layout.nq], data[..., self._layout.nq :]
+        )
+
     def pack_sample(
         self,
         *,
-        root_positions: torch.Tensor,
-        root_rotations_wxyz: torch.Tensor,
-        root_linear_velocities: torch.Tensor,
-        root_angular_velocities: torch.Tensor,
-        local_rotations_wxyz: torch.Tensor,
         backend_frame_data: torch.Tensor,
         next_backend_frame_data: torch.Tensor,
         blend: torch.Tensor,
-    ) -> MuJoCoMotionTensorSample:
-        """Convert sampled quaternion poses to MuJoCo qpos/qvel tensors."""
+    ) -> MuJoCoMotionState:
+        """Interpolate prepared coordinates and native velocities."""
+        first = backend_frame_data[..., : self._layout.nq]
+        following = next_backend_frame_data[..., : self._layout.nq]
+        qpos = first + (following - first) * blend.unsqueeze(-1)
+        qvel = torch.lerp(
+            backend_frame_data[..., self._layout.nq :],
+            next_backend_frame_data[..., self._layout.nq :],
+            blend.unsqueeze(-1),
+        )
 
-        first_qpos = backend_frame_data[..., : self._layout.nq]
-        next_qpos = next_backend_frame_data[..., : self._layout.nq]
-        qpos = first_qpos + (next_qpos - first_qpos) * blend.unsqueeze(-1)
-        qvel = backend_frame_data[..., self._layout.nq :].clone()
-        for block in self._revolute_blocks:
-            delta = (
-                torch.remainder(
-                    next_qpos[..., block.q_offset]
-                    - first_qpos[..., block.q_offset]
-                    + torch.pi,
-                    2.0 * torch.pi,
-                )
-                - torch.pi
-            )
-            qpos[..., block.q_offset] = first_qpos[..., block.q_offset] + blend * delta
-
-        for block in self._rotation_blocks:
-            if block.type == ArticulationCoordinateType.FREE:
-                qpos[..., block.q_offset : block.q_offset + 3] = root_positions
-                quaternion = root_rotations_wxyz
-                qvel[..., block.qd_offset : block.qd_offset + 3] = (
-                    root_linear_velocities
-                )
-                world_angular = root_angular_velocities
-            else:
-                reference = torch.as_tensor(
-                    np.asarray(block.reference_rotation, dtype=np.float32),
-                    dtype=local_rotations_wxyz.dtype,
-                    device=local_rotations_wxyz.device,
-                )
-                quaternion = quat_wxyz_multiply(
-                    quat_wxyz_conjugate(reference),
-                    local_rotations_wxyz[..., block.body_index, :],
-                )
-                angular_offset = block.qd_offset
-                world_angular = qvel[
-                    ..., angular_offset : angular_offset + block.qd_size
-                ]
-            rotation_offset = (
-                block.q_offset + 3
-                if block.type == ArticulationCoordinateType.FREE
-                else block.q_offset
-            )
-            angular_offset = (
-                block.qd_offset + 3
-                if block.type == ArticulationCoordinateType.FREE
-                else block.qd_offset
-            )
-            qpos[..., rotation_offset : rotation_offset + 4] = quaternion
-            if block.type == ArticulationCoordinateType.FREE:
-                vector = torch.cat(
-                    (torch.zeros_like(world_angular[..., :1]), world_angular), dim=-1
-                )
-                local = quat_wxyz_multiply(
-                    quat_wxyz_multiply(quat_wxyz_conjugate(quaternion), vector),
-                    quaternion,
-                )[..., 1:]
-                qvel[..., angular_offset : angular_offset + 3] = local
-        return MuJoCoMotionTensorSample(qpos=qpos, qvel=qvel)
+        # Reuse device indices and interpolate all quaternion joints together.
+        if first.device not in self._quaternion_ids:
+            self._quaternion_ids[first.device] = self._quaternion_ids[
+                torch.device("cpu")
+            ].to(first.device)
+        ids = self._quaternion_ids[first.device]
+        first_rotation = first[..., ids]
+        next_rotation = following[..., ids]
+        rotation = batched_rotations.quat_wxyz_slerp(
+            first_rotation, next_rotation, blend.unsqueeze(-1)
+        )
+        qpos[..., ids] = rotation
+        return MuJoCoMotionState(qpos=qpos, qvel=qvel)
 
     def unpack(
         self,

@@ -1,4 +1,4 @@
-#include "motion_matching_index.hpp"
+#include "motion_matching_search.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,7 +8,7 @@
 
 namespace KE::Animation {
 
-MotionMatchingIndex::MotionMatchingIndex(
+MotionMatchingSearch::MotionMatchingSearch(
     std::vector<double> features, std::size_t featureDimension,
     std::vector<MotionMatchingClipInfo> clips)
     : _features(std::move(features)), _featureDimension(featureDimension),
@@ -37,8 +37,8 @@ MotionMatchingIndex::MotionMatchingIndex(
 }
 
 MotionMatch
-MotionMatchingIndex::search(const std::vector<double>& query,
-                            const MotionMatchingSearchOptions& options) const {
+MotionMatchingSearch::search(const std::vector<double>& query,
+                             const MotionMatchingSearchOptions& options) const {
     if (query.size() != _featureDimension ||
         !std::all_of(query.begin(), query.end(),
                      [](double value) { return std::isfinite(value); }))

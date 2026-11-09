@@ -21,7 +21,7 @@
 #include "animation/skeleton_motion_player.hpp"
 #include "animation/trajectory_spring.hpp"
 #include "animation/skeleton_pose_smoother.hpp"
-#include "animation/motion_matching_index.hpp"
+#include "animation/motion_matching_search.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
 #include "animation/skinning.hpp"
@@ -1304,9 +1304,9 @@ void bind_animation(py::module& m) {
 
     using DoubleFeatures =
         py::array_t<double, py::array::c_style | py::array::forcecast>;
-    py::class_<MotionMatchingIndex>(
-        anim, "MotionMatchingIndex",
-        "Owned float64 feature index with exact native search.")
+    py::class_<MotionMatchingSearch>(
+        anim, "MotionMatchingSearch",
+        "Exact nearest-feature search over owned float64 data.")
         .def(py::init([](const DoubleFeatures& features,
                          const std::vector<std::size_t>& frameCounts,
                          const std::vector<std::size_t>& candidateCounts,
@@ -1323,7 +1323,7 @@ void bind_animation(py::module& m) {
                  for (std::size_t i = 0; i < fps.size(); ++i)
                      clips.push_back(
                          {frameCounts[i], candidateCounts[i], fps[i]});
-                 return MotionMatchingIndex(
+                 return MotionMatchingSearch(
                      std::vector<double>(features.data(),
                                          features.data() + features.size()),
                      static_cast<std::size_t>(features.shape(1)),
@@ -1331,13 +1331,13 @@ void bind_animation(py::module& m) {
              }),
              py::arg("features"), py::kw_only(), py::arg("clip_frame_counts"),
              py::arg("clip_candidate_counts"), py::arg("clip_fps"))
-        .def_property_readonly("num_frames", &MotionMatchingIndex::numFrames)
+        .def_property_readonly("num_frames", &MotionMatchingSearch::numFrames)
         .def_property_readonly("feature_dimension",
-                               &MotionMatchingIndex::featureDimension)
-        .def_property_readonly("num_motions", &MotionMatchingIndex::numMotions)
+                               &MotionMatchingSearch::featureDimension)
+        .def_property_readonly("num_motions", &MotionMatchingSearch::numMotions)
         .def(
             "search",
-            [](const MotionMatchingIndex& self, const DoubleFeatures& query,
+            [](const MotionMatchingSearch& self, const DoubleFeatures& query,
                std::optional<std::size_t> currentMotionIndex,
                std::optional<double> currentTime, double continuationBias,
                std::optional<std::vector<std::size_t>> allowedMotionIndices) {
@@ -1346,7 +1346,7 @@ void bind_animation(py::module& m) {
                         self.featureDimension())
                     throw py::value_error(
                         "query must have shape [feature_dimension]");
-                // Copy this small query before releasing the GIL. The index
+                // Copy this small query before releasing the GIL. The search backend
                 // owns its feature storage independently of Python arrays.
                 std::vector<double> values(query.data(),
                                            query.data() + query.size());

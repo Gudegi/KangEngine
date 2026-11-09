@@ -72,10 +72,11 @@ __all__ += [
     "IKRetargetProcessor",
     "IKRetargetResult",
     "IKTargetProfile",
-    "MotionKinematics",
+    "BodyMotionState",
+    "MotionView",
     "MotionLibrary",
     "MotionLibraryBuffers",
-    "MotionSample",
+    "SkeletonMotionState",
     "MotionMatchingConfig",
     "MotionMatchingDatabase",
     "MotionMatchingController",
@@ -107,16 +108,20 @@ for _type in (
     set_public_module(_type, __name__)
 
 _LAZY_IMPORTS = {
+    "MotionMatchBatch": (".matching", "MotionMatchBatch"),
+    "MotionMatchingBatchSearch": (".matching", "MotionMatchingBatchSearch"),
+    "MotionMatchingBatchController": (".matching", "MotionMatchingBatchController"),
     "FootContactDetector": (".contact_detector", "FootContactDetector"),
     "FootContactModule": (".modules", "FootContactModule"),
     "MotionMatchingConfig": (".matching", "MotionMatchingConfig"),
     "MotionMatchingDatabase": (".matching", "MotionMatchingDatabase"),
     "MotionMatchingController": (".matching", "MotionMatchingController"),
     "WalkingFeatures": (".matching", "WalkingFeatures"),
-    "MotionKinematics": (".motion_library", "MotionKinematics"),
+    "BodyMotionState": (".motion_library", "BodyMotionState"),
+    "MotionView": (".motion_library", "MotionView"),
     "MotionLibrary": (".motion_library", "MotionLibrary"),
     "MotionLibraryBuffers": (".motion_library", "MotionLibraryBuffers"),
-    "MotionSample": (".motion_library", "MotionSample"),
+    "SkeletonMotionState": (".motion_library", "SkeletonMotionState"),
 }
 
 

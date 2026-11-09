@@ -706,24 +706,24 @@ class IKRetargetConfigEditor(ke.App):
         except (TypeError, ValueError):
             return False
         local_frame = self.frame - self.solve_frame_start
-        frame_count = len(self.solve_buffers.joint_positions)
+        frame_count = len(self.solve_buffers.joint_pos)
         if not 0 <= local_frame < frame_count:
             return False
         buffers = self.solve_buffers
-        root_position = np.asarray(buffers.root_positions[local_frame]).copy()
+        root_position = np.asarray(buffers.root_pos[local_frame]).copy()
         root_position[0] += self._target_x()
         self.robot.set_root_state(
             None,
             root_position,
-            buffers.root_rotations_xyzw[local_frame],
-            buffers.root_linear_velocities[local_frame],
-            buffers.root_angular_velocities[local_frame],
+            buffers.root_quat_xyzw[local_frame],
+            buffers.root_vel[local_frame],
+            buffers.root_ang_vel[local_frame],
             immediate=True,
         )
         self.robot.set_dof_state(
             None,
-            buffers.joint_positions[local_frame],
-            buffers.joint_velocities[local_frame],
+            buffers.joint_pos[local_frame],
+            buffers.joint_vel[local_frame],
             immediate=True,
         )
         self.world.step(substeps=0, apply_commands=False)

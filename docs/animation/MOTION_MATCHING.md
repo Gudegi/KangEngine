@@ -143,7 +143,7 @@ restored: ke.animation.MotionMatchingDatabase = (
 ```
 
 NPZ stores source motions, features, normalization, and reference tracks.
-Loading rebuilds the search index without extracting features or running
+Loading rebuilds the search backend without extracting features or running
 filters. The optional `.summary.json` lists clip names, frame counts, and FPS
 for inspection; it is not used during loading.
 
@@ -301,3 +301,108 @@ example rebuilds features in memory and runs without a viewer.
 
 When loading a custom database, pass its builder to `from_npz(feature_builder=...)`
 with matching schema metadata. Keep builder settings unchanged after creation.
+
+## Batch targets for imitation learning
+
+Use `MotionMatchingBatchSearch` for CPU/CUDA queries `[N, D]` and
+`MotionMatchingBatchController` for independent environment playback. Feature
+and motion buffers are shared across environments. Prepare them once, using the
+same clips in the same order:
+
+```python
+import torch
+import kangengine as ke
+
+# database contains robot-compatible clips; layout describes that robot's DOFs.
+search: ke.animation.MotionMatchingBatchSearch = ke.animation.MotionMatchingBatchSearch(
+    database, device="cuda:0"
+)
+molib: ke.animation.MotionLibrary = ke.animation.MotionLibrary(
+    database.motions,
+    adapter=ke.adapters.physx.PhysXMotionAdapter(layout),
+    device="cuda:0",
+)
+batch: ke.animation.MotionMatchingBatchController = (
+    ke.animation.MotionMatchingBatchController(
+        search, molib, num_envs=4096, transition_half_life=0.1
+    )
+)
+
+# In the task's control loop, step starts at 0.
+# Keep playing the selected motion for 6 control steps before searching again.
+# raw_features is a CUDA tensor [4096, D] matching database.schema["features"]["layout"].
+if step % 6 == 0:
+    batch.select(
+        queries=search.normalize(raw_features), continuation_bias=0.01
+    )
+
+# Each control step: advance the reference clock, then read target states.
+batch.advance(dt=1 / 30)
+state, bodies = batch.sample_robot_state()
+target_joint_pos = state.joint_pos       # [4096, DOFs], logical PhysX order
+target_body_pos = bodies.body_pos_w       # [4096, bodies, 3], world coordinates
+
+# Future targets use the same alignment and decaying transition offsets.
+future_offsets = torch.tensor([1 / 30, 2 / 30, 3 / 30], device="cuda:0")
+future_state, future_bodies = batch.sample_robot_state(future_offsets=future_offsets)
+# future_state.joint_pos: [4096, 3, DOFs]
+```
+
+This example searches every 6 control steps (0.2 seconds at 30 Hz), advancing
+the selected motion between searches. The task chooses this interval; it is not
+a controller default. Playback clamps at the clip end if it is reached sooner.
+
+Build raw features in the task using the same coordinates, joint order, and
+trajectory offsets as the database. Existing NumPy walking-query helpers target
+the scalar controller; they are not a GPU feature builder. For search alone,
+`search.search(queries=...)` returns `motion_ids`, clip-local `frame_ids`, `times`,
+`row_ids`, and `costs`. `allowed_motion_mask` accepts a Boolean tensor `[clips]`
+or `[N, clips]`. No eligible clip gives IDs of `-1`, NaN times, and infinite cost;
+`batch.select()` leaves those environments unchanged. Inputs must already be
+on the search device and queries must match its dtype (float32 by default).
+
+`reset(env_ids, motion_ids=..., times=...)` clears smoothing only for selected
+environments. Pass world `root_pos` and WXYZ `root_quat_wxyz` to place the
+reference at a robot or environment origin. Position aligns all three axes;
+rotation aligns heading only. Without overrides, reset places the root at the
+planar origin and retains source height. A transition aligns to the current
+reference's planar root and heading. `transition()` accepts the same overrides
+for live-robot alignment and preserves output pose and velocity while offsets
+decay. Zero `transition_half_life` disables smoothing. Root forward directions
+must have a nonzero projection onto the ground plane.
+
+The task owns search timing and episode resets. `advance()` clamps at clip ends;
+check the device-side `finished` mask and select new references instead of
+wrapping their world positions. Future queries clamp too: they do not predict
+future search decisions. All returned states are independent snapshots.
+
+Batch playback supports floating-root **PhysX, Newton, and MuJoCo adapters**.
+Use the same controller calls with the appropriate library adapter:
+
+| Library adapter | Returned articulation state | Coordinate fields |
+| --- | --- | --- |
+| `PhysXMotionAdapter` | `PhysXMotionState` | Split root fields, `joint_pos`, `joint_vel` |
+| `NewtonMotionAdapter` | `NewtonMotionState` | `joint_q` (XYZW), `joint_qd` |
+| `MuJoCoMotionAdapter` | `MuJoCoMotionState` | `qpos` (WXYZ), `qvel` |
+
+Newton and MuJoCo support ball-joint transitions as well as scalar joints.
+MuJoCo angular rates remain in the local frame; Newton root rates are world-space
+and ball-joint rates use the joint parent frame. Body states remain world-space
+with WXYZ rotations for all three adapters.
+
+Playback requires precomputed body tracks and a database without a separate
+reference track. Do not add clips or move the library after creating the
+controller. Clip content and order must match the search; clocks are checked at
+construction. Joint coordinates and world body tracks use independent inertial
+offsets, so body targets are not exact FK of the smoothed joints.
+The CPU controller instead smooths local
+skeleton rotations. Joint targets are not clamped to joint limits.
+
+Search is exhaustive, with bounded query/frame chunks; cost still scales with
+query count × database size × feature width. The default `distance_mode="matrix"`
+uses fast dot products. Cancellation near zero distances and the application's
+Torch matmul precision settings can affect near ties. Use
+`distance_mode="direct", dtype=torch.float64` for CPU-reference comparisons;
+direct distances are slower. Equal computed costs choose the first database row.
+Runtime batch methods perform no implicit host transfers; initialization uploads
+and checks the buffers once.

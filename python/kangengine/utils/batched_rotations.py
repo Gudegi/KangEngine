@@ -5,12 +5,12 @@ import torch
 
 def quat_wxyz_to_xyzw(quat: torch.Tensor) -> torch.Tensor:
     """Reorder [..., 4] quaternions, preserving device, dtype, and gradients."""
-    return quat[..., [1, 2, 3, 0]]
+    return torch.cat((quat[..., 1:], quat[..., :1]), dim=-1)
 
 
 def quat_xyzw_to_wxyz(quat: torch.Tensor) -> torch.Tensor:
     """Reorder [..., 4] quaternions, preserving device, dtype, and gradients."""
-    return quat[..., [3, 0, 1, 2]]
+    return torch.cat((quat[..., 3:4], quat[..., :3]), dim=-1)
 
 
 def _require_last_dim(value: torch.Tensor, width: int, name: str) -> None:
@@ -24,7 +24,7 @@ def quat_wxyz_normalize(quat: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     norm = torch.linalg.vector_norm(quat, dim=-1, keepdim=True)
     normalized = quat / norm.clamp_min(eps)
     identity = torch.zeros_like(quat)
-    identity[..., 0] = 1.0
+    identity[..., 0].fill_(1.0)
     return torch.where(norm >= eps, normalized, identity)
 
 
@@ -205,53 +205,26 @@ def matrix_to_quat_wxyz(matrix: torch.Tensor) -> torch.Tensor:
     """Convert proper rotation matrices ``[..., 3, 3]`` to WXYZ quaternions."""
     if matrix.shape[-2:] != (3, 3):
         raise ValueError("matrix must have shape [..., 3, 3]")
-    result = []
-    for value in matrix.reshape(-1, 3, 3):
-        trace = torch.trace(value)
-        if trace > 0:
-            scale = torch.sqrt(trace + 1.0) * 2.0
-            quat = torch.stack(
-                (
-                    0.25 * scale,
-                    (value[2, 1] - value[1, 2]) / scale,
-                    (value[0, 2] - value[2, 0]) / scale,
-                    (value[1, 0] - value[0, 1]) / scale,
-                )
-            )
-        else:
-            index = int(torch.argmax(torch.diagonal(value)))
-            if index == 0:
-                scale = torch.sqrt(1.0 + value[0, 0] - value[1, 1] - value[2, 2]) * 2.0
-                quat = torch.stack(
-                    (
-                        (value[2, 1] - value[1, 2]) / scale,
-                        0.25 * scale,
-                        (value[0, 1] + value[1, 0]) / scale,
-                        (value[0, 2] + value[2, 0]) / scale,
-                    )
-                )
-            elif index == 1:
-                scale = torch.sqrt(1.0 + value[1, 1] - value[0, 0] - value[2, 2]) * 2.0
-                quat = torch.stack(
-                    (
-                        (value[0, 2] - value[2, 0]) / scale,
-                        (value[0, 1] + value[1, 0]) / scale,
-                        0.25 * scale,
-                        (value[1, 2] + value[2, 1]) / scale,
-                    )
-                )
-            else:
-                scale = torch.sqrt(1.0 + value[2, 2] - value[0, 0] - value[1, 1]) * 2.0
-                quat = torch.stack(
-                    (
-                        (value[1, 0] - value[0, 1]) / scale,
-                        (value[0, 2] + value[2, 0]) / scale,
-                        (value[1, 2] + value[2, 1]) / scale,
-                        0.25 * scale,
-                    )
-                )
-        result.append(quat_wxyz_normalize(quat))
-    return torch.stack(result).reshape(matrix.shape[:-2] + (4,))
+    m00, m01, m02 = matrix[..., 0, :].unbind(dim=-1)
+    m10, m11, m12 = matrix[..., 1, :].unbind(dim=-1)
+    m20, m21, m22 = matrix[..., 2, :].unbind(dim=-1)
+    trace = m00 + m11 + m22
+
+    # Each row is proportional to one branch of the normalized quaternion.
+    candidates = torch.stack(
+        (
+            torch.stack((1 + trace, m21 - m12, m02 - m20, m10 - m01), dim=-1),
+            torch.stack((m21 - m12, 1 + m00 - m11 - m22, m01 + m10, m02 + m20), dim=-1),
+            torch.stack((m02 - m20, m01 + m10, 1 - m00 + m11 - m22, m12 + m21), dim=-1),
+            torch.stack((m10 - m01, m02 + m20, m12 + m21, 1 - m00 - m11 + m22), dim=-1),
+        ),
+        dim=-2,
+    )
+    largest = matrix.diagonal(dim1=-2, dim2=-1).argmax(dim=-1) + 1
+    branch = torch.where(trace > 0, 0, largest)
+    index = branch[..., None, None].expand(*branch.shape, 1, 4)
+    quaternion = candidates.gather(-2, index).squeeze(-2)
+    return quat_wxyz_normalize(quaternion)
 
 
 # KangEngine/PhysX-facing XYZW helpers. Keep the convention in every public
