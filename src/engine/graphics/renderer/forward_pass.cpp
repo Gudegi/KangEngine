@@ -930,11 +930,9 @@ void ForwardPass::initializeResources(
                 {debugCheckerFs, Backend::ShaderType::Fragment, "main"}};
             desc.pipelineLayout =
                 skin ? _skinPipelineLayout : _forwardPipelineLayout;
-            desc.vertexBuffers = {position, transform, normal, texCoord, color};
+            desc.vertexBuffers = {position, transform, normal, texCoord, color,
+                                  empty};
             if (skin) {
-                // Preserve the shared mesh slot numbering without requiring
-                // the unused tangent stream.
-                desc.vertexBuffers.push_back({});
                 desc.vertexBuffers.push_back(boneIndices);
                 desc.vertexBuffers.push_back(boneWeights);
             }
