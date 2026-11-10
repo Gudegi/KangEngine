@@ -1,5 +1,6 @@
 import numpy as np
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from .._core import _ke
 from .color import preset_rgba
@@ -37,6 +38,9 @@ from .math import (
     quat_xyzw_to_wxyz,
 )
 
+if TYPE_CHECKING:
+    from .batch_fsm import BatchFSM as BatchFSM, FSMTransition as FSMTransition
+
 
 class CoordinateSystem(str, Enum):
     """Right-handed coordinate-system presets used by shared converters."""
@@ -56,6 +60,8 @@ def coordinate_conversion_matrix(
 
 
 _LAZY_IMPORTS = {
+    "BatchFSM": (".batch_fsm", "BatchFSM"),
+    "FSMTransition": (".batch_fsm", "FSMTransition"),
     "as_cpu_numpy": (".tensor", "as_cpu_numpy"),
     "as_sim_buffer": (".sim_buffer", "as_sim_buffer"),
     "as_tensor": (".tensor", "as_tensor"),
@@ -140,6 +146,8 @@ def __getattr__(name):
 
 
 __all__ = [
+    "BatchFSM",
+    "FSMTransition",
     "CoordinateSystem",
     "coordinate_conversion_matrix",
     "preset_rgba",

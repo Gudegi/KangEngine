@@ -100,7 +100,7 @@ accounting for that axis difference.
 
 [Contact sensors](CONTACT_SENSORS.md) select physical bodies; per-shape contact
 filtering is not currently available. For older code that treated rigid body
-slots as colliders, see the [migration note](../CHANGELOG.md#rigid-body-state).
+slots as colliders, see the [0.2.0 migration note](upgrade-notes-0-2-0).
 
 See [Multi-Environment Simulation](MULTI_ENV.md#different-rigid-sources-per-environment)
 for the fixed body/shape counts required within one object batch.

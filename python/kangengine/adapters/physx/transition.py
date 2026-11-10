@@ -35,6 +35,11 @@ class PhysXMotionTransition:
     def root_pose(self, state: PhysXMotionState) -> tuple[torch.Tensor, torch.Tensor]:
         return state.root_pos, quat_xyzw_to_wxyz(state.root_quat_xyzw)
 
+    def root_velocity(
+        self, state: PhysXMotionState
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        return state.root_vel, state.root_ang_vel
+
     def aligned_root(
         self, components: TransitionChannels
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -52,6 +57,17 @@ class PhysXMotionTransition:
         changed: torch.Tensor,
     ) -> None:
         self._offsets.capture_offsets(before, after, env_ids, changed)
+
+    def zero_velocities(
+        self, components: TransitionChannels, held: torch.Tensor
+    ) -> TransitionChannels:
+        pos, vel, quat, ang = components
+        return (
+            pos,
+            vel.masked_fill(held[..., None], 0),
+            quat,
+            ang.masked_fill(held[..., None, None], 0),
+        )
 
     def apply_offsets(
         self, components: TransitionChannels, env_ids: EnvSelection, age: torch.Tensor

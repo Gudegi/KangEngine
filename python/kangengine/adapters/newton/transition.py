@@ -68,6 +68,14 @@ class NewtonMotionTransition:
             quat_xyzw_to_wxyz(state.joint_q[..., self._root_quat_slice]),
         )
 
+    def root_velocity(
+        self, state: NewtonMotionState
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        return (
+            state.joint_qd[..., self._root_vel_slice],
+            state.joint_qd[..., self._root_ang_slice],
+        )
+
     def aligned_root(
         self, components: TransitionState
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -156,4 +164,13 @@ class NewtonMotionTransition:
     def to_states(
         self, components: TransitionState
     ) -> tuple[NewtonMotionState, BodyMotionState]:
+        return components
+
+    def zero_velocities(
+        self, components: TransitionState, held: torch.Tensor
+    ) -> TransitionState:
+        state, bodies = components
+        state.joint_qd.masked_fill_(held[..., None], 0)
+        bodies.body_vel_w.masked_fill_(held[..., None, None], 0)
+        bodies.body_ang_vel_w.masked_fill_(held[..., None, None], 0)
         return components

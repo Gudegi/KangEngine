@@ -31,6 +31,10 @@ class MotionMatchingBatchSearch:
     Matrix distances are fast; direct distances reduce rounding errors for
     nearly identical features. Equal computed costs select the first row.
     Treat tensors as read-only; rebuild to change features or normalization.
+
+    Work scales with query count * candidate count * feature width. Matrix-mode
+    near ties depend on Torch matmul precision and cancellation near zero.
+    Use distance_mode="direct", dtype=torch.float64 for slower CPU comparisons.
     """
 
     def __init__(

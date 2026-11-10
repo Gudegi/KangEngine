@@ -1,12 +1,16 @@
 # Changelog
 
-## 0.3.0 — Unreleased
+## 0.3.0
 
 ### Added
 
+- Generic CPU/CUDA `BatchFSM` with per-environment states and prioritized transitions.
+  See [Batch State Machine](utils/BATCH_FSM.md).
 - CPU/CUDA batch motion matching with per-environment playback, transitions,
-  and future targets for PhysX, Newton, and MuJoCo.
+  filtered reference-track placement, and future targets for PhysX, Newton, and MuJoCo.
   See [Motion Matching](animation/MOTION_MATCHING.md#batch-targets-for-imitation-learning).
+- Batch playback hold/resume with zero velocities while held, plus Newton G1
+  examples for authored start/stop clips and holding only after stopping.
 - Typed motion-state queries, single-clip frame views, optional `torch.compile()`,
   and batched FK from supported PhysX joint states.
   See [Articulation Motion](animation/ARTICULATION_MOTION.md#reference-motion-library).
@@ -79,6 +83,7 @@ include `animation/motion_matching_search.hpp`.
   attachments and links without meshes.
 - Updated macOS ARM64 PhysX support to 5.8 and corrected lighting/selection guides.
 
+(upgrade-notes-0-2-0)=
 ### Upgrade notes
 
 **Behavior changes (no error, different result)**

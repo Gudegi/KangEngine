@@ -35,11 +35,19 @@ class NativeMotionTransition(Protocol[BackendSample, Components]):
         """Return world root position and WXYZ orientation."""
         ...
 
+    def root_velocity(self, state: BackendSample) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return world root linear and angular velocity."""
+        ...
+
     def aligned_root(
         self, components: Components
     ) -> tuple[torch.Tensor, torch.Tensor]: ...
 
     def reset(self, env_ids: EnvSelection) -> None: ...
+
+    def zero_velocities(self, components: Components, held: torch.Tensor) -> Components:
+        """Zero all rates in held [N] or [N, K] samples; preserve poses."""
+        ...
 
     def align(
         self,
@@ -220,7 +228,7 @@ def _rotation_quat(vector):
 
 def _left_jacobian(rotation, velocity, *, inverse=False):
     # Map rotation-vector derivatives to parent-frame angular rates (and back).
-    squared = rotation.square().sum(-1, keepdim=True)
+    squared = (rotation**2).sum(-1, keepdim=True)
     safe_squared = squared.clamp_min(1e-8)
     angle = safe_squared.sqrt()
     cross = torch.cross(rotation, velocity, dim=-1)

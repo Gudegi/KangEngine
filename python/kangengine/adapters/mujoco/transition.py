@@ -67,6 +67,17 @@ class MuJoCoMotionTransition:
             state.qpos[..., self._root_quat_slice],
         )
 
+    def root_velocity(
+        self, state: MuJoCoMotionState
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        return (
+            state.qvel[..., self._root_vel_slice],
+            quat_wxyz_rotate(
+                state.qpos[..., self._root_quat_slice],
+                state.qvel[..., self._root_ang_slice],
+            ),
+        )
+
     def aligned_root(
         self, components: TransitionState
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -154,4 +165,13 @@ class MuJoCoMotionTransition:
     def to_states(
         self, components: TransitionState
     ) -> tuple[MuJoCoMotionState, BodyMotionState]:
+        return components
+
+    def zero_velocities(
+        self, components: TransitionState, held: torch.Tensor
+    ) -> TransitionState:
+        state, bodies = components
+        state.qvel.masked_fill_(held[..., None], 0)
+        bodies.body_vel_w.masked_fill_(held[..., None, None], 0)
+        bodies.body_ang_vel_w.masked_fill_(held[..., None, None], 0)
         return components
