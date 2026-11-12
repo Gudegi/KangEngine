@@ -22,17 +22,11 @@
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
 #include "animation/skinning.hpp"
-#include "bridge/articulation_visual_bridge.hpp"
-#include "bridge/skeletal_visual_bridge.hpp"
-#include "engine/core/app/app.hpp"
-#include "engine/scene/native/prim.hpp"
-#include "engine/scene/scene_backend.hpp"
 
 namespace py = pybind11;
 using namespace KE;
 using namespace KE::Asset;
 using namespace KE::Animation;
-using namespace KE::Bridge;
 
 namespace {
 

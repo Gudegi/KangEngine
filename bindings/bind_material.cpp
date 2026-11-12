@@ -2,7 +2,6 @@
 /// Material and color Python bindings
 ///
 
-#include "../src/kangEngine.hpp"
 #include "../src/engine/graphics/material/colors.hpp"
 #include "../src/engine/graphics/material/material.hpp"
 #include "engine/graphics/material/phongMaterials.hpp"

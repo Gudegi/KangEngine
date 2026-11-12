@@ -32,12 +32,12 @@
 
 #include "asset/mjcf_loader.hpp"
 #include "asset/urdf_loader.hpp"
-#include "bridge/physics_bridge.hpp"
 #include "bridge/articulation_visual_bridge.hpp"
 #include "bridge/skeletal_visual_bridge.hpp"
 #include "bridge/skin_visual_bridge.hpp"
 
 #ifdef KANGENGINE_USE_PHYSX
+#include "bridge/physics_bridge.hpp"
 #include "physics/physics.hpp"
 #include "physics/articulation.hpp"
 #endif

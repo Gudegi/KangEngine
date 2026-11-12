@@ -2,7 +2,7 @@
 #define _GEOMETRY_DESC_HPP_
 
 // Context-free geometry, appearance, and inertia shared by model descriptions.
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 #include "physics/physics_material.hpp"
 
 #include <Eigen/Geometry>

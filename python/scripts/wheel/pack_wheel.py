@@ -14,6 +14,7 @@ import tomllib
 import zipfile
 
 from validate_wheel import inspect_wheel, run
+from wheel_licenses import inspect_license_bundle, write_license_bundle
 
 
 def resolve_usd_runtime(runtime: Path) -> Path:
@@ -49,17 +50,6 @@ def bundle_usd_runtime(package: Path, runtime: Path) -> None:
             shutil.copy2(library, destination / library.name)
     shutil.copytree(lib_dir / "usd", destination / "usd")
 
-    licenses = package / "licenses"
-    licenses.mkdir(exist_ok=True)
-    for package_name, output_name in (
-        ("usd", "OpenUSD.txt"),
-        ("tbb", "oneTBB.txt"),
-        ("zlib", "zlib.txt"),
-    ):
-        copyright_file = runtime / "share" / package_name / "copyright"
-        if copyright_file.is_file():
-            shutil.copy2(copyright_file, licenses / output_name)
-
     extension = package / "_kangengine.so"
     if sys.platform == "darwin":
         run("install_name_tool", "-delete_rpath", str(lib_dir), str(extension))
@@ -77,7 +67,6 @@ def stage_project(
     usd_runtime: Path | None = None,
     extension: Path | None = None,
     physx_runtime: Path | None = None,
-    physx_license: Path | None = None,
 ) -> None:
     shutil.copy2(source / "pyproject.toml", destination)
     shutil.copy2(source / "setup.py", destination)
@@ -95,10 +84,23 @@ def stage_project(
             "*.pyc",
             ".*",
             "external",
+            "_native",
+            "licenses",
+            "*.so",
+            "*.dylib",
         ),
     )
-    if extension is not None:
-        shutil.copy2(extension, destination / "kangengine" / "_kangengine.so")
+    compiled = extension if extension is not None else source / "kangengine/_kangengine.so"
+    shutil.copy2(compiled, destination / "kangengine" / "_kangengine.so")
+    # Use the selected build's notices, never stale files from the source package.
+    licenses = compiled.parent / "licenses"
+    manifest = licenses / "manifest.txt"
+    staged_licenses = destination / "kangengine/licenses"
+    write_license_bundle(
+        staged_licenses,
+        {name: licenses / name for name in manifest.read_text().splitlines()},
+        json.loads((licenses / "versions.json").read_text()),
+    )
     if usd_runtime is not None:
         bundle_usd_runtime(destination / "kangengine", usd_runtime)
     if sys.platform == "linux":
@@ -107,7 +109,6 @@ def stage_project(
         bundle_linux_runtime(
             destination / "kangengine",
             physx_runtime,
-            physx_license,
         )
 
 
@@ -185,12 +186,12 @@ def main() -> None:
             with zipfile.ZipFile(runtime_wheel) as archive:
                 required = {
                     "kangengine_physx_gpu/lib/libPhysXGpu_64.so",
-                    "kangengine_physx_gpu/licenses/PhysX.txt",
                 }
                 if not required.issubset(archive.namelist()):
                     raise AssertionError(
-                        "PhysX runtime wheel is missing its library or license"
+                        "PhysX runtime wheel is missing its library"
                     )
+                inspect_license_bundle(archive, "kangengine_physx_gpu")
                 if "-py3-none-linux_" not in runtime_wheel.name:
                     raise AssertionError(
                         f"Unexpected runtime wheel tag: {runtime_wheel.name}"
@@ -201,7 +202,6 @@ def main() -> None:
             args.usd_runtime,
             args.extension,
             args.physx_runtime,
-            args.physx_license,
         )
 
         run(
@@ -238,6 +238,10 @@ def main() -> None:
         output_dir.mkdir(parents=True, exist_ok=True)
         final_wheels = sorted(prepared.glob("*.whl"))
         for artifact in final_wheels:
+            if artifact.name.startswith("kangengine-"):
+                inspect_wheel(
+                    artifact, args.expect_usd, cuda_runtime_version, runtime_version
+                )
             shutil.copy2(artifact, output_dir / artifact.name)
             print(f"Packed wheel: {output_dir / artifact.name}")
         manifest = {"platform": sys.platform, "wheels": [p.name for p in final_wheels]}

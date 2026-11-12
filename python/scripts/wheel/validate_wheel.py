@@ -13,6 +13,8 @@ import sys
 import tempfile
 import zipfile
 
+from wheel_licenses import inspect_license_bundle
+
 
 STALE_MODULES = {
     "kangengine/app.py",
@@ -40,10 +42,17 @@ def inspect_wheel(
 
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
+        licensed_projects = inspect_license_bundle(archive, "kangengine")
+        split_artifacts = [
+            name for name in names
+            if Path(name).name.startswith("libengine_")
+            or name.startswith(("kangengine_viewer/", "kangengine_sim/", "kangengine_usd/"))
+        ]
+        if split_artifacts:
+            raise AssertionError(f"Split-package artifacts in wheel: {split_artifacts}")
         if cuda_runtime_version:
-            for required in ("kangengine/licenses/PhysX.txt",):
-                if required not in names:
-                    raise AssertionError(f"CUDA wheel is missing {required}")
+            if "PhysX" not in licensed_projects:
+                raise AssertionError("CUDA wheel is missing its PhysX license")
             metadata_name = next(
                 name for name in names if name.endswith(".dist-info/METADATA")
             )
@@ -67,6 +76,8 @@ def inspect_wheel(
         )
         if expect_usd and not bundled_usd:
             raise AssertionError("USD wheel does not contain bundled libraries")
+        if bundled_usd and "OpenUSD" not in licensed_projects:
+            raise AssertionError("USD wheel is missing its OpenUSD license")
         external = sorted(
             name for name in names if name.startswith("kangengine/assets/external/")
         )
@@ -88,6 +99,7 @@ def create_validation_environment(
     for name in (
         "PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV", "LD_LIBRARY_PATH", "LD_PRELOAD",
         "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH",
+        "KANGENGINE_ASSETS_ROOT",
     ):
         environment.pop(name, None)
 
@@ -127,7 +139,11 @@ def main() -> None:
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--wheel-dir", type=Path, default=Path("python/dist/release"))
     parser.add_argument("--expect-usd", action="store_true")
-    parser.add_argument("--gpu-smoke", action="store_true")
+    parser.add_argument("--gpu-smoke", action="store_true",
+                        help="Run Linux CUDA/PhysX checks without requiring a display")
+    parser.add_argument("--render-smoke", action="store_true",
+                        help="Run rendering checks; requires a working OpenGL display. "
+                             "Combine with --gpu-smoke to check CUDA/OpenGL interop")
     args = parser.parse_args()
     if args.gpu_smoke and sys.platform != "linux":
         parser.error("--gpu-smoke requires Linux")
@@ -228,6 +244,36 @@ def main() -> None:
                 env=environment,
             )
 
+        for script in (
+            "scene_data_smoke.py",
+            "animation_sim_roundtrip_smoke.py",
+            "scene_resource_manager_smoke.py",
+            "render_component_lifecycle_smoke.py",
+            "sim_visual_batch_smoke.py",
+        ):
+            run(
+                python_executable, "-I", str(smoke / script), cwd=temp,
+                env={k: v for k, v in environment.items()
+                     if k not in ("DISPLAY", "WAYLAND_DISPLAY")},
+            )
+        if args.render_smoke:
+            for script in (
+                "scene_renderer_boundary_smoke.py",
+                "scene_render_system_smoke.py",
+            ):
+                run(python_executable, "-I", str(smoke / script), cwd=temp, env=environment)
+        else:
+            print("SKIP: rendering checks (enable with --render-smoke)")
+        if args.gpu_smoke:
+            run(
+                python_executable, "-I", str(smoke / "mimickit_engine_gpu_reset_smoke.py"),
+                cwd=temp, env=environment,
+            )
+            if args.render_smoke:
+                run(
+                    python_executable, "-I", str(smoke / "cuda_gl_visual_smoke.py"),
+                    cwd=temp, env=environment,
+                )
         print(f"PASS: isolated wheel {wheel.name}")
 
 

@@ -3,7 +3,7 @@
 
 #include "asset/import_diagnostics.hpp"
 #include "asset/articulation_desc.hpp"
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 #include "engine/scene/types/light.hpp"
 #include "utils/types.hpp"
 

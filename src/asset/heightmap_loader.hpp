@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 #include "utils/types.hpp"
 
 namespace KE {

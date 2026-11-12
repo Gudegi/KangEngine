@@ -7,6 +7,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <algorithm>
 #include <array>
 #include <cstring>

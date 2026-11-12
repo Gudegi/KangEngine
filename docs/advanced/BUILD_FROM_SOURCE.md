@@ -525,6 +525,16 @@ Use the same commands on both platforms. Validation runs PhysX CPU checks
 on macOS and CPU plus GPU checks on Linux. Linux validation requires an NVIDIA
 GPU and CUDA-enabled PyTorch; GPU failures are not silently skipped.
 Each physics check runs in a separate process without opening a viewer.
+Default validation checks base APIs without gpu and render features;
+To validate those features:
+
+```bash
+# Linux: include rendering and CUDA/OpenGL interop checks.
+make validate_wheel WHEEL_VALIDATION_FLAGS="--gpu-smoke --render-smoke"
+# macOS: include rendering checks.
+make validate_wheel WHEEL_VALIDATION_FLAGS="--render-smoke"
+```
+
 Validation creates a temporary virtual environment, installs the wheel and its
 declared dependencies, and checks dependency compatibility before running tests.
 It does not reuse installed development packages. Dependency downloads may be

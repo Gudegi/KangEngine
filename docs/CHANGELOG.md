@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix Python callbacks in `Prim.traverse()`.
+
 ## 0.3.0
 
 ### Added

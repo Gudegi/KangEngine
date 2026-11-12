@@ -4,7 +4,7 @@
 #include "animation/skeleton_tree.hpp"
 #include "animation/skeleton_motion.hpp"
 #include "asset/import_diagnostics.hpp"
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

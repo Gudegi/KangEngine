@@ -1,8 +1,10 @@
 """Python API surface for KangEngine."""
 
+from importlib import import_module as _import_module
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
 import os as _os
 from pathlib import Path as _Path
-from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 _assets_dir = _Path(__file__).resolve().parent / "assets"
 if _assets_dir.exists():
@@ -10,46 +12,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
-from . import (
-    adapters,
-    animation,
-    asset,
-    geometry,
-    input,
-    material,
-    physics,
-    recording,
-    render,
-    scene,
-    terrain,
-    utils,
-    visual,
-)
-from .app import (
-    App,
-    DebugGeometry,
-    DebugOverlay,
-    ObjImportView,
-    RenderablePrimView,
-    ScreenText,
-    SceneContext,
-    WorldText,
-)
-from .utils import (
-    COMMON,
-    DEFAULT_PROFILE_ORDER,
-    GENO,
-    JOINT_PROFILES,
-    JointMapper,
-    JointSemantic,
-    KW,
-    KW5,
-    MIXAMO,
-    preset_rgba,
-)
 
-# TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
-# This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
     "SimulationPacer": (".sim.run_mode", "SimulationPacer"),
     "SimulationRunConfig": (".sim.run_mode", "SimulationRunConfig"),
@@ -62,11 +25,21 @@ _LAZY_IMPORTS = {
         "install_mimickit_engine_builder",
     ),
 }
-_LAZY_MODULES = {
-    "exports": ".exports",
-    "motion_module": ".motion_module",
-    "sim": ".sim",
-}
+_LAZY_MODULES = {name: f".{name}" for name in (
+    "adapters", "animation", "asset", "geometry", "input", "material", "physics",
+    "recording", "render", "scene", "terrain", "utils", "visual", "exports",
+    "motion_module", "sim", "app",
+)}
+for _name in (
+    "App", "DebugGeometry", "DebugOverlay", "ObjImportView", "RenderablePrimView",
+    "ScreenText", "SceneContext", "WorldText",
+):
+    _LAZY_IMPORTS[_name] = (".app", _name)
+for _name in (
+    "COMMON", "DEFAULT_PROFILE_ORDER", "GENO", "JOINT_PROFILES", "JointMapper",
+    "JointSemantic", "KW", "KW5", "MIXAMO", "preset_rgba",
+):
+    _LAZY_IMPORTS[_name] = (".utils", _name)
 
 if _TYPE_CHECKING:
     from . import exports as exports
@@ -82,11 +55,9 @@ if _TYPE_CHECKING:
 
 
 def __getattr__(name):
-    from importlib import import_module
-
     module_name = _LAZY_MODULES.get(name)
     if module_name is not None:
-        value = import_module(module_name, __name__)
+        value = _import_module(module_name, __name__)
         globals()[name] = value
         return value
 
@@ -95,7 +66,9 @@ def __getattr__(name):
     except KeyError as exc:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
 
-    value = getattr(import_module(module_name, __name__), attr_name)
+    value = getattr(_import_module(module_name, __name__), attr_name)
+    if module_name == ".app":
+        _set_public_module(value, __name__)
     globals()[name] = value
     return value
 
@@ -123,7 +96,6 @@ Mat4 = _set_public_module(_ke.Mat4, __name__)
 translate = _set_public_module(_ke.translate, __name__)
 scale = _set_public_module(_ke.scale, __name__)
 
-# Bound C++ submodules exposed through Python wrapper modules.
 imgui = _ke.imgui
 keys = _ke.keys
 
@@ -192,4 +164,9 @@ __all__ = [
     "preset_rgba",
 ]
 
-del _assets_dir, _Path, _os, _set_public_module, _ke
+del _name
+
+
+def __dir__():
+    # Discovery lists the complete API without importing every domain module.
+    return sorted(set(globals()) | set(__all__))

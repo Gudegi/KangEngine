@@ -1,7 +1,7 @@
 #ifndef _MESH_UTILS_HPP_
 #define _MESH_UTILS_HPP_
 
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 
 #include <glm/geometric.hpp>
 #include <mikktspace.h>

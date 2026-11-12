@@ -26,7 +26,6 @@ target_compile_options(build_configs INTERFACE
 
 set(VCPKG_BUILD_TYPE release)
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
-set(ASSETS_SIMLINK_DIR "${CMAKE_BINARY_DIR}/../assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(THIRDPARTY_DIR "${CMAKE_SOURCE_DIR}/third_party")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
@@ -304,16 +303,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     KANGENGINE_ASSETS_ROOT="${CMAKE_SOURCE_DIR}/assets"
 )
 
-# Create asset folder simlink
-if(EXISTS "${ASSETS_SIMLINK_DIR}")
-    file(REMOVE_RECURSE "${ASSETS_SIMLINK_DIR}")
-endif()
-file(CREATE_LINK 
-    "${ASSETS_DIR}"
-    "${ASSETS_SIMLINK_DIR}"
-    SYMBOLIC
-)
-
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
     set(PYTHON_MODULE_NAME "_kangengine")
@@ -325,16 +314,22 @@ if(IS_PYTHON_LIB)
     set(PYTHON_DL_DIR "${KANGENGINE_PYTHON_OUTPUT_DIR}")
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
     file(GLOB PYBIND_SOURCE_FILES
-        "${BIND_DIR}/bind_new.cpp"
-        "${BIND_DIR}/bind_material.cpp"
+        "${BIND_DIR}/module.cpp"
+        "${BIND_DIR}/bind_core.cpp"
+        "${BIND_DIR}/bind_sim_buffer.cpp"
         "${BIND_DIR}/bind_render.cpp"
-        "${BIND_DIR}/bind_scene.cpp"
+        "${BIND_DIR}/bind_material.cpp"
+        "${BIND_DIR}/bind_geometry.cpp"
         "${BIND_DIR}/bind_animation.cpp"
-        "${BIND_DIR}/bind_articulation_desc.cpp"
+        "${BIND_DIR}/bind_scene.cpp"
         "${BIND_DIR}/bind_asset.cpp"
-        "${BIND_DIR}/bind_sim.cpp"
+        "${BIND_DIR}/bind_articulation_desc.cpp"
+        "${BIND_DIR}/bind_sim_visual.cpp"
         "${BIND_DIR}/bind_physics.cpp"
         "${BIND_DIR}/bind_physics_gpu.cpp"
+        "${BIND_DIR}/bind_scene_render.cpp"
+        "${BIND_DIR}/bind_animation_visual.cpp"
+        "${BIND_DIR}/bind_viewer.cpp"
     )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     
@@ -360,6 +355,36 @@ if(IS_PYTHON_LIB)
         CXX_VISIBILITY_PRESET default
         VISIBILITY_INLINES_HIDDEN ON
     )
+
+    set(KANGENGINE_LICENSE_PROJECTS
+        glm fmt eigen3 tinyobjloader tinyxml2 openfbx libdeflate mikktspace
+        stb pybind11 glad glfw3 imgui imguizmo implot
+        LBFGSpp IconFontCppHeaders ImGuiFileDialog ImViewGuizmo)
+    if(USE_USD)
+        list(APPEND KANGENGINE_LICENSE_PROJECTS OpenUSD tbb zlib)
+    endif()
+    if(USE_PHYSX)
+        list(APPEND KANGENGINE_LICENSE_PROJECTS PhysX)
+    endif()
+    set(KANGENGINE_LICENSE_FILES)
+    foreach(dependency IN LISTS KANGENGINE_LICENSE_PROJECTS)
+        set(notice_dir "${CMAKE_SOURCE_DIR}/licenses/${dependency}")
+        configure_file("${notice_dir}/LICENSE"
+            "${PYTHON_DL_DIR}/licenses/${dependency}/LICENSE" COPYONLY)
+        list(APPEND KANGENGINE_LICENSE_FILES "${dependency}/LICENSE")
+        file(GLOB additional_notices CONFIGURE_DEPENDS "${notice_dir}/NOTICE*")
+        foreach(notice IN LISTS additional_notices)
+            get_filename_component(notice_name "${notice}" NAME)
+            configure_file("${notice}"
+                "${PYTHON_DL_DIR}/licenses/${dependency}/${notice_name}" COPYONLY)
+            list(APPEND KANGENGINE_LICENSE_FILES "${dependency}/${notice_name}")
+        endforeach()
+    endforeach()
+    configure_file("${CMAKE_SOURCE_DIR}/licenses/versions.json"
+        "${PYTHON_DL_DIR}/licenses/versions.json" COPYONLY)
+    # Include linked dependencies even when their code is statically embedded.
+    string(REPLACE ";" "\n" KANGENGINE_LICENSE_MANIFEST "${KANGENGINE_LICENSE_FILES}")
+    file(WRITE "${PYTHON_DL_DIR}/licenses/manifest.txt" "${KANGENGINE_LICENSE_MANIFEST}\n")
 
     set(PYTHON_ASSETS_DIR "${PYTHON_DL_DIR}/assets")
     if(EXISTS "${PYTHON_ASSETS_DIR}" OR IS_SYMLINK "${PYTHON_ASSETS_DIR}")

@@ -1,7 +1,7 @@
 #ifndef _MESH_LOADER_HPP_
 #define _MESH_LOADER_HPP_
 
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 
 #include <optional>
 #include <array>

@@ -1,0 +1,34 @@
+Bundled dependency license sources
+
+Review these license copies when updating dependencies.
+
+The following copies came from vcpkg's share/<project>/copyright files.
+Date-formatted versions are vcpkg package versions, not license update dates.
+versions.json records the distribution packages used for these copies, not build pins.
+
+Project         Version
+glm             1.0.3
+fmt             12.1.0
+eigen3          5.0.1
+tinyobjloader   2.0.0rc13
+tinyxml2        11.0.0
+openfbx         2024-12-28
+mikktspace     2020-10-06
+stb             2024-07-29
+pybind11        3.0.1
+glad            0.1.36
+glfw3           3.4
+imgui           1.91.9
+imguizmo        2024-05-29
+implot          0.17
+OpenUSD         25.11
+tbb             2022.3.0
+zlib            1.3.1
+libdeflate      1.25
+
+Other sources:
+LBFGSpp: third_party/LBFGSpp/LICENSE.md
+IconFontCppHeaders: third_party/IconFontCppHeaders/licence.txt
+ImGuiFileDialog: third_party/ImGuiFileDialog/LICENSE
+ImViewGuizmo: third_party/ImViewGuizmo/LICENSE
+PhysX: PhysX 5.8.0 SDK root's LICENSE.md

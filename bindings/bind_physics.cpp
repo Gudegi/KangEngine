@@ -15,10 +15,6 @@
 #include "asset/heightmap_loader.hpp"
 #include "asset/articulation_desc.hpp"
 #include "asset/rigid_desc.hpp"
-#include "bridge/physics_bridge.hpp"
-#include "bridge/articulation_visual_bridge.hpp"
-#include "engine/core/app/app.hpp"
-#include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
 #include "physics/d6_joint.hpp"
 #include "physics/physics_material.hpp"
@@ -171,7 +167,6 @@ void bind_physics(py::module& m) {
     using namespace KE;
     using namespace KE::Asset;
     using namespace KE::Physics;
-    using namespace KE::Bridge;
 
     py::module physics = m.def_submodule(
         "physics", "PhysX world, articulation, and collision material APIs.");
@@ -930,6 +925,7 @@ void bind_physics(py::module& m) {
         .def("release", &PxRigidStatic::release);
 
     physics.attr("RigidStatic") = m.attr("RigidStatic");
+    physics.attr("RigidDynamic") = m.attr("RigidDynamic");
 
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
     py::enum_<D6Axis>(physics, "D6Axis")
@@ -2091,32 +2087,5 @@ void bind_physics(py::module& m) {
             },
             "Return imported joint metadata keyed by body index.");
 
-    // PhysicsBridge
-    py::class_<PhysicsBridge>(
-        physics, "PhysicsBridge",
-        "Syncs PhysX articulation state into KangEngine scene/render visuals.")
-        .def(py::init<>(), "Create a scene-graph physics bridge.")
-        .def("add", &PhysicsBridge::add, py::arg("artic"),
-             py::arg("skel_bridge"), py::keep_alive<1, 2>(),
-             py::keep_alive<1, 3>(),
-             "Connect an articulation to an ArticulationVisualBridge.")
-        .def("sync", &PhysicsBridge::sync,
-             "Copy latest physics transforms into connected visuals.")
-        .def("set_collision_visible", &PhysicsBridge::setCollisionVisible,
-             py::arg("visible"), "Show or hide collision visual prims.")
-        .def(
-            "add_collision_visuals",
-            [](PhysicsBridge& self, const Articulation& artic,
-               Scene::SceneBackend* scene, const std::string& basePath,
-               bool visibleByDefault) {
-                return self.addCollisionVisuals(artic, scene, basePath,
-                                                visibleByDefault);
-            },
-            py::arg("artic"), py::arg("scene"),
-            py::arg("path") = "/collision",
-            py::arg("visible_by_default") = false,
-            py::return_value_policy::reference, py::keep_alive<1, 2>(),
-            py::keep_alive<1, 3>(),
-            "Create scene prims that visualize articulation collision shapes.");
 #endif
 }

@@ -2,7 +2,6 @@
 #define _MATERIAL_HPP_
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
-#include "engine/graphics/backend/graphics_factory.hpp"
 #include "engine/graphics/material/pbrMaterials.hpp"
 #include "engine/graphics/material/phongMaterials.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"

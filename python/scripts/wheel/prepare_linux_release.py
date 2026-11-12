@@ -9,6 +9,8 @@ import sys
 import tempfile
 import zipfile
 
+from wheel_licenses import inspect_license_bundle
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -52,6 +54,12 @@ def main() -> None:
         if len(repaired) != len(args.wheels):
             raise RuntimeError("Expected one repaired artifact per input wheel")
         for wheel in repaired:
+            package = (
+                "kangengine_physx_gpu"
+                if wheel.name.startswith("kangengine_physx_gpu-") else "kangengine"
+            )
+            with zipfile.ZipFile(wheel) as archive:
+                inspect_license_bundle(archive, package)
             if wheel.stat().st_size > 100_000_000:
                 raise ValueError(f"Wheel exceeds 100 MB: {wheel.name}")
         subprocess.run(

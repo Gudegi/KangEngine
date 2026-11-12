@@ -7,6 +7,8 @@ import re
 import shutil
 import subprocess
 
+from wheel_licenses import write_license_bundle
+
 
 def output(*args: str) -> str:
     return subprocess.check_output(args, text=True)
@@ -26,7 +28,6 @@ def is_elf(path: Path) -> bool:
 def bundle_linux_runtime(
     package: Path,
     physx_runtime: Path | None,
-    physx_license: Path | None,
 ) -> None:
     if not shutil.which("patchelf"):
         raise RuntimeError("Linux wheel staging requires patchelf on PATH")
@@ -43,13 +44,6 @@ def bundle_linux_runtime(
 
     lib = package / "_native" / "lib"
     lib.mkdir(parents=True, exist_ok=True)
-    if physx_runtime is not None:
-        if physx_license is None or not physx_license.is_file():
-            raise ValueError("--physx-license must name the SDK license file")
-        licenses = package / "licenses"
-        licenses.mkdir(exist_ok=True)
-        shutil.copy2(physx_license, licenses / "PhysX.txt")
-
     # PhysX's dlopen plugin is supplied by kangengine-physx-gpu.
     # Collect before rewriting any search paths. Keep host OS/driver libraries
     # external; auditwheel determines the eventual manylinux policy separately.
@@ -138,8 +132,12 @@ def stage_physx_runtime(
     if unexpected:
         raise RuntimeError(f"Unsupported PhysX GPU dependencies: {sorted(unexpected)}")
     subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(binary)], check=True)
-    (package / "licenses").mkdir()
-    shutil.copy2(license_file, package / "licenses" / "PhysX.txt")
-    return tomllib.loads((destination / "pyproject.toml").read_text())["project"][
+    version = tomllib.loads((destination / "pyproject.toml").read_text())["project"][
         "version"
     ]
+    write_license_bundle(
+        package / "licenses",
+        {"PhysX/LICENSE": license_file},
+        {"PhysX": f"{version} (runtime package)"},
+    )
+    return version

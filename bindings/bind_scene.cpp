@@ -4,14 +4,13 @@
 ///
 
 #include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "engine/scene/scene_backend.hpp"
-#include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
-#include "engine/scene/debug_draw.hpp"
 #include "engine/scene/types/camera.hpp"
 #include "engine/scene/types/light.hpp"
 #include "engine/scene/component/transform_component.hpp"
@@ -25,7 +24,6 @@
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/collision_shape_component.hpp"
-#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
@@ -42,40 +40,7 @@
 namespace py = pybind11;
 
 void bind_scene(py::module& m) {
-    py::module scene = m.def_submodule(
-        "scene", "Scene graph, prim, mesh, and debug drawing APIs.");
-    py::module geometry = m.def_submodule(
-        "geometry", "Geometry algorithms and procedural mesh factories.");
-
-    // Scene-owned viewport and light value types.
-    py::class_<KE::Camera>(scene, "Camera",
-                           "View camera used by KangEngine applications.")
-        .def("get_camera_pos", &KE::Camera::getCameraPos,
-             "Return the camera position.")
-        .def("get_target_pos", &KE::Camera::getTargetPos,
-             "Return the current camera target point.")
-        .def("get_camera_look_dir", &KE::Camera::getCameraLookDir,
-             "Return the normalized forward/look direction.")
-        .def("get_camera_up_dir", &KE::Camera::getCameraUpDir,
-             "Return the normalized up direction.")
-        .def("get_camera_right_dir", &KE::Camera::getCameraRightDir,
-             "Return the normalized right direction.")
-        .def("get_fov", &KE::Camera::getFoV,
-             "Return the vertical field of view in degrees.")
-        .def("get_near_plane", &KE::Camera::getNearPlane,
-             "Return the near clipping distance.")
-        .def("get_far_plane", &KE::Camera::getFarPlane,
-             "Return the far clipping distance.")
-        .def("set_camera_pos", &KE::Camera::setCameraPos, py::arg("position"),
-             "Set the camera position.")
-        .def("set_target_pos", &KE::Camera::setTargetPos, py::arg("target"),
-             "Set the camera target point.")
-        .def("set_fov", &KE::Camera::setFoV, py::arg("fov"),
-             "Set the vertical field of view in degrees.")
-        .def("set_near_plane", &KE::Camera::setNearPlane, py::arg("distance"),
-             "Set the near clipping distance.")
-        .def("set_far_plane", &KE::Camera::setFarPlane, py::arg("distance"),
-             "Set the far clipping distance.");
+    py::module scene = m.attr("scene");
 
     py::class_<KE::Scene::DirectionalLight>(
         scene, "DirectionalLight",
@@ -133,6 +98,46 @@ void bind_scene(py::module& m) {
         .def(py::init<>())
         .def_readwrite("texture_path", &KE::Scene::DomeLight::texturePath)
         .def_readwrite("texture_format", &KE::Scene::DomeLight::textureFormat);
+
+    py::enum_<KE::Scene::LightType>(
+        scene, "LightType",
+        "Light prim subtype used by renderer scene-light sync.")
+        .value("DIRECTIONAL", KE::Scene::LightType::Directional)
+        .value("POINT", KE::Scene::LightType::Point)
+        .value("SPOT", KE::Scene::LightType::Spot)
+        .value("RECT", KE::Scene::LightType::Rect)
+        .value("DOME", KE::Scene::LightType::Dome);
+
+
+    // Scene-owned viewport and light value types.
+    py::class_<KE::Camera>(scene, "Camera",
+                           "View camera used by KangEngine applications.")
+        .def("get_camera_pos", &KE::Camera::getCameraPos,
+             "Return the camera position.")
+        .def("get_target_pos", &KE::Camera::getTargetPos,
+             "Return the current camera target point.")
+        .def("get_camera_look_dir", &KE::Camera::getCameraLookDir,
+             "Return the normalized forward/look direction.")
+        .def("get_camera_up_dir", &KE::Camera::getCameraUpDir,
+             "Return the normalized up direction.")
+        .def("get_camera_right_dir", &KE::Camera::getCameraRightDir,
+             "Return the normalized right direction.")
+        .def("get_fov", &KE::Camera::getFoV,
+             "Return the vertical field of view in degrees.")
+        .def("get_near_plane", &KE::Camera::getNearPlane,
+             "Return the near clipping distance.")
+        .def("get_far_plane", &KE::Camera::getFarPlane,
+             "Return the far clipping distance.")
+        .def("set_camera_pos", &KE::Camera::setCameraPos, py::arg("position"),
+             "Set the camera position.")
+        .def("set_target_pos", &KE::Camera::setTargetPos, py::arg("target"),
+             "Set the camera target point.")
+        .def("set_fov", &KE::Camera::setFoV, py::arg("fov"),
+             "Set the vertical field of view in degrees.")
+        .def("set_near_plane", &KE::Camera::setNearPlane, py::arg("distance"),
+             "Set the near clipping distance.")
+        .def("set_far_plane", &KE::Camera::setFarPlane, py::arg("distance"),
+             "Set the far clipping distance.");
 
     // Token class
     py::class_<KE::Scene::Token>(
@@ -205,15 +210,6 @@ void bind_scene(py::module& m) {
         .value("PARENT", KE::Scene::ManipulationPolicy::Parent)
         .value("ROOT", KE::Scene::ManipulationPolicy::Root)
         .value("DISABLED", KE::Scene::ManipulationPolicy::Disabled);
-
-    py::enum_<KE::Scene::LightType>(
-        scene, "LightType",
-        "Light prim subtype used by renderer scene-light sync.")
-        .value("DIRECTIONAL", KE::Scene::LightType::Directional)
-        .value("POINT", KE::Scene::LightType::Point)
-        .value("SPOT", KE::Scene::LightType::Spot)
-        .value("RECT", KE::Scene::LightType::Rect)
-        .value("DOME", KE::Scene::LightType::Dome);
 
     py::enum_<KE::Scene::CameraProjectionType>(
         scene, "CameraProjectionType",
@@ -785,128 +781,6 @@ void bind_scene(py::module& m) {
                    "' version=" + std::to_string(c.version()) + ">";
         });
 
-    py::class_<KE::Scene::SceneRenderSystem>(
-        scene, "SceneRenderSystem",
-        "Registry connecting scene RenderComponents to renderer resources. "
-        "This hides raw renderable handles for normal scene use.")
-        .def_property_readonly(
-            "registration_count",
-            &KE::Scene::SceneRenderSystem::registrationCount,
-            "Return the number of registered render components.")
-        .def("is_registered", &KE::Scene::SceneRenderSystem::isRegistered,
-             py::arg("component"),
-             "Return whether a render component owns renderer resources.")
-        .def("_handle", &KE::Scene::SceneRenderSystem::handle,
-             py::arg("component"),
-             "Return the renderer batch handle for internal bridges; "
-             "unregistered components return InvalidHandle.")
-        .def("shares_batch", &KE::Scene::SceneRenderSystem::sharesBatch,
-             py::arg("first"), py::arg("second"),
-             "Return whether two components share one renderer batch without "
-             "exposing the raw handle.")
-        .def("set_double_sided", &KE::Scene::SceneRenderSystem::setDoubleSided,
-             py::arg("component"), py::arg("enabled") = true,
-             "Set double-sided rendering through component registration.")
-        .def("set_casts_shadow", &KE::Scene::SceneRenderSystem::setCastsShadow,
-             py::arg("component"), py::arg("enabled") = true,
-             "Set shadow casting through component registration.")
-        .def("set_alpha_mode", &KE::Scene::SceneRenderSystem::setAlphaMode,
-             py::arg("component"), py::arg("mode"), py::arg("cutoff") = 0.5f,
-             "Set alpha rendering through component registration.")
-        .def("set_material", &KE::Scene::SceneRenderSystem::setMaterial,
-             py::arg("component"), py::arg("material"),
-             "Replace a registered SceneGraph renderable's material and move "
-             "it to the matching renderer batch. ExternalBuffer renderables "
-             "reject dynamic material replacement.")
-        .def(
-            "set_texture",
-            [](KE::Scene::SceneRenderSystem& self,
-               KE::Scene::RenderComponent& component,
-               KE::Backend::Texture* texture, KE::TextureRole role) {
-                self.setTexture(component, texture, role);
-            },
-            py::arg("component"), py::arg("texture"), py::arg("role"),
-            "Set a texture by material role through component registration.")
-        .def(
-            "set_texture",
-            [](KE::Scene::SceneRenderSystem& self,
-               KE::Scene::RenderComponent& component,
-               KE::Backend::Texture* texture,
-               int slot) { self.setTexture(component, texture, slot); },
-            py::arg("component"), py::arg("texture"), py::arg("slot") = 0,
-            "Set a texture by raw renderer slot through component "
-            "registration.")
-        .def("set_external_buffer",
-             &KE::Scene::SceneRenderSystem::setExternalBuffer,
-             py::arg("component"), py::arg("descriptor"),
-             "Attach an external transform buffer through registration.")
-        .def(
-            "set_instance_colors",
-            [](KE::Scene::SceneRenderSystem& self,
-               KE::Scene::RenderComponent& component, const FloatArray& colors) {
-                self.setInstanceColors(component, vec4Array(colors, "colors"));
-            },
-            py::arg("component"), py::arg("colors"),
-            "Set ExternalBuffer RGBA multipliers without replacing transforms. "
-            "Accept one color or one per instance; empty resets to white.")
-        .def(
-            "update_instances",
-            [](KE::Scene::SceneRenderSystem& self,
-               KE::Scene::RenderComponent& component,
-               const FloatArray& transforms, py::object colors) {
-                auto transformVec = mat4Array(transforms, "transforms");
-                std::vector<glm::vec4> colorVec;
-                const std::vector<glm::vec4>* colorPtr = nullptr;
-                if (!colors.is_none()) {
-                    auto colorArray = colors.cast<FloatArray>();
-                    colorVec = vec4Array(colorArray, "colors");
-                    if (!colorVec.empty() && colorVec.size() != 1 &&
-                        colorVec.size() != transformVec.size()) {
-                        throw py::value_error(
-                            "colors must be empty, length 1, or match "
-                            "transforms length");
-                    }
-                    colorPtr = &colorVec;
-                }
-                self.updateInstances(component, transformVec, colorPtr);
-            },
-            py::arg("component"), py::arg("transforms"),
-            py::arg("colors") = py::none(),
-            "Update instanced transforms and optional colors through "
-            "component registration.")
-        .def(
-            "update_geometry",
-            [](KE::Scene::SceneRenderSystem& self,
-               KE::Scene::RenderComponent& component,
-               const FloatArray& positions, py::object normals) {
-                auto positionVec = vec3Array(positions, "positions");
-                std::vector<glm::vec3> normalVec;
-                if (!normals.is_none()) {
-                    auto normalArray = normals.cast<FloatArray>();
-                    normalVec = vec3Array(normalArray, "normals");
-                    if (normalVec.size() != positionVec.size()) {
-                        throw py::value_error(
-                            "normals must match positions length");
-                    }
-                }
-                self.updateGeometry(component, positionVec, normalVec);
-            },
-            py::arg("component"), py::arg("positions"),
-            py::arg("normals") = py::none(),
-            "Update dynamic vertex positions and optional normals through "
-            "component registration.")
-        .def(
-            "update_skinning",
-            [](KE::Scene::SceneRenderSystem& self,
-               KE::Scene::RenderComponent& component,
-               const FloatArray& boneMatrices) {
-                self.updateSkinning(
-                    component,
-                    mat4RowMajorArray(boneMatrices, "bone_matrices"));
-            },
-            py::arg("component"), py::arg("bone_matrices"),
-            "Update skinned bone matrices through component registration.");
-
     // Prim class
     py::class_<KE::Scene::Prim>(
         scene, "Prim",
@@ -1291,395 +1165,6 @@ void bind_scene(py::module& m) {
                                       "Scene backend implementation type.")
         .value("NATIVE", KE::Scene::BackendType::Native)
         .value("USD", KE::Scene::BackendType::USD);
-
-    // MeshData struct (with shared_ptr holder for set_mesh_data compatibility)
-    py::class_<KE::Scene::MeshData, std::shared_ptr<KE::Scene::MeshData>>(
-        scene, "MeshData",
-        "Static mesh payload with vertex attributes and triangle indices.")
-        .def(py::init<>(), "Create empty mesh data.")
-        .def_static("from_arrays", [](const FloatArray& vertices, const IntArray& indices) {
-            auto points = vec3ArrayView(vertices, "vertices");
-            auto indexInfo = indices.request();
-            if (indexInfo.size % 3)
-                throw py::value_error("indices must contain triangles");
-            auto mesh = std::make_shared<KE::Scene::MeshData>();
-            mesh->vertices.reserve(points.count);
-            for (size_t i = 0; i < points.count; ++i) {
-                const float* p = points.data + 3 * i;
-                if (!std::isfinite(p[0]) || !std::isfinite(p[1]) || !std::isfinite(p[2]))
-                    throw py::value_error("vertices must be finite");
-                mesh->vertices.emplace_back(p[0], p[1], p[2]);
-            }
-            const int* data = static_cast<const int*>(indexInfo.ptr);
-            for (py::ssize_t i = 0; i < indexInfo.size; ++i) {
-                if (data[i] < 0 || size_t(data[i]) >= points.count)
-                    throw py::value_error("mesh index out of range");
-                mesh->indices.push_back(static_cast<unsigned int>(data[i]));
-            }
-            mesh->fillMissingAttributes();
-            return mesh;
-        }, py::arg("vertices"), py::arg("indices"),
-           "Create a mesh from CPU vertex [N,3] and triangle index arrays.")
-        .def_readwrite("vertices", &KE::Scene::MeshData::vertices,
-                       "Vertex positions.")
-        .def_readwrite("normals", &KE::Scene::MeshData::normals,
-                       "Vertex normals.")
-        .def_readwrite("uvs", &KE::Scene::MeshData::uvs,
-                       "Vertex texture coordinates.")
-        .def_readwrite("indices", &KE::Scene::MeshData::indices,
-                       "Triangle index buffer.");
-
-    auto meshResult = [](KE::Scene::MeshData data) {
-        return std::make_shared<KE::Scene::MeshData>(std::move(data));
-    };
-    geometry.def(
-        "create_cube_data",
-        [meshResult](float scale) {
-            return meshResult(KE::Geometry::createCube(scale));
-        },
-        py::arg("scale") = 1.0f, "Create a cube mesh payload.");
-    geometry.def(
-        "create_plane_data",
-        [meshResult](float scale, KE::UpAxis upAxis) {
-            return meshResult(KE::Geometry::createPlane(scale, upAxis));
-        },
-        py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y,
-        "Create a plane mesh payload.");
-    geometry.def(
-        "create_sphere_data",
-        [meshResult](float radius, int longitudes, int latitudes) {
-            return meshResult(
-                KE::Geometry::createSphere(radius, longitudes, latitudes));
-        },
-        py::arg("radius"), py::arg("num_longitudes"), py::arg("num_latitudes"),
-        "Create a UV sphere mesh payload.");
-    geometry.def(
-        "create_box_data",
-        [meshResult](float x, float y, float z) {
-            return meshResult(KE::Geometry::createBox(x, y, z));
-        },
-        py::arg("x_scale"), py::arg("y_scale"), py::arg("z_scale"),
-        "Create a box mesh payload with independent axis lengths.");
-    geometry.def(
-        "create_cylinder_data",
-        [meshResult](float radius, float length, KE::UpAxis upAxis,
-                     int segments) {
-            return meshResult(
-                KE::Geometry::createCylinder(radius, length, upAxis, segments));
-        },
-        py::arg("radius"), py::arg("length"),
-        py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
-        "Create a cylinder mesh payload.");
-    geometry.def(
-        "create_arrow_data",
-        [meshResult](float baseRadius, float baseHeight, KE::UpAxis upAxis,
-                     float capRadius, float capHeight, int segments) {
-            return meshResult(KE::Geometry::createArrow(baseRadius, baseHeight,
-                                                        upAxis, capRadius,
-                                                        capHeight, segments));
-        },
-        py::arg("base_radius"), py::arg("base_height"),
-        py::arg("up_axis") = KE::UpAxis::Y, py::arg("cap_radius") = -1.0f,
-        py::arg("cap_height") = -1.0f, py::arg("segments") = 32,
-        "Create an arrow mesh payload.");
-    geometry.def(
-        "create_capsule_data",
-        [meshResult](float radius, float height, KE::UpAxis upAxis,
-                     int segments) {
-            return meshResult(
-                KE::Geometry::createCapsule(radius, height, upAxis, segments));
-        },
-        py::arg("radius"), py::arg("height"),
-        py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
-        "Create a capsule mesh payload.");
-    geometry.def(
-        "create_cone_data",
-        [meshResult](float radius, float height, KE::UpAxis upAxis,
-                     int segments) {
-            return meshResult(
-                KE::Geometry::createCone(radius, height, upAxis, segments));
-        },
-        py::arg("radius"), py::arg("height"),
-        py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
-        "Create a cone mesh payload.");
-
-    py::class_<KE::Scene::SkinnedMeshData,
-               std::shared_ptr<KE::Scene::SkinnedMeshData>>(
-        scene, "SkinnedMeshData",
-        "Mesh payload with skinning attributes for skeletal animation.")
-        .def(py::init<>(), "Create empty skinned mesh data.")
-        .def(
-            py::init([](std::shared_ptr<KE::Scene::MeshData> mesh,
-                        const IntArray& boneIndices,
-                        const FloatArray& boneWeights,
-                        std::vector<int> boneNodeIndices,
-                        const FloatArray& inverseBindMatrices) {
-                if (!mesh)
-                    throw py::value_error("mesh is None");
-                auto result = std::make_shared<KE::Scene::SkinnedMeshData>();
-                result->mesh = *mesh;
-                result->boneIndices = intVec4Array(boneIndices, "bone_indices");
-                result->boneWeights = vec4Array(boneWeights, "bone_weights");
-                result->boneNodeIndices = std::move(boneNodeIndices);
-                result->inverseBindMatrices = mat4RowMajorArray(
-                    inverseBindMatrices, "inverse_bind_matrices");
-                const size_t vertexCount = result->mesh.vertices.size();
-                if (result->boneIndices.size() != vertexCount ||
-                    result->boneWeights.size() != vertexCount) {
-                    throw py::value_error("bone_indices and bone_weights must "
-                                          "match mesh vertices");
-                }
-                if (result->boneNodeIndices.size() !=
-                    result->inverseBindMatrices.size()) {
-                    throw py::value_error("bone_node_indices and "
-                                          "inverse_bind_matrices must match");
-                }
-                const int boneCount =
-                    static_cast<int>(result->inverseBindMatrices.size());
-                for (size_t vertex = 0; vertex < vertexCount; ++vertex) {
-                    const glm::ivec4 indices = result->boneIndices[vertex];
-                    const glm::vec4 weights = result->boneWeights[vertex];
-                    for (int slot = 0; slot < 4; ++slot) {
-                        if (weights[slot] > 0.0f &&
-                            (indices[slot] < 0 || indices[slot] >= boneCount)) {
-                            throw py::value_error("weighted bone index is "
-                                                  "outside the bone palette");
-                        }
-                    }
-                }
-                return result;
-            }),
-            py::arg("mesh"), py::arg("bone_indices"), py::arg("bone_weights"),
-            py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
-            "Create a complete skinned mesh payload from array data.")
-        .def_readwrite("mesh", &KE::Scene::SkinnedMeshData::mesh,
-                       "Base static mesh data.")
-        .def_readwrite("bone_node_indices",
-                       &KE::Scene::SkinnedMeshData::boneNodeIndices,
-                       "Skeleton node index for each bound bone.")
-        .def(
-            "has_valid_vertex_skinning",
-            &KE::Scene::SkinnedMeshData::hasValidVertexSkinning,
-            "Return true when vertex bone data matches the mesh vertex count.");
-
-    py::class_<KE::Scene::DebugDraw>(
-        scene, "DebugDraw",
-        "Helpers for creating debug lines, arrows, and coordinate axes.")
-        .def_static(
-            "make_arrow_transform",
-            [](const glm::vec3& start, const glm::vec3& end) -> py::object {
-                glm::mat4 transform(1.0f);
-                if (!KE::Scene::DebugDraw::makeArrowTransform(start, end,
-                                                              transform))
-                    return py::none();
-                return py::cast(transform);
-            },
-            py::arg("start"), py::arg("end"),
-            "Return the arrow transform, or None for a zero-length arrow.")
-        .def_static(
-            "make_line_transform",
-            [](const glm::vec3& start, const glm::vec3& end) -> py::object {
-                glm::mat4 transform(1.0f);
-                if (!KE::Scene::DebugDraw::makeLineTransform(start, end,
-                                                             transform))
-                    return py::none();
-                return py::cast(transform);
-            },
-            py::arg("start"), py::arg("end"),
-            "Return the centered line transform, or None for a zero-length "
-            "line.")
-        .def_static(
-            "log_component_lines",
-            [](KE::App* app, KE::Material* material, const std::string& path,
-               const FloatArray& starts, const FloatArray& ends,
-               py::object colors, float radius, int segments) {
-                auto s = vec3Array(starts, "starts");
-                auto e = vec3Array(ends, "ends");
-                std::vector<glm::vec4> c;
-                if (!colors.is_none())
-                    c = vec4Array(colors.cast<FloatArray>(), "colors");
-                if (s.size() != e.size()) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
-                    throw py::value_error(
-                        "colors must be empty, length 1, or match starts "
-                        "length");
-                }
-                return KE::Scene::DebugDraw::logLineComponent(
-                    app, material, path, s, e, c, radius, segments);
-            },
-            py::arg("app"), py::arg("material"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
-            py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            "Create instanced debug line geometry and return its "
-            "RenderComponent.")
-        .def_static(
-            "update_component_lines",
-            [](KE::App* app, KE::Scene::RenderComponent& component,
-               const FloatArray& starts, const FloatArray& ends,
-               py::object colors) {
-                auto s = vec3Array(starts, "starts");
-                auto e = vec3Array(ends, "ends");
-                std::vector<glm::vec4> c;
-                if (!colors.is_none())
-                    c = vec4Array(colors.cast<FloatArray>(), "colors");
-                if (s.size() != e.size()) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
-                    throw py::value_error(
-                        "colors must be empty, length 1, or match starts "
-                        "length");
-                }
-                KE::Scene::DebugDraw::updateLines(app, component, s, e, c);
-            },
-            py::arg("app"), py::arg("component"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors") = py::none(),
-            "Update component-backed debug line geometry.")
-        .def_static(
-            "log_component_arrows",
-            [](KE::App* app, KE::Material* material, const std::string& path,
-               const FloatArray& starts, const FloatArray& ends,
-               py::object colors, float radius, int segments) {
-                auto s = vec3Array(starts, "starts");
-                auto e = vec3Array(ends, "ends");
-                std::vector<glm::vec4> c;
-                if (!colors.is_none())
-                    c = vec4Array(colors.cast<FloatArray>(), "colors");
-                if (s.size() != e.size()) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
-                    throw py::value_error(
-                        "colors must be empty, length 1, or match starts "
-                        "length");
-                }
-                return KE::Scene::DebugDraw::logArrowComponent(
-                    app, material, path, s, e, c, radius, segments);
-            },
-            py::arg("app"), py::arg("material"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
-            py::arg("radius") = 0.02f, py::arg("segments") = 12,
-            "Create instanced debug arrow geometry and return its "
-            "RenderComponent.")
-        .def_static(
-            "update_component_arrows",
-            [](KE::App* app, KE::Scene::RenderComponent& component,
-               const FloatArray& starts, const FloatArray& ends,
-               py::object colors) {
-                auto s = vec3Array(starts, "starts");
-                auto e = vec3Array(ends, "ends");
-                std::vector<glm::vec4> c;
-                if (!colors.is_none())
-                    c = vec4Array(colors.cast<FloatArray>(), "colors");
-                if (s.size() != e.size()) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
-                    throw py::value_error(
-                        "colors must be empty, length 1, or match starts "
-                        "length");
-                }
-                KE::Scene::DebugDraw::updateArrows(app, component, s, e, c);
-            },
-            py::arg("app"), py::arg("component"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors") = py::none(),
-            "Update component-backed debug arrow geometry.")
-        .def_static(
-            "log_coordinate_axes",
-            [](KE::App* app, KE::Material* material, const std::string& path,
-               glm::vec3 origin, glm::quat orientation, float length,
-               float radius, int segments) {
-                return KE::Scene::DebugDraw::logCoordinateAxes(
-                    app, material, path, origin, orientation, length, radius,
-                    segments);
-            },
-            py::arg("app"), py::arg("material"), py::arg("path"),
-            py::arg("origin"), py::arg("orientation"), py::arg("length") = 1.0f,
-            py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            "Create instanced XYZ coordinate axes.")
-        .def_static(
-            "log_scene_lines",
-            [](KE::Scene::SceneBackend* sceneBackend,
-               const std::string& basePath, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logLines(
-                    sceneBackend, basePath, vec3Array(starts, "starts"),
-                    vec3Array(ends, "ends"), vec4Array(colors, "colors"),
-                    radius, segments);
-            },
-            py::arg("scene"), py::arg("path"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.005f,
-            py::arg("segments") = 8, py::return_value_policy::reference,
-            "Create scene-backed line prims from numpy arrays.")
-        .def_static(
-            "log_scene_lines",
-            [](KE::Scene::SceneBackend* sceneBackend,
-               const std::string& basePath,
-               const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logLines(sceneBackend, basePath,
-                                                      starts, ends, colors,
-                                                      radius, segments);
-            },
-            py::arg("scene"), py::arg("path"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.005f,
-            py::arg("segments") = 8, py::return_value_policy::reference,
-            "Create scene-backed line prims.")
-        .def_static(
-            "log_scene_arrows",
-            [](KE::Scene::SceneBackend* sceneBackend,
-               const std::string& basePath, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logArrows(
-                    sceneBackend, basePath, vec3Array(starts, "starts"),
-                    vec3Array(ends, "ends"), vec4Array(colors, "colors"),
-                    radius, segments);
-            },
-            py::arg("scene"), py::arg("path"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.02f,
-            py::arg("segments") = 12, py::return_value_policy::reference,
-            "Create scene-backed arrow prims from numpy arrays.")
-        .def_static(
-            "log_scene_arrows",
-            [](KE::Scene::SceneBackend* sceneBackend,
-               const std::string& basePath,
-               const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logArrows(sceneBackend, basePath,
-                                                       starts, ends, colors,
-                                                       radius, segments);
-            },
-            py::arg("scene"), py::arg("path"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.02f,
-            py::arg("segments") = 12, py::return_value_policy::reference,
-            "Create scene-backed arrow prims.")
-        .def_static(
-            "log_scene_coordinate_axes",
-            [](KE::Scene::SceneBackend* sceneBackend,
-               const std::string& basePath, glm::vec3 origin,
-               glm::quat orientation, float length, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logCoordinateAxes(
-                    sceneBackend, basePath, origin, orientation, length, radius,
-                    segments);
-            },
-            py::arg("scene"), py::arg("path"), py::arg("origin"),
-            py::arg("orientation"), py::arg("length") = 1.0f,
-            py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            py::return_value_policy::reference,
-            "Create scene-backed XYZ coordinate axes.");
 
     // SceneBackend interface
     py::class_<KE::Scene::SceneBackend>(

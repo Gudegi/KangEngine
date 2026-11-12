@@ -1,5 +1,5 @@
 #include "asset/heightmap_loader.hpp"
-#include "engine/scene/scene_backend.hpp"
+#include "geometry/mesh_data.hpp"
 #include "geometry/mesh_utils.hpp"
 #include "utils/types.hpp"
 #include <algorithm>
