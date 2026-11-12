@@ -22,6 +22,7 @@ throughput and measurement details.
 
 guide/index
 guide/integrations/INDEX
+guide/tools/INDEX
 ```
 
 ```{toctree}

@@ -8,6 +8,7 @@ getting_started/index
 scene_rendering/INDEX
 simulation/INDEX
 animation/INDEX
+utils/INDEX
 advanced/INDEX
 CHANGELOG
 ```

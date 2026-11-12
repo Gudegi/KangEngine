@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const navigation = document.querySelector(".sidebar-tree");
   if (navigation) {
-    const defaultOpenSections = new Set(["User Guide", "Integrations"]);
+    const defaultOpenSections = new Set(["User Guide", "Integrations", "Tools"]);
     const topLevelItems = navigation.querySelectorAll(":scope > ul > li");
     for (const item of topLevelItems) {
       const link = item.querySelector(":scope > a");

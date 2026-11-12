@@ -1,7 +1,7 @@
 # ke.utils
 
-Pure Python helpers for joint mapping, math, tensor conversion, colors, and
-debug drawing.
+Pure Python helpers for batch state machines, joint mapping, math, tensor
+conversion, colors, and debug drawing.
 
 ## API overview
 
@@ -17,6 +17,22 @@ debug drawing.
    as_cpu_numpy
    as_sim_buffer
    preset_rgba
+   BatchFSM
+   FSMTransition
+```
+
+## Batch State Machines
+
+See the [Batch FSM guide](../guide/utils/BATCH_FSM.md) for signals, priorities, and
+handling state changes.
+
+```{eval-rst}
+.. currentmodule:: kangengine.utils
+
+.. autoclass:: BatchFSM
+   :members:
+
+.. autoclass:: FSMTransition
 ```
 
 ## Joint Mapping

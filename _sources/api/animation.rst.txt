@@ -43,3 +43,21 @@ linear/angular velocity, and acceleration arrays are computed through its
 .. autoclass:: Transform
 
 .. autoclass:: SkeletonState
+
+.. _batch-motion-matching-api:
+
+Batch motion matching
+---------------------
+
+Prepare shared data once, then search and advance independent references.
+See the :doc:`motion matching guide <../guide/animation/MOTION_MATCHING>`
+for a minimal example and runnable Newton viewers.
+
+.. autoclass:: MotionMatchingBatchSearch
+   :members:
+
+.. autoclass:: MotionMatchBatch
+   :members:
+
+.. autoclass:: MotionMatchingBatchController
+   :members:

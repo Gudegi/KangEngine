@@ -80,7 +80,7 @@ outlive its resource registration.
 
 ## Debug geometry
 
-Use `app.scene.debug_geometry` for mesh-based debug lines, arrows, and axes.
+Use `app.debug.geometry` for mesh-based debug lines, arrows, and axes.
 These objects are ordinary SceneGraph renderables and return
 `DebugPrimitiveView` instances.
 
