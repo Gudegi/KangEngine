@@ -111,6 +111,11 @@ void ShadowPass::initializeResources(Backend::Buffer* shadowBuffer,
     boneWeights.attributes = {
         {Backend::VertexFormat::Float32x4, 0, RendererAttribute::BoneWeights}};
     Backend::VertexBufferLayout empty;
+    Backend::VertexBufferLayout color;
+    color.arrayStride = sizeof(glm::vec4);
+    color.stepMode = Backend::VertexStepMode::Instance;
+    color.attributes = {{Backend::VertexFormat::Float32x4, 0,
+                         RendererAttribute::InstanceColor}};
     const std::string staticVs =
         _shaderLibrary->load(KE::getAssetPath("shaders/shadow.vs"));
     const std::string skinVs =
@@ -135,7 +140,7 @@ void ShadowPass::initializeResources(Backend::Buffer* shadowBuffer,
                                       transforms,
                                       empty,
                                       alpha ? texCoords : empty,
-                                      empty,
+                                      alpha ? color : empty,
                                       empty,
                                       skin ? boneIndices : empty,
                                       skin ? boneWeights : empty};
@@ -170,7 +175,8 @@ void ShadowPass::initializeResources(Backend::Buffer* shadowBuffer,
 }
 
 ShadowPass::PreparedDraws
-ShadowPass::prepare(const std::vector<MeshInstancer*>& casters) {
+ShadowPass::prepare(const std::vector<MeshInstancer*>& casters,
+                     Backend::Texture* whiteTexture) {
     PreparedDraws prepared;
     prepared.draws.reserve(casters.size());
     prepared.ownedViews.reserve(casters.size());
@@ -179,13 +185,13 @@ ShadowPass::prepare(const std::vector<MeshInstancer*>& casters) {
         PreparedDraw draw;
         draw.instancer = inst;
         draw.skinned = inst->hasSkinning();
-        Backend::Texture* alphaTexture = inst->alphaMode() == AlphaMode::Mask
-                                             ? inst->alphaMaskTexture()
-                                             : nullptr;
-        draw.alphaMask = alphaTexture != nullptr;
+        draw.alphaMask = inst->alphaMode() == AlphaMode::Mask;
         draw.pipeline =
             pipelineFor(draw.skinned, draw.alphaMask, inst->isDoubleSided());
-        if (alphaTexture) {
+        if (draw.alphaMask) {
+            Backend::Texture* alphaTexture = inst->alphaMaskTexture();
+            if (!alphaTexture)
+                alphaTexture = whiteTexture;
             Backend::TextureViewDesc viewDesc;
             viewDesc.format = alphaTexture->getFormat();
             viewDesc.label = "shadow_alpha_view";

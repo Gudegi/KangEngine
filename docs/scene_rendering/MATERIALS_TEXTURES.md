@@ -12,31 +12,31 @@ the current application and its scene are accessed as `self` and `self.scene`.
 
 ## API namespaces
 
-KangEngine separates normal scene authoring from low-level rendering:
+Use these APIs for scene objects, materials, and textures:
 
 | Namespace | Use it for |
 | --- | --- |
 | `self.scene` | Adding meshes, ground planes, and imported assets to the scene |
-| `ke.material` | Material classes, presets, and vertex-color styles |
-| `ke.render` | Textures, GPU buffers, custom pipelines, and render hooks |
+| `ke.material` | Creating and configuring materials |
+| `ke.render` | Working with GPU resources and custom drawing |
 
 For ordinary meshes, create a material and pass it to
 `self.scene.add_mesh()`.
 
 ## Standard materials
 
-`create_standard_materials()` creates a cached bundle of shared materials used
-by common scene, debug, ground, and character workflows. Calling it again
-returns the same bundle unless `force=True` is supplied.
+`create_standard_materials()` returns a collection of reusable materials for
+meshes, ground planes, and characters. Repeated calls return the same materials;
+`force=True` creates a new collection.
 
 The simplest ground call automatically uses the shared checkerboard material
-from the standard bundle:
+from this collection:
 
 ```python
 ground = self.scene.add_ground()
 ```
 
-Obtain the bundle directly when you want to reuse one of its materials or
+Get the collection directly when you want to reuse one of its materials or
 replace the ground material explicitly:
 
 ```python
@@ -47,25 +47,24 @@ ground = self.scene.add_ground(
 )
 ```
 
-The bundle contains:
+Available materials:
 
 | Name | Purpose |
 | --- | --- |
-| `common`, `debug`, `skinned`, `skinned_debug` | Untextured vertex/display color |
-| `common_texture`, `skinned_texture` | Textured vertex/display color |
+| `common`, `debug`, `skinned`, `skinned_debug` | One color per object, with optional colors per vertex |
+| `common_texture`, `skinned_texture` | Image texture tinted by object and vertex colors |
 | `ground` | Checkerboard ground |
-| `debug_checker`, `skinned_debug_checker` | Diagnostic UV grid and checker pattern |
+| `debug_checker`, `skinned_debug_checker` | Grid for checking texture placement (UV coordinates) |
 | `phong`, `skinned_phong` | Default Phong surface |
 | `pbr`, `skinned_pbr` | Default PBR surface |
 
 These are shared defaults. Changing one changes every object using that same
-material. Create a separate material when an object needs its own editable
-surface values.
+material. Create a separate material to change one object's appearance independently.
 
 ## Create a Phong material
 
-Phong is useful for simple colored surfaces and assets described with diffuse,
-specular, and shininess values.
+Phong controls surface color (`diffuse`), highlight color (`specular`), and
+highlight sharpness (`shininess`).
 
 ```python
 material: ke.material.PhongMaterial = self.create_phong_material(
@@ -81,14 +80,16 @@ mesh: ke.RenderablePrimView = self.scene.add_mesh(
 )
 ```
 
-`create_phong_material()` returns a new retained material on every call.
+`create_phong_material()` creates a new material owned by the App on every call.
 Available texture inputs are `diffuse_map`, `specular_map`, `alpha_map`, and
 `normal_map`.
 
 ## Create a PBR material
 
-PBR is a better fit for metallic-roughness assets and surfaces that should
-respond more consistently to different lighting environments.
+PBR (physically based rendering) controls how metallic (`metallic`) and rough
+(`roughness`) a surface looks. The fourth `base_color` value is opacity:
+`0` is transparent and `1` is opaque. Transparency also requires `MASK` or
+`BLEND` mode, as shown under [Mesh rendering options](#mesh-rendering-options).
 
 ```python
 material: ke.material.PBRMaterial = self.create_pbr_material(
@@ -104,18 +105,17 @@ mesh: ke.RenderablePrimView = self.scene.add_mesh(
 )
 ```
 
-Phong and PBR parameters are intentionally different. Replacing a Phong
-material with a PBR material does not translate `diffuse` and `shininess` into
-`base_color` and `roughness`.
+Switching from Phong to PBR does not automatically convert `diffuse` and
+`shininess` into `base_color` and `roughness`.
 
 ## Load and attach textures
 
-`App.load_texture()` loads a texture through `ke.render`, retains it for the
-application lifetime, and reuses it for the same normalized path, `flip` and
-`srgb` settings.
+`App.load_texture()` loads an image and keeps the texture alive while the App
+is open. Loading the same file with the same `flip` and `srgb` settings reuses
+the texture. `flip=True` (the default) flips the image vertically.
 
-Use `srgb=True` for sRGB color images. Normal, roughness, metallic and other
-data maps use `srgb=False`, which is the default.
+Use `srgb=True` for color images stored as sRGB. Images storing surface data,
+such as normals, roughness, or metallic values, use `srgb=False` (the default).
 
 Phong example:
 
@@ -133,7 +133,8 @@ material = self.create_phong_material(
 )
 ```
 
-PBR example:
+PBR example with a combined ORM image: red stores ambient occlusion (darkening
+in crevices), green stores roughness, and blue stores metallic values.
 
 ```python
 base_color: ke.render.Texture = self.load_texture(
@@ -149,23 +150,22 @@ material = self.create_pbr_material(
 )
 ```
 
-Material color factors multiply their corresponding textures. Use a white
-factor when the texture should appear without an additional tint.
+Material colors multiply the texture colors. Use white `diffuse` or `base_color`
+to display an image without an additional tint.
 
 For a separate PBR transparency mask, pass `opacity_texture` to
 `create_pbr_material()`. Load it with `srgb=False`; its red channel replaces
-the base-color texture alpha and is multiplied by the base-color alpha factor.
+the base-color texture's alpha and is multiplied by the fourth `base_color` value.
 Set the mesh alpha mode to `MASK` or `BLEND` to enable transparency.
 
-OBJ/MTL imports create material subsets automatically and attach supported
-diffuse, specular, alpha, and normal textures. See
+OBJ/MTL imports group faces by material and attach supported diffuse, specular,
+alpha, and normal textures automatically. See
 [Load Assets](LOAD_ASSETS.md) for the import workflow.
 
-## Asset source materials
+## Store texture paths in an asset
 
-Prepare source materials before creating instances. This optional example
-defines a visual part with texture filenames; the files are loaded through the
-App when the visual is created:
+For reusable assets, store image filenames in `texture_paths`. The App loads
+them when it creates the visual:
 
 ```python
 import kangengine as ke
@@ -189,22 +189,21 @@ part: ke.asset.VisualGeomDesc = ke.asset.VisualGeomDesc(
 ```
 
 Use your own filenames and set the containing `RigidDesc.asset_dir` to their
-base directory. Keys are material texture slot names: PBR supports base color,
-normal, metallic-roughness, metallic, roughness, AO, ORM, emissive, opacity slots;
-Phong supports `diffuse_map`, `specular_map`, `alpha_map`, and `normal_map`.
+base directory. Dictionary keys match material properties, such as
+`base_color_texture` and `normal_texture` for PBR, or `diffuse_map` for Phong.
 See [Load and attach textures](#load-and-attach-textures) for App texture loading.
 
-`VisualGeomDesc` retains its material. Attached visuals create App-owned runtime
-materials and textures, so filename-based sources can be reused across Apps.
-Already loaded GPU textures remain tied to their owning App.
+`VisualGeomDesc` keeps its material alive. Each App creates its own materials
+and textures from these descriptions, so the asset can be reused across Apps.
+Already loaded GPU textures cannot be shared between Apps.
 
-The part's `rgba` tint defaults to white. Its alpha, PBR base-color alpha, and
-instance tint multiply once each. OBJ opacity is stored in the part tint.
+The part's `rgba` defaults to white with full opacity. For PBR, opacity multiplies
+the part, `base_color`, and instance alpha values. OBJ opacity is stored in the
+part's alpha.
 
 ## Mesh rendering options
 
-Shadow casting, face culling, and alpha handling belong to the renderable mesh,
-not to the material itself:
+Set whether a mesh casts shadows, is visible from both sides, or uses transparency:
 
 ```python
 mesh: ke.RenderablePrimView = self.scene.add_mesh(
@@ -218,39 +217,96 @@ mesh.set_alpha_mode(mode=ke.render.AlphaMode.OPAQUE)
 ```
 
 Use double-sided rendering for surfaces that must be visible from both sides.
-For cutout textures use `AlphaMode.MASK`; for partial transparency use
-`AlphaMode.BLEND`.
+Use `AlphaMode.MASK` for fully visible or fully transparent cutouts, and
+`AlphaMode.BLEND` for partial transparency.
 
-## Vertex-color styles
+## Color materials
 
-Vertex-color materials use the mesh or instance display color and are useful
-for visualization, debug geometry, and lightweight scene objects.
+`ColorMaterial` uses an object's color and optional colors stored at each vertex.
+Choose a style for plain color, an image texture, or a checkerboard:
 
 ```python
-plain = self.create_vertex_color_material()
-textured = self.create_vertex_color_material(
-    style=ke.material.VertexColorStyle.TEXTURED
+plain: ke.material.ColorMaterial = self.create_color_material()
+textured: ke.material.ColorMaterial = self.create_color_material(
+    style=ke.material.ColorStyle.TEXTURED,
 )
-checker = self.create_vertex_color_material(
-    style=ke.material.VertexColorStyle.CHECKERBOARD
+checker: ke.material.ColorMaterial = self.create_color_material(
+    style=ke.material.ColorStyle.CHECKERBOARD,
 )
-debug_checker = self.create_vertex_color_material(
-    style=ke.material.VertexColorStyle.DEBUG_CHECKER
+debug_checker: ke.material.ColorMaterial = self.create_color_material(
+    style=ke.material.ColorStyle.DEBUG_CHECKER,
 )
 ```
 
-`DEBUG_CHECKER` overlays a fine/coarse UV grid and checker pattern. It is useful
-for finding distorted or missing UV coordinates.
+`DEBUG_CHECKER` draws a grid to reveal stretched or missing texture coordinates (UVs).
 
-## Shader and pipeline sharing
+`VertexColorMaterial`, `VertexColorStyle`, and `create_vertex_color_material()`
+remain aliases of `ColorMaterial`, `ColorStyle`, and `create_color_material()`.
+
+## Per-vertex colors
+
+The `color` passed to `scene.add_mesh()` tints the whole object. For a separate
+color at each vertex, pass `[N, 3]` **linear RGB** values when creating the mesh.
+The vertex array is `[N, 3]` and triangle indices are `[M, 3]`:
+
+```python
+mesh_data: ke.scene.MeshData = ke.scene.MeshData.from_arrays(
+    vertices=vertices, indices=indices, colors=colors,
+)
+material: ke.material.ColorMaterial = self.create_color_material()
+material.unlit = True
+mesh: ke.RenderablePrimView = self.scene.add_mesh(
+    path="/colored_mesh", mesh_data=mesh_data, material=material,
+    color=ke.Vec4(1, 1, 1, 1),
+)
+```
+
+`normals` is also optional and accepts `[N, 3]` values. Omitted normals are
+generated from the triangles; omitted colors act as white. Vertex colors
+multiply object and material colors in ColorMaterial, Phong, and PBR,
+including skinned meshes. They contain RGB only; opacity comes from the
+object and material. Editing `MeshData.colors` after scene registration does
+not automatically update the rendered colors.
+
+Convert colors from sRGB images to linear RGB before use.
+
+## Display colors without lighting
+
+ColorMaterial, PhongMaterial, and PBRMaterial support `unlit` (default `False`).
+
+```python
+material.unlit = True
+```
+
+With unlit rendering, the object's `color` is multiplied by any vertex colors
+and the material values below:
+
+| Material | Material color used |
+| --- | --- |
+| ColorMaterial | Base-color texture, when assigned to the surface |
+| PhongMaterial | `diffuse` × `diffuse_map` |
+| PBRMaterial | `base_color` × `base_color_texture` |
+
+Missing textures act as white. Phong `alpha_map` and PBR `opacity_texture`
+use red-channel opacity instead of the color texture's alpha. Alpha mode and
+cutoff still apply.
+
+Unlit displays base color only, without lighting, received shadows, normal maps,
+emission, or checker patterns. It does not disable shadow casting or the
+renderer's final color adjustments. Set `material.unlit = False` to restore lighting, or
+`mesh.set_casts_shadow(enabled=False)` to disable shadow casting separately.
+
+`ColorStyle.UNLIT` also enables `unlit`; choosing another style disables it.
+Setting `unlit=False` while using `ColorStyle.UNLIT` changes the style to `UNTEXTURED`.
+
+## Materials share built-in shaders
 
 KangEngine selects and reuses the appropriate built-in pipeline from the
 material, mesh, and render settings. Creating many materials does not compile
 the same built-in shader repeatedly.
 
-The Resource panel exposes built-in shader sources and logical pipeline
-families for inspection. A pipeline entry can be expanded to show its shader
-sources and variants, such as static/skinned or opaque/transparent.
+The Resource panel lists shader sources and rendering variants, such as those
+for static or skinned meshes and opaque or transparent surfaces.
 
 ## Custom rendering
 

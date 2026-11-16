@@ -34,6 +34,7 @@ constexpr int InstanceColor = 7;
 constexpr int BoneIndices = 8;
 constexpr int BoneWeights = 9;
 constexpr int Tangent = 10;
+constexpr int VertexColor = 11;
 
 } // namespace RendererAttribute
 
@@ -49,6 +50,7 @@ enum class MeshVertexBufferSlot : uint32_t {
     Tangent,
     BoneIndices,
     BoneWeights,
+    VertexColor,
 };
 
 constexpr uint32_t vertexBufferSlot(MeshVertexBufferSlot slot) {
@@ -69,6 +71,7 @@ class MeshInstancer {
 
     // Geometry (static) — shared by all instances
     std::vector<std::unique_ptr<Backend::Buffer>> _vbos;
+    std::unique_ptr<Backend::Buffer> _vertexColors;
     std::unique_ptr<Backend::Buffer> _indexBuffer;
     std::unique_ptr<Backend::Buffer> _overrideTransformVBO;
     std::unique_ptr<Backend::Buffer> _boneMatricesUBO;
@@ -237,6 +240,7 @@ class MeshInstancer {
     float alphaCutoff() const { return _alphaCutoff; }
     bool hasSkinning() const { return _hasSkinning; }
     bool hasTangents() const { return _hasTangents; }
+    bool hasVertexColors() const { return _vertexColors != nullptr; }
     const Geometry::AABB& localBounds() const { return _localBounds; }
     const Geometry::Sphere& localSphere() const { return _localSphere; }
     const Geometry::AABB& combinedWorldBounds() const {

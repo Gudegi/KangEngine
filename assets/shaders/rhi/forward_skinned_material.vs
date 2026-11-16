@@ -10,6 +10,9 @@ layout(location = 7) in vec4 aInstanceColor;
 layout(location = 8) in ivec4 aBoneIndices;
 layout(location = 9) in vec4 aBoneWeights;
 layout(location = 10) in vec4 aTangent;
+#ifdef KE_HAS_VERTEX_COLORS
+layout(location = 11) in vec3 aVertexColor;
+#endif
 
 layout(std140) uniform ke_g0_b0 {
     mat4 view;
@@ -63,4 +66,7 @@ void main() {
     TangentHandedness = aTangent.w;
     TexCoord = aTexCoord;
     vColor = aInstanceColor;
+#ifdef KE_HAS_VERTEX_COLORS
+    vColor.rgb *= aVertexColor;
+#endif
 }

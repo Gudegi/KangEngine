@@ -15,6 +15,18 @@
 namespace KE {
 
 void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
+    if (!mesh.colors.empty() && mesh.colors.size() != mesh.vertices.size())
+        throw std::invalid_argument(
+            "Mesh colors must be empty or match the vertex count");
+    _vertexColors.reset();
+    if (!mesh.colors.empty()) {
+        Backend::BufferDesc colorDesc;
+        colorDesc.size = mesh.colors.size() * sizeof(glm::vec3);
+        colorDesc.usage = Backend::BufferUsage::Vertex;
+        colorDesc.label = "mesh_vertex_colors";
+        _vertexColors = _device->createBuffer(colorDesc, mesh.colors.data());
+    }
+
     _vertexCount = mesh.vertices.size();
     _localBounds = mesh.computeLocalAABB();
     // Reserved for future sphere culling / LOD paths; current culling uses
@@ -25,7 +37,12 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
     const Scene::MeshData* uploadMesh = &mesh;
     if ((!mesh.vertices.empty() && mesh.uvs.size() != mesh.vertices.size()) ||
         mesh.tangents.size() != mesh.vertices.size()) {
-        tangentMesh = mesh;
+        // Tangent generation does not need vertex colors.
+        tangentMesh.vertices = mesh.vertices;
+        tangentMesh.normals = mesh.normals;
+        tangentMesh.uvs = mesh.uvs;
+        tangentMesh.tangents = mesh.tangents;
+        tangentMesh.indices = mesh.indices;
         if (tangentMesh.uvs.size() != tangentMesh.vertices.size())
             tangentMesh.uvs.assign(tangentMesh.vertices.size(), glm::vec2(0.0f));
         if (tangentMesh.normals.size() == tangentMesh.vertices.size())
@@ -735,6 +752,9 @@ void MeshInstancer::recordDraw(Backend::RenderPassEncoder& pass,
                                bool includeSkinning) const {
     if (_visibleCount <= 0)
         return;
+    if (includeTexCoord)
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceColor),
+                             _colorVBO.get());
     _recordGeometry(pass, _transformVBO.get(),
                     static_cast<uint32_t>(_visibleCount), includeTexCoord,
                     includeSkinning);
@@ -743,6 +763,9 @@ void MeshInstancer::recordDraw(Backend::RenderPassEncoder& pass,
 void MeshInstancer::recordForwardDraw(Backend::RenderPassEncoder& pass) const {
     if (_visibleCount <= 0)
         return;
+    if (_vertexColors)
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::VertexColor),
+                             _vertexColors.get());
     Backend::Buffer* position = nullptr;
     Backend::Buffer* normal = nullptr;
     for (const auto& binding : _vertexBufferBindings) {
@@ -769,6 +792,9 @@ void MeshInstancer::recordSkinnedForwardDraw(
     Backend::RenderPassEncoder& pass) const {
     if (_visibleCount <= 0)
         return;
+    if (_vertexColors)
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::VertexColor),
+                             _vertexColors.get());
     Backend::Buffer* position = nullptr;
     Backend::Buffer* normal = nullptr;
     Backend::Buffer* boneIndices = nullptr;
@@ -806,6 +832,9 @@ void MeshInstancer::recordMaterialDraw(Backend::RenderPassEncoder& pass,
                                        bool includeSkinning) const {
     if (_visibleCount <= 0)
         return;
+    if (_vertexColors)
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::VertexColor),
+                             _vertexColors.get());
     Backend::Buffer* position = nullptr;
     Backend::Buffer* normal = nullptr;
     Backend::Buffer* texCoord = nullptr;

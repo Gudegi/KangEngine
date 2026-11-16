@@ -1141,24 +1141,24 @@ class App(_NativeApp):
             return self.standard_materials
 
         self.standard_materials = SimpleNamespace(
-            common=self.create_vertex_color_material(),
-            common_texture=self.create_vertex_color_material(
-                style=material_api.VertexColorStyle.TEXTURED
+            common=self.create_color_material(),
+            common_texture=self.create_color_material(
+                style=material_api.ColorStyle.TEXTURED
             ),
-            ground=self.create_vertex_color_material(
-                style=material_api.VertexColorStyle.CHECKERBOARD
+            ground=self.create_color_material(
+                style=material_api.ColorStyle.CHECKERBOARD
             ),
-            debug_checker=self.create_vertex_color_material(
-                style=material_api.VertexColorStyle.DEBUG_CHECKER
+            debug_checker=self.create_color_material(
+                style=material_api.ColorStyle.DEBUG_CHECKER
             ),
-            debug=self.create_vertex_color_material(),
-            skinned=self.create_vertex_color_material(),
-            skinned_texture=self.create_vertex_color_material(
-                style=material_api.VertexColorStyle.TEXTURED
+            debug=self.create_color_material(),
+            skinned=self.create_color_material(),
+            skinned_texture=self.create_color_material(
+                style=material_api.ColorStyle.TEXTURED
             ),
-            skinned_debug=self.create_vertex_color_material(),
-            skinned_debug_checker=self.create_vertex_color_material(
-                style=material_api.VertexColorStyle.DEBUG_CHECKER
+            skinned_debug=self.create_color_material(),
+            skinned_debug_checker=self.create_color_material(
+                style=material_api.ColorStyle.DEBUG_CHECKER
             ),
             phong=self.create_phong_material(),
             pbr=self.create_pbr_material(),
@@ -1248,11 +1248,13 @@ class App(_NativeApp):
         self._register_material_resource(material)
         return material
 
-    def create_vertex_color_material(
-        self, *, style=material_api.VertexColorStyle.UNTEXTURED
-    ) -> material_api.VertexColorMaterial:
-        """Create and retain a built-in vertex/display-color material."""
-        return self._remember_material(material_api.VertexColorMaterial(style))
+    def create_color_material(
+        self, *, style=material_api.ColorStyle.UNTEXTURED
+    ) -> material_api.ColorMaterial:
+        """Create and retain a color material."""
+        return self._remember_material(material_api.ColorMaterial(style))
+
+    create_vertex_color_material = create_color_material
 
     def _remember_textures(self, *textures):
         """Keep Python-created native textures alive while materials use them."""

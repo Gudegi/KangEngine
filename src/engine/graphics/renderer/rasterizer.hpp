@@ -50,7 +50,7 @@ namespace KE {
 //
 // Sources are split at the Rasterizer key level, so scene-graph objects and
 // external simulation buffers can share shader/mesh/material without
-// interfering. Legacy shader-only APIs are wrapped into VertexColorMaterial
+// interfering. Legacy shader-only APIs are wrapped into ColorMaterial
 // before they reach this layer.
 // ---------------------------------------------------------------------------
 

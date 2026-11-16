@@ -15,8 +15,9 @@ namespace KE {
 // stays raster-specific; compute and ray-tracing pipelines will use their own
 // keys and libraries instead of growing this enum into a global pipeline key.
 enum class RasterPipelineFamily {
-    VertexColor,
-    TexturedVertexColor,
+    Color,
+    UnlitColor,
+    TexturedColor,
     GroundPhong,
     GroundPbr,
     DebugChecker,
@@ -61,15 +62,15 @@ struct RasterPassSignature {
   PBR + skinned + transparent + back-face
     → forward_skinned_pbr_transparent_pipeline
 
-  VertexColor + static + opaque + back-face
+  Color + static + opaque + back-face
     → forward_vertex_color_pipeline
 */
-// TODO:: lazy cache
 struct RasterPipelineKey {
-    RasterPipelineFamily family = RasterPipelineFamily::VertexColor;
+    RasterPipelineFamily family = RasterPipelineFamily::Color;
     bool skinned = false;
     bool transparent = false;
     bool doubleSided = false;
+    bool hasVertexColors = false;
     RasterPassSignature pass;
     uint64_t shaderGeneration = 0;
 
@@ -80,15 +81,15 @@ struct RasterPipelineKey {
           transparent(transparentValue), doubleSided(doubleSidedValue) {}
 
     bool operator<(const RasterPipelineKey& other) const {
-        return std::tie(family, skinned, transparent, doubleSided, pass,
-                        shaderGeneration) <
+        return std::tie(family, skinned, transparent, doubleSided,
+                        hasVertexColors, pass, shaderGeneration) <
                std::tie(other.family, other.skinned, other.transparent,
-                        other.doubleSided, other.pass, other.shaderGeneration);
+                        other.doubleSided, other.hasVertexColors, other.pass,
+                        other.shaderGeneration);
     }
 };
 
-// Owns immutable raster pipeline variants. Pipelines are registered during
-// renderer initialization and only queried while recording frames.
+// Owns immutable raster pipeline variants, created before draw recording.
 class RasterPipelineLibrary {
   public:
     using Factory = std::function<std::unique_ptr<Backend::GraphicsPipeline>()>;

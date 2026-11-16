@@ -16,7 +16,8 @@ void bind_geometry(py::module& m) {
         .def(py::init<>(), "Create empty mesh data.")
         .def_static(
             "from_arrays",
-            [](const FloatArray& vertices, const IntArray& indices) {
+            [](const FloatArray& vertices, const IntArray& indices,
+               py::object normals, py::object colors) {
                 auto points = vec3ArrayView(vertices, "vertices");
                 auto indexInfo = indices.request();
                 if (indexInfo.size % 3)
@@ -36,17 +37,40 @@ void bind_geometry(py::module& m) {
                         throw py::value_error("mesh index out of range");
                     mesh->indices.push_back(static_cast<unsigned int>(data[i]));
                 }
+                auto readAttribute = [&](py::object value, const char* name,
+                                         std::vector<glm::vec3>& target) {
+                    if (value.is_none())
+                        return;
+                    auto array = value.cast<FloatArray>();
+                    auto view = vec3ArrayView(array, name);
+                    if (view.count != points.count)
+                        throw py::value_error(std::string(name) +
+                                              " must match the vertex count");
+                    target.reserve(view.count);
+                    for (size_t i = 0; i < view.count; ++i) {
+                        const float* p = view.data + 3 * i;
+                        if (!std::isfinite(p[0]) || !std::isfinite(p[1]) ||
+                            !std::isfinite(p[2]))
+                            throw py::value_error(std::string(name) + " must be finite");
+                        target.emplace_back(p[0], p[1], p[2]);
+                    }
+                };
+                readAttribute(normals, "normals", mesh->normals);
+                readAttribute(colors, "colors", mesh->colors);
                 mesh->fillMissingAttributes();
                 return mesh;
             },
-            py::arg("vertices"), py::arg("indices"),
-            "Create a mesh from CPU vertex [N,3] and triangle index arrays.")
+            py::arg("vertices"), py::arg("indices"), py::kw_only(),
+            py::arg("normals") = py::none(), py::arg("colors") = py::none(),
+            "Create a mesh with optional [N,3] normals and linear RGB colors.")
         .def_readwrite("vertices", &KE::Scene::MeshData::vertices,
                        "Vertex positions.")
         .def_readwrite("normals", &KE::Scene::MeshData::normals,
                        "Vertex normals.")
         .def_readwrite("uvs", &KE::Scene::MeshData::uvs,
                        "Vertex texture coordinates.")
+        .def_readwrite("colors", &KE::Scene::MeshData::colors,
+                       "Optional linear RGB per vertex; empty means white.")
         .def_readwrite("indices", &KE::Scene::MeshData::indices,
                        "Triangle index buffer.");
 

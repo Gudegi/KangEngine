@@ -61,8 +61,8 @@ def material_instance(app, material, *, asset_dir=""):
         )
 
     source = unwrap_native(material)
-    if isinstance(source, _ke.VertexColorMaterial):
-        return app.create_vertex_color_material(style=source.style)
+    if isinstance(source, _ke.ColorMaterial):
+        return app.create_color_material(style=source.style)
     if isinstance(source, _ke.PhongMaterial):
         textures = _texture_values(
             app,

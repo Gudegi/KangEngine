@@ -11,7 +11,7 @@ Python-friendly surface material authoring and renderer material presets.
    :nosignatures:
 
    Material
-   VertexColorMaterial
+   ColorMaterial
    PhongMaterial
    PBRMaterial
 ```
@@ -21,7 +21,7 @@ Python-friendly surface material authoring and renderer material presets.
 
 .. autoclass:: Material
 
-.. autoclass:: VertexColorMaterial
+.. autoclass:: ColorMaterial
 
 .. autoclass:: PhongMaterial
 

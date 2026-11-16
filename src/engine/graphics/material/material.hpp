@@ -13,20 +13,25 @@
 namespace KE {
 
 enum class MaterialShadingModel {
-    VertexColor,
+    Color,
     Phong,
     PBR,
     Custom,
+    VertexColor = Color,
 };
 
-enum class VertexColorStyle {
+enum class ColorStyle {
     Untextured,
     Textured,
     Checkerboard,
     DebugChecker,
+    Unlit,
 };
 
 class Material {
+  private:
+    bool _unlit = false;
+
   public:
     // Source files are resolved into scene-local textures by the owning App.
     std::unordered_map<std::string, std::string> texturePaths;
@@ -34,6 +39,8 @@ class Material {
     std::unordered_map<std::string, bool> textureSrgb;
 
     virtual ~Material() = default;
+    bool isUnlit() const { return _unlit; }
+    virtual void setUnlit(bool enabled = true) { _unlit = enabled; }
     virtual bool hasNormalMap() const { return false; }
     // Texture sampled by depth-only passes when AlphaMode::Mask is active.
     virtual Backend::Texture* alphaTexture() const { return nullptr; }
@@ -41,25 +48,39 @@ class Material {
     virtual MaterialShadingModel shadingModel() const {
         return MaterialShadingModel::Custom;
     }
-    virtual VertexColorStyle vertexColorStyle() const {
-        return VertexColorStyle::Untextured;
+    virtual ColorStyle colorStyle() const { return vertexColorStyle(); }
+    virtual ColorStyle vertexColorStyle() const {
+        return ColorStyle::Untextured;
     }
 };
 
-class VertexColorMaterial : public Material {
+class ColorMaterial : public Material {
   private:
-    VertexColorStyle _style = VertexColorStyle::Untextured;
+    ColorStyle _style = ColorStyle::Untextured;
 
   public:
-    explicit VertexColorMaterial(
-        VertexColorStyle style = VertexColorStyle::Untextured)
-        : _style(style) {}
-    MaterialShadingModel shadingModel() const override {
-        return MaterialShadingModel::VertexColor;
+    explicit ColorMaterial(ColorStyle style = ColorStyle::Untextured) {
+        setStyle(style);
     }
-    VertexColorStyle vertexColorStyle() const override { return _style; }
-    void setStyle(VertexColorStyle style) { _style = style; }
+    MaterialShadingModel shadingModel() const override {
+        return MaterialShadingModel::Color;
+    }
+    ColorStyle colorStyle() const override { return _style; }
+    ColorStyle vertexColorStyle() const override { return colorStyle(); }
+    void setStyle(ColorStyle style) {
+        _style = style;
+        Material::setUnlit(style == ColorStyle::Unlit);
+    }
+    void setUnlit(bool enabled = true) override {
+        Material::setUnlit(enabled);
+        if (!enabled && _style == ColorStyle::Unlit)
+            _style = ColorStyle::Untextured;
+    }
 };
+
+// Compatibility aliases.
+using VertexColorStyle = ColorStyle;
+using VertexColorMaterial = ColorMaterial;
 
 class PhongMaterial : public Material {
   public:

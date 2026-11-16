@@ -50,20 +50,25 @@ class PBRMaterialType(Enum):
     GOLD: PBRMaterialType
     EMISSIVE_BLUE: PBRMaterialType
 
-class VertexColorStyle(Enum):
-    """Built-in rendering style for vertex/display-color materials."""
-    UNTEXTURED: VertexColorStyle
-    TEXTURED: VertexColorStyle
-    CHECKERBOARD: VertexColorStyle
-    DEBUG_CHECKER: VertexColorStyle
+class ColorStyle(Enum):
+    """Built-in lighting and texture style for color materials."""
+    UNTEXTURED: ColorStyle
+    UNLIT: ColorStyle
+    TEXTURED: ColorStyle
+    CHECKERBOARD: ColorStyle
+    DEBUG_CHECKER: ColorStyle
 
 class NativeMaterial:
     """Native renderer material base used for advanced interop."""
     texture_paths: dict[str, str]
     texture_srgb: dict[str, bool]
+    unlit: bool
+    def set_unlit(self, enabled: bool = True) -> None:
+        """Set unlit rendering."""
+        ...
 
-class NativeVertexColorMaterial(NativeMaterial):
-    """Native vertex-color material used for advanced interop."""
+class NativeColorMaterial(NativeMaterial):
+    """Native color material used for advanced interop."""
 
 class NativePhongMaterial(NativeMaterial):
     """Native Phong material used for advanced interop."""
@@ -74,6 +79,15 @@ class NativePBRMaterial(NativeMaterial):
 class Material:
     """Base facade wrapping a native renderer material."""
     def __init__(self, native: NativeMaterial) -> None: ...
+    @property
+    def unlit(self) -> bool:
+        """Display base color and textures without lighting; defaults to False."""
+        ...
+    @unlit.setter
+    def unlit(self, enabled: bool) -> None: ...
+    def set_unlit(self, enabled: bool = True) -> Material:
+        """Set unlit rendering and return this material."""
+        ...
     @property
     def native(self) -> NativeMaterial:
         """Return the wrapped native material."""
@@ -91,14 +105,14 @@ class Material:
     @texture_srgb.setter
     def texture_srgb(self, value: dict[str, bool]) -> None: ...
 
-class VertexColorMaterial(Material):
-    """Material using vertex/display colors and an optional built-in style."""
-    def __init__(self, style: VertexColorStyle = VertexColorStyle.UNTEXTURED, native: NativeVertexColorMaterial | None = None) -> None: ...
+class ColorMaterial(Material):
+    """Use instance color and optional vertex RGB."""
+    def __init__(self, style: ColorStyle = ColorStyle.UNTEXTURED, native: NativeColorMaterial | None = None) -> None: ...
     @property
-    def style(self) -> VertexColorStyle:
-        """Return the active built-in vertex-color style."""
+    def style(self) -> ColorStyle:
+        """Return the active built-in color style."""
         ...
-    def set_style(self, style: VertexColorStyle) -> VertexColorMaterial:
+    def set_style(self, style: ColorStyle) -> ColorMaterial:
         """Set the rendering style and return this material."""
         ...
 
@@ -321,3 +335,8 @@ def unwrap_native(value: _T) -> Any:
     ...
 
 __all__: list[str]
+
+# Compatibility aliases.
+VertexColorStyle = ColorStyle
+VertexColorMaterial = ColorMaterial
+NativeVertexColorMaterial = NativeColorMaterial

@@ -40,7 +40,7 @@ def _stub_function_parameters(stub_path: Path) -> dict[str, tuple[str, ...]]:
 
 def _stub_class_attributes(stub_path: Path) -> dict[str, set[str]]:
     tree = ast.parse(stub_path.read_text(), filename=str(stub_path))
-    return {
+    attributes = {
         node.name: {
             child.target.id
             for child in node.body
@@ -49,6 +49,13 @@ def _stub_class_attributes(stub_path: Path) -> dict[str, set[str]]:
         for node in tree.body
         if isinstance(node, ast.ClassDef)
     }
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Name):
+            if node.value.id in attributes:
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        attributes[target.id] = attributes[node.value.id]
+    return attributes
 
 
 def _missing_public_docstrings(stub_path: Path, public_names: set[str]) -> list[str]:
@@ -118,7 +125,7 @@ def main() -> None:
                 stub_members = stub_attributes.get(name, set())
                 if stub_members != set(members):
                     raise AssertionError(
-                        f"render.{name} stub enum members {sorted(stub_members)} "
+                        f"{package_name}.{name} stub enum members {sorted(stub_members)} "
                         f"do not match runtime members {sorted(members)}"
                     )
         if package_name == "animation":

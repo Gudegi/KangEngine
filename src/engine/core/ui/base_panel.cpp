@@ -565,8 +565,8 @@ const char* materialTypeLabel(const Material* material) {
         return "PBRMaterial";
     if (dynamic_cast<const PhongMaterial*>(material))
         return "PhongMaterial";
-    if (dynamic_cast<const VertexColorMaterial*>(material))
-        return "VertexColorMaterial";
+    if (dynamic_cast<const ColorMaterial*>(material))
+        return "ColorMaterial";
     return "Material";
 }
 
@@ -643,7 +643,7 @@ void drawMaterialInspector(Scene::Prim& prim) {
         drawTextureStatus("ORM Map", pbr->ormTexture);
         drawTextureStatus("Emissive Map", pbr->emissiveTexture);
         drawTextureStatus("Opacity Map", pbr->opacityTexture);
-    } else if (dynamic_cast<VertexColorMaterial*>(material)) {
+    } else if (dynamic_cast<ColorMaterial*>(material)) {
         ImGui::TextWrapped(
             "Compatibility wrapper for legacy shader-only renderables. "
             "Surface color comes from per-instance display/base color.");

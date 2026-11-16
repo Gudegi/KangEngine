@@ -14,6 +14,8 @@ struct MeshData {
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
+    // Optional linear RGB per vertex; empty means white.
+    std::vector<glm::vec3> colors;
     // Tangent.xyz is the tangent direction; tangent.w is bitangent handedness.
     std::vector<glm::vec4> tangents;
     std::vector<unsigned int> indices;

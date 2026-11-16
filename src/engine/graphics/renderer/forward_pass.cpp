@@ -54,9 +54,9 @@ ForwardPass::createTexture(const Backend::TextureResourceDesc& desc,
     return _textures.back().get();
 }
 
-void ForwardPass::createPipeline(RasterPipelineKey key,
-                                 const Backend::GraphicsPipelineDesc& desc) {
-    requireInitialized("creating pipelines");
+void ForwardPass::registerPipeline(RasterPipelineKey key,
+                                   const Backend::GraphicsPipelineDesc& desc) {
+    requireInitialized("registering pipeline descriptors");
     key.pass = RasterPassSignature::fromPipelineDesc(desc);
     key.shaderGeneration = _shaderGeneration;
     if (!_passSignature)
@@ -64,12 +64,28 @@ void ForwardPass::createPipeline(RasterPipelineKey key,
     else if (!(*_passSignature == key.pass))
         throw std::logic_error(
             "ForwardPass pipeline variants must share one pass signature");
-    _pipelines.getOrCreate(
-        key, [&] { return _device->createGraphicsPipeline(desc); });
+    _pipelineDescs.emplace(key, desc);
+    if (key.family == RasterPipelineFamily::TexturedColor) {
+        key.family = RasterPipelineFamily::UnlitColor;
+        auto unlitDesc = desc;
+        unlitDesc.label += "_unlit";
+        unlitDesc.shader.name += "_unlit";
+        unlitDesc.shader.stages[1].source = _shaderLibrary->load(
+            KE::getAssetPath("shaders/rhi/forward_unlit.fs"));
+        auto*& layout = _unlitPipelineLayouts[key.skinned ? 1 : 0];
+        if (!layout) {
+            auto layoutDesc = desc.pipelineLayout->getDesc();
+            layoutDesc.label += "_unlit";
+            layoutDesc.bindGroupLayouts[3] = _unlitGroupLayout;
+            layout = createPipelineLayout(layoutDesc);
+        }
+        unlitDesc.pipelineLayout = layout;
+        _pipelineDescs.emplace(key, std::move(unlitDesc));
+    }
 }
 
 Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
-                                                    bool transparent) const {
+                                                    bool transparent) {
     RasterPipelineKey key;
     if (!_passSignature)
         throw std::logic_error(
@@ -81,22 +97,24 @@ Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
     key.doubleSided = inst.isDoubleSided();
 
     const Material* material = inst.material();
-    if (material->shadingModel() == MaterialShadingModel::VertexColor) {
-        switch (material->vertexColorStyle()) {
-        case VertexColorStyle::Textured:
-            key.family = RasterPipelineFamily::TexturedVertexColor;
+    if (material->isUnlit()) {
+        key.family = RasterPipelineFamily::UnlitColor;
+    } else if (material->shadingModel() == MaterialShadingModel::Color) {
+        switch (material->colorStyle()) {
+        case ColorStyle::Textured:
+            key.family = RasterPipelineFamily::TexturedColor;
             break;
-        case VertexColorStyle::Checkerboard:
+        case ColorStyle::Checkerboard:
             key.family = _useGroundPbr ? RasterPipelineFamily::GroundPbr
                                        : RasterPipelineFamily::GroundPhong;
             // Checkerboard is a ground-only family and has no skin input.
             key.skinned = false;
             break;
-        case VertexColorStyle::DebugChecker:
+        case ColorStyle::DebugChecker:
             key.family = RasterPipelineFamily::DebugChecker;
             break;
         default:
-            key.family = RasterPipelineFamily::VertexColor;
+            key.family = RasterPipelineFamily::Color;
             break;
         }
     } else if (material->shadingModel() == MaterialShadingModel::Phong) {
@@ -104,18 +122,43 @@ Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
     } else if (material->shadingModel() == MaterialShadingModel::PBR) {
         key.family = RasterPipelineFamily::Pbr;
     } else {
-        key.family = RasterPipelineFamily::VertexColor;
+        key.family = RasterPipelineFamily::Color;
     }
 
-    return _pipelines.get(key);
+    const auto descriptorKey = key;
+    key.hasVertexColors = inst.hasVertexColors();
+    if (auto* pipeline = _pipelines.find(key))
+        return pipeline;
+    return _pipelines.getOrCreate(key, [&] {
+        auto desc = _pipelineDescs.at(descriptorKey);
+        if (key.hasVertexColors) {
+            Backend::VertexBufferLayout colors;
+            colors.arrayStride = sizeof(glm::vec3);
+            colors.attributes = {{Backend::VertexFormat::Float32x3, 0,
+                                  RendererAttribute::VertexColor}};
+            const auto slot = vertexBufferSlot(MeshVertexBufferSlot::VertexColor);
+            desc.vertexBuffers.resize(slot + 1);
+            desc.vertexBuffers[slot] = colors;
+            desc.label += "_vertex_colors";
+            desc.shader.name += "_vertex_colors";
+            for (auto& stage : desc.shader.stages) {
+                if (stage.type == Backend::ShaderType::Vertex) {
+                    // GLSL requires #version to remain the first directive.
+                    stage.source.insert(stage.source.find('\n') + 1,
+                                        "#define KE_HAS_VERTEX_COLORS\n");
+                }
+            }
+        }
+        return _device->createGraphicsPipeline(desc);
+    });
 }
 
 void ForwardPass::configureMaterialBindings(
-    Backend::BindGroupLayout* texturedVertexColorLayout,
+    Backend::BindGroupLayout* texturedColorLayout,
     Backend::BindGroupLayout* phongLayout, Backend::BindGroupLayout* pbrLayout,
     Backend::Sampler* sampler, Backend::Texture* whiteTexture,
     Backend::Texture* normalTexture) {
-    _texturedVertexColorLayout = texturedVertexColorLayout;
+    _texturedColorLayout = texturedColorLayout;
     _phongLayout = phongLayout;
     _pbrLayout = pbrLayout;
     _materialSampler = sampler;
@@ -262,9 +305,9 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
 }
 
 Backend::BindGroup*
-ForwardPass::updateTexturedVertexColorMaterial(const MeshInstancer& inst) {
-    auto [it, inserted] = _texturedVertexColorResources.try_emplace(&inst);
-    TexturedVertexColorResources& resources = it->second;
+ForwardPass::updateTexturedColorMaterial(const MeshInstancer& inst) {
+    auto [it, inserted] = _texturedColorResources.try_emplace(&inst);
+    TexturedColorResources& resources = it->second;
     if (inserted) {
         Backend::BufferDesc desc;
         desc.size = sizeof(glm::vec4);
@@ -297,7 +340,7 @@ ForwardPass::updateTexturedVertexColorMaterial(const MeshInstancer& inst) {
                 _device->createTextureView(textures[i], viewDesc);
         }
         Backend::BindGroupDesc desc;
-        desc.layout = _texturedVertexColorLayout;
+        desc.layout = _texturedColorLayout;
         desc.label = "textured_vertex_color_bind_group";
         desc.entries = {
             {0, nullptr, 0, 0, resources.views[0].get(), nullptr},
@@ -311,6 +354,67 @@ ForwardPass::updateTexturedVertexColorMaterial(const MeshInstancer& inst) {
     return resources.bindGroup.get();
 }
 
+Backend::BindGroup* ForwardPass::updateUnlitMaterial(const MeshInstancer& inst) {
+    const Material* material = inst.material();
+    UnlitResources::Params values;
+    Backend::Texture* baseTexture = nullptr;
+    Backend::Texture* opacityTexture = nullptr;
+    if (material->shadingModel() == MaterialShadingModel::Phong) {
+        const auto* phong = static_cast<const PhongMaterial*>(material);
+        values.baseColor = glm::vec4(phong->diffuse, 1.0f);
+        baseTexture = phong->diffuseMap;
+        opacityTexture = phong->alphaMap;
+    } else if (material->shadingModel() == MaterialShadingModel::PBR) {
+        const auto* pbr = static_cast<const PBRMaterial*>(material);
+        values.baseColor = pbr->baseColor;
+        baseTexture = pbr->baseColorTexture;
+        opacityTexture = pbr->opacityTexture;
+    } else {
+        baseTexture = inst.textureAtSlot(RendererTextureSlot::BaseColor);
+    }
+    values.alpha = glm::vec4(static_cast<float>(inst.alphaMode()),
+                             inst.alphaCutoff(), opacityTexture ? 1.0f : 0.0f,
+                             0.0f);
+
+    auto& resources = _unlitResources[&inst];
+    if (!resources.params) {
+        Backend::BufferDesc desc;
+        desc.size = sizeof(values);
+        desc.usage = Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
+        desc.label = "unlit_material_params";
+        resources.params = _device->createBuffer(desc, &values);
+    } else if (resources.values.baseColor != values.baseColor ||
+               resources.values.alpha != values.alpha) {
+        resources.params->setData(&values, sizeof(values));
+    }
+    resources.values = values;
+
+    const std::array<Backend::Texture*, 2> textures{
+        baseTexture ? baseTexture : _whiteTexture,
+        opacityTexture ? opacityTexture : _whiteTexture};
+    const std::array<uintptr_t, 2> handles{textures[0]->getNativeHandle(),
+                                          textures[1]->getNativeHandle()};
+    if (!resources.bindGroup || resources.textureHandles != handles) {
+        resources.bindGroup.reset();
+        for (size_t i = 0; i < textures.size(); ++i) {
+            Backend::TextureViewDesc viewDesc;
+            viewDesc.label = "unlit_material_view_" + std::to_string(i);
+            resources.views[i] = _device->createTextureView(textures[i], viewDesc);
+        }
+        Backend::BindGroupDesc desc;
+        desc.layout = _unlitGroupLayout;
+        desc.label = "unlit_material_bind_group";
+        desc.entries = {
+            {0, resources.params.get(), 0, sizeof(values), nullptr, nullptr},
+            {1, nullptr, 0, 0, resources.views[0].get(), nullptr},
+            {2, nullptr, 0, 0, resources.views[1].get(), nullptr},
+            {3, nullptr, 0, 0, nullptr, _materialSampler}};
+        resources.bindGroup = _device->createBindGroup(desc);
+        resources.textureHandles = handles;
+    }
+    return resources.bindGroup.get();
+}
+
 ForwardPass::PreparedDraws
 ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
                      bool transparent) {
@@ -319,16 +423,16 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
     prepared.ownedBindGroups.reserve(drawables.size());
     for (MeshInstancer* inst : drawables) {
         Material* material = inst->material();
-        const bool vertexColor =
-            material->shadingModel() == MaterialShadingModel::VertexColor;
-        const bool textured = vertexColor && material->vertexColorStyle() ==
-                                                 VertexColorStyle::Textured;
+        const bool colorMaterial =
+            material->shadingModel() == MaterialShadingModel::Color;
+        const bool textured =
+            colorMaterial && material->colorStyle() == ColorStyle::Textured;
         const bool checkerboard =
-            vertexColor &&
-            material->vertexColorStyle() == VertexColorStyle::Checkerboard;
+            colorMaterial &&
+            material->colorStyle() == ColorStyle::Checkerboard;
         const bool debugChecker =
-            vertexColor &&
-            material->vertexColorStyle() == VertexColorStyle::DebugChecker;
+            colorMaterial &&
+            material->colorStyle() == ColorStyle::DebugChecker;
 
         PreparedDraw draw;
         draw.instancer = inst;
@@ -346,15 +450,18 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
                 _device->createBindGroup(skinDesc));
             draw.skinBindGroup = prepared.ownedBindGroups.back().get();
 
-            if (textured) {
+            if (material->isUnlit()) {
+                draw.kind = DrawKind::SkinnedMaterial;
+                draw.materialBindGroup = updateUnlitMaterial(*inst);
+            } else if (textured) {
                 draw.kind = DrawKind::SkinnedMaterial;
                 draw.materialBindGroup =
-                    updateTexturedVertexColorMaterial(*inst);
+                    updateTexturedColorMaterial(*inst);
                 draw.normalMapped =
                     inst->textureAtSlot(RendererTextureSlot::Normal) != nullptr;
             } else if (debugChecker) {
                 draw.kind = DrawKind::SkinnedMaterial;
-            } else if (vertexColor) {
+            } else if (colorMaterial) {
                 draw.kind = DrawKind::SkinnedForward;
             } else if (material->shadingModel() ==
                        MaterialShadingModel::Phong) {
@@ -368,6 +475,9 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
                 draw.materialBindGroup = updatePbrMaterial(*pbr, *inst);
                 draw.normalMapped = pbr->normalTexture != nullptr;
             }
+        } else if (material->isUnlit()) {
+            draw.kind = DrawKind::Material;
+            draw.materialBindGroup = updateUnlitMaterial(*inst);
         } else if (debugChecker) {
             draw.kind = DrawKind::Material;
         } else if (checkerboard) {
@@ -375,7 +485,7 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
             draw.materialBindGroup = _groundBindGroup;
         } else if (textured) {
             draw.kind = DrawKind::Material;
-            draw.materialBindGroup = updateTexturedVertexColorMaterial(*inst);
+            draw.materialBindGroup = updateTexturedColorMaterial(*inst);
             draw.normalMapped =
                 inst->textureAtSlot(RendererTextureSlot::Normal) != nullptr;
         } else if (material->shadingModel() == MaterialShadingModel::Phong) {
@@ -455,6 +565,18 @@ void ForwardPass::initializeResources(
                                    _groupLayouts[1], _groupLayouts[2]};
     _forwardPipelineLayout = createPipelineLayout(layoutDesc);
 
+    Backend::BindGroupLayoutDesc unlitDesc;
+    unlitDesc.label = "unlit_material_group_layout";
+    unlitDesc.entries = {{0, Backend::BindingType::UniformBuffer,
+                          Backend::ShaderStageVisibility::Fragment},
+                         {1, Backend::BindingType::SampledTexture,
+                          Backend::ShaderStageVisibility::Fragment},
+                         {2, Backend::BindingType::SampledTexture,
+                          Backend::ShaderStageVisibility::Fragment},
+                         {3, Backend::BindingType::Sampler,
+                          Backend::ShaderStageVisibility::Fragment}};
+    _unlitGroupLayout = createBindGroupLayout(unlitDesc);
+
     Backend::BindGroupDesc bindDesc;
     bindDesc.layout = _groupLayouts[0];
     bindDesc.label = "forward_frame_bind_group";
@@ -507,11 +629,11 @@ void ForwardPass::initializeResources(
                                    true, Backend::CompareFunction::Less};
     pipelineDesc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
     pipelineDesc.sampleCount = 4;
-    createPipeline({RasterPipelineFamily::VertexColor, false, false, false},
+    registerPipeline({RasterPipelineFamily::Color, false, false, false},
                    pipelineDesc);
     pipelineDesc.label = "forward_vertex_color_double_sided_pipeline";
     pipelineDesc.primitive.cullMode = Backend::CullMode::None;
-    createPipeline({RasterPipelineFamily::VertexColor, false, false, true},
+    registerPipeline({RasterPipelineFamily::Color, false, false, true},
                    pipelineDesc);
 
     Backend::BindGroupLayoutDesc skinLayoutDesc;
@@ -544,11 +666,11 @@ void ForwardPass::initializeResources(
                                   empty,       color,      empty,
                                   boneIndices, boneWeights};
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
-    createPipeline({RasterPipelineFamily::VertexColor, true, false, false},
+    registerPipeline({RasterPipelineFamily::Color, true, false, false},
                    pipelineDesc);
     pipelineDesc.label = "forward_skinned_vertex_color_double_sided_pipeline";
     pipelineDesc.primitive.cullMode = Backend::CullMode::None;
-    createPipeline({RasterPipelineFamily::VertexColor, true, false, true},
+    registerPipeline({RasterPipelineFamily::Color, true, false, true},
                    pipelineDesc);
 
     // Phong Material Pipeline
@@ -623,7 +745,7 @@ void ForwardPass::initializeResources(
         {3, Backend::BindingType::UniformBuffer,
          Backend::ShaderStageVisibility::Fragment},
     };
-    _texturedVertexColorGroupLayout = createBindGroupLayout(texturedLayoutDesc);
+    _texturedColorGroupLayout = createBindGroupLayout(texturedLayoutDesc);
     for (size_t skin = 0; skin < 2; ++skin) {
         Backend::PipelineLayoutDesc texturedPipelineLayoutDesc;
         texturedPipelineLayoutDesc.label =
@@ -632,8 +754,8 @@ void ForwardPass::initializeResources(
         texturedPipelineLayoutDesc.bindGroupLayouts = {
             _groupLayouts[0], shadowSamplingLayout,
             skin ? _skinGroupLayout : _groupLayouts[1],
-            _texturedVertexColorGroupLayout};
-        _texturedVertexColorPipelineLayouts[skin] =
+            _texturedColorGroupLayout};
+        _texturedColorPipelineLayouts[skin] =
             createPipelineLayout(texturedPipelineLayoutDesc);
     }
     Backend::BlendState texturedAlphaBlend;
@@ -661,7 +783,7 @@ void ForwardPass::initializeResources(
                 desc.shader.stages = {
                     {texturedVs, Backend::ShaderType::Vertex, "main"},
                     {texturedFs, Backend::ShaderType::Fragment, "main"}};
-                desc.pipelineLayout = _texturedVertexColorPipelineLayouts[skin];
+                desc.pipelineLayout = _texturedColorPipelineLayouts[skin];
                 desc.vertexBuffers = {position, transform, normal,
                                       texCoord, color,     tangent};
                 if (skin) {
@@ -677,7 +799,7 @@ void ForwardPass::initializeResources(
                 if (transparent)
                     desc.colorTargets[0].blend = texturedAlphaBlend;
                 desc.sampleCount = 4;
-                createPipeline({RasterPipelineFamily::TexturedVertexColor,
+                registerPipeline({RasterPipelineFamily::TexturedColor,
                                 skin != 0, transparent != 0, doubleSided != 0},
                                desc);
             }
@@ -739,7 +861,7 @@ void ForwardPass::initializeResources(
                 if (transparent)
                     desc.colorTargets[0].blend = texturedAlphaBlend;
                 desc.sampleCount = 4;
-                createPipeline(
+                registerPipeline(
                     {family, false, transparent != 0, doubleSided != 0}, desc);
             }
         }
@@ -763,11 +885,11 @@ void ForwardPass::initializeResources(
     pipelineDesc.vertexBuffers = {position, transform, normal,
                                   texCoord, color,     tangent};
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
-    createPipeline({RasterPipelineFamily::Phong, false, false, false},
+    registerPipeline({RasterPipelineFamily::Phong, false, false, false},
                    pipelineDesc);
     pipelineDesc.label = "forward_phong_double_sided_pipeline";
     pipelineDesc.primitive.cullMode = Backend::CullMode::None;
-    createPipeline({RasterPipelineFamily::Phong, false, false, true},
+    registerPipeline({RasterPipelineFamily::Phong, false, false, true},
                    pipelineDesc);
 
     // PBR Material Pipeline
@@ -797,11 +919,11 @@ void ForwardPass::initializeResources(
         Backend::ShaderType::Fragment, "main"};
     pipelineDesc.pipelineLayout = _pbrPipelineLayout;
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
-    createPipeline({RasterPipelineFamily::Pbr, false, false, false},
+    registerPipeline({RasterPipelineFamily::Pbr, false, false, false},
                    pipelineDesc);
     pipelineDesc.label = "forward_pbr_double_sided_pipeline";
     pipelineDesc.primitive.cullMode = Backend::CullMode::None;
-    createPipeline({RasterPipelineFamily::Pbr, false, false, true},
+    registerPipeline({RasterPipelineFamily::Pbr, false, false, true},
                    pipelineDesc);
 
     Backend::BlendState alphaBlend;
@@ -829,10 +951,10 @@ void ForwardPass::initializeResources(
                 {Backend::TextureFormat::RGBA16Float, alphaBlend}};
             desc.sampleCount = 4;
             desc.primitive.cullMode = Backend::CullMode::Back;
-            createPipeline({family, skinned, true, false}, desc);
+            registerPipeline({family, skinned, true, false}, desc);
             desc.label = std::string(label) + "_double_sided_pipeline";
             desc.primitive.cullMode = Backend::CullMode::None;
-            createPipeline({family, skinned, true, true}, desc);
+            registerPipeline({family, skinned, true, true}, desc);
         };
     const std::string vertexColorVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_vertex_color.vs"));
@@ -847,10 +969,10 @@ void ForwardPass::initializeResources(
     const std::string pbrFs =
         _shaderLibrary->load(KE::getAssetPath("shaders/rhi/forward_pbr.fs"));
     createTransparentVariants(
-        RasterPipelineFamily::VertexColor, false, "transparent_vertex_color",
+        RasterPipelineFamily::Color, false, "transparent_vertex_color",
         _forwardPipelineLayout, vertexColorVs, vertexColorFs,
         {position, transform, normal, empty, color});
-    createTransparentVariants(RasterPipelineFamily::VertexColor, true,
+    createTransparentVariants(RasterPipelineFamily::Color, true,
                               "transparent_skinned_vertex_color",
                               _skinPipelineLayout, skinnedVertexColorVs,
                               vertexColorFs,
@@ -901,13 +1023,13 @@ void ForwardPass::initializeResources(
                 desc.colorTargets[0].blend = alphaBlend;
             desc.sampleCount = 4;
             desc.primitive.cullMode = Backend::CullMode::Back;
-            createPipeline({model == 0 ? RasterPipelineFamily::Phong
+            registerPipeline({model == 0 ? RasterPipelineFamily::Phong
                                        : RasterPipelineFamily::Pbr,
                             true, transparent != 0, false},
                            desc);
             desc.label = baseLabel + "_double_sided_pipeline";
             desc.primitive.cullMode = Backend::CullMode::None;
-            createPipeline({model == 0 ? RasterPipelineFamily::Phong
+            registerPipeline({model == 0 ? RasterPipelineFamily::Phong
                                        : RasterPipelineFamily::Pbr,
                             true, transparent != 0, true},
                            desc);
@@ -944,17 +1066,17 @@ void ForwardPass::initializeResources(
                 desc.colorTargets[0].blend = alphaBlend;
             desc.sampleCount = 4;
             desc.primitive.cullMode = Backend::CullMode::Back;
-            createPipeline({RasterPipelineFamily::DebugChecker, skin != 0,
+            registerPipeline({RasterPipelineFamily::DebugChecker, skin != 0,
                             transparent != 0, false},
                            desc);
             desc.label = baseLabel + "_double_sided_pipeline";
             desc.primitive.cullMode = Backend::CullMode::None;
-            createPipeline({RasterPipelineFamily::DebugChecker, skin != 0,
+            registerPipeline({RasterPipelineFamily::DebugChecker, skin != 0,
                             transparent != 0, true},
                            desc);
         }
     }
-    configureMaterialBindings(_texturedVertexColorGroupLayout,
+    configureMaterialBindings(_texturedColorGroupLayout,
                               _phongMaterialGroupLayout,
                               _pbrMaterialGroupLayout, _materialSampler,
                               _whiteTexture, _normalTexture);

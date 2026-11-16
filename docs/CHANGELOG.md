@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add optional normals and linear RGB vertex colors to `MeshData.from_arrays()`,
+  with vertex colors supported on static and skinned meshes.
+- Add `unlit` rendering to ColorMaterial, PhongMaterial, and PBRMaterial.
+- Rename `VertexColorMaterial`, `VertexColorStyle`, and
+  `app.create_vertex_color_material()` to `ColorMaterial`, `ColorStyle`, and
+  `app.create_color_material()`. Previous names remain available as aliases.
+- Preserve vertex colors when merging articulation visual meshes, and apply
+  instance alpha to alpha-masked shadows.
 - Fix Python callbacks in `Prim.traverse()`.
 
 ## 0.3.0

@@ -175,6 +175,7 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_vertex_color_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/debug_draw_transform_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/quaternion_binding_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
@@ -185,6 +186,8 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/render_component_lifecycle_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/vertex_color_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/unlit_material_smoke.py
 
 # build Python + CPU + local USD
 build_usd_python:

@@ -80,7 +80,7 @@ utils
     :nosignatures:
 
     Material
-    VertexColorMaterial
+    ColorMaterial
     PhongMaterial
     PBRMaterial
 ```

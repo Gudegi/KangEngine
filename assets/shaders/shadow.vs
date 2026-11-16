@@ -5,6 +5,7 @@ layout(location = 3) in vec4 aInstanceTransform0;
 layout(location = 4) in vec4 aInstanceTransform1;
 layout(location = 5) in vec4 aInstanceTransform2;
 layout(location = 6) in vec4 aInstanceTransform3;
+layout(location = 7) in vec4 aInstanceColor;
 
 layout(std140) uniform ke_g0_b0 {
     mat4 lightSpaceMatrices[4];
@@ -16,6 +17,7 @@ layout(std140) uniform ke_g0_b0 {
 };
 
 out vec2 vTexCoord;
+out float vAlpha;
 
 void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
@@ -24,4 +26,5 @@ void main() {
     // Shadow pass uploads the current cascade matrix into slot 0.
     gl_Position = lightSpaceMatrices[0] * model * vec4(aPos, 1.0);
     vTexCoord = aTexCoord;
+    vAlpha = aInstanceColor.a;
 }

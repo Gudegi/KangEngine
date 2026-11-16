@@ -128,6 +128,9 @@ void bind_material(py::module& m) {
 
     py::class_<Material, std::shared_ptr<Material>>(
         m, "Material", "Base class for renderer materials.")
+        .def_property("unlit", &Material::isUnlit, &Material::setUnlit,
+                      "Display base color and textures without lighting.")
+        .def("set_unlit", &Material::setUnlit, py::arg("enabled") = true)
         .def_readwrite("texture_paths", &Material::texturePaths,
                        "Source texture paths keyed by texture slot. Reading "
                        "returns a copy; assign a dictionary to update paths.")
@@ -135,19 +138,23 @@ void bind_material(py::module& m) {
                        "sRGB decoding by source texture slot. Defaults to False (linear). "
                        "Assign a dictionary to update values.");
 
-    py::enum_<VertexColorStyle>(m, "VertexColorStyle")
-        .value("UNTEXTURED", VertexColorStyle::Untextured)
-        .value("TEXTURED", VertexColorStyle::Textured)
-        .value("CHECKERBOARD", VertexColorStyle::Checkerboard)
-        .value("DEBUG_CHECKER", VertexColorStyle::DebugChecker);
+    py::enum_<ColorStyle>(m, "ColorStyle")
+        .value("UNTEXTURED", ColorStyle::Untextured)
+        .value("UNLIT", ColorStyle::Unlit)
+        .value("TEXTURED", ColorStyle::Textured)
+        .value("CHECKERBOARD", ColorStyle::Checkerboard)
+        .value("DEBUG_CHECKER", ColorStyle::DebugChecker);
 
-    py::class_<VertexColorMaterial, Material, std::shared_ptr<VertexColorMaterial>>(
-        m, "VertexColorMaterial",
-        "Vertex/display-color material with a built-in rendering style.")
-        .def(py::init<VertexColorStyle>(),
-             py::arg("style") = VertexColorStyle::Untextured)
-        .def("set_style", &VertexColorMaterial::setStyle, py::arg("style"))
-        .def_property_readonly("style", &VertexColorMaterial::vertexColorStyle);
+    py::class_<ColorMaterial, Material, std::shared_ptr<ColorMaterial>>(
+        m, "ColorMaterial",
+        "Instance/display-color material with optional mesh vertex colors.")
+        .def(py::init<ColorStyle>(),
+             py::arg("style") = ColorStyle::Untextured)
+        .def("set_style", &ColorMaterial::setStyle, py::arg("style"))
+        .def_property_readonly("style", &ColorMaterial::colorStyle);
+
+    m.attr("VertexColorStyle") = m.attr("ColorStyle");
+    m.attr("VertexColorMaterial") = m.attr("ColorMaterial");
 
     py::class_<PhongMaterial, Material, std::shared_ptr<PhongMaterial>>(
         m, "PhongMaterial",

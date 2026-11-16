@@ -70,7 +70,7 @@ description, then recreate the instances.
 
 For imported geometry, see [Load Assets](../scene_rendering/LOAD_ASSETS.md#rigid-body-sources);
 for textures and appearance, see
-[asset source materials](../scene_rendering/MATERIALS_TEXTURES.md#asset-source-materials).
+[storing texture paths in an asset](../scene_rendering/MATERIALS_TEXTURES.md#store-texture-paths-in-an-asset).
 
 ## Render without physics
 

@@ -4,6 +4,8 @@
 #include "engine/graphics/renderer/render_pass_base.hpp"
 
 #include <array>
+#include <glm/vec4.hpp>
+#include <map>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -30,6 +32,7 @@ class ForwardPass : public RenderPassBase {
     void setBackgroundSettings(const BackgroundSettings& settings);
     Backend::BindGroupLayout* frameLayout() const { return _groupLayouts[0]; }
     Backend::BindGroup* frameBindGroup() const { return _frameBindGroup; }
+    Backend::Texture* whiteTexture() const { return _whiteTexture; }
     enum class DrawKind {
         Forward,
         Material,
@@ -59,12 +62,12 @@ class ForwardPass : public RenderPassBase {
     Backend::Texture*
     createTexture(const Backend::TextureResourceDesc& desc,
                   const Backend::TextureInitialData* initialData = nullptr);
-    void createPipeline(RasterPipelineKey key,
-                        const Backend::GraphicsPipelineDesc& desc);
+    void registerPipeline(RasterPipelineKey key,
+                          const Backend::GraphicsPipelineDesc& desc);
     Backend::GraphicsPipeline* pipelineFor(const MeshInstancer& inst,
-                                           bool transparent) const;
+                                           bool transparent);
     void configureMaterialBindings(
-        Backend::BindGroupLayout* texturedVertexColorLayout,
+        Backend::BindGroupLayout* texturedColorLayout,
         Backend::BindGroupLayout* phongLayout,
         Backend::BindGroupLayout* pbrLayout, Backend::Sampler* sampler,
         Backend::Texture* whiteTexture, Backend::Texture* normalTexture);
@@ -73,14 +76,26 @@ class ForwardPass : public RenderPassBase {
     Backend::BindGroup* updatePbrMaterial(PBRMaterial& material,
                                           const MeshInstancer& inst);
     Backend::BindGroup*
-    updateTexturedVertexColorMaterial(const MeshInstancer& inst);
+    updateTexturedColorMaterial(const MeshInstancer& inst);
+    Backend::BindGroup* updateUnlitMaterial(const MeshInstancer& inst);
     PreparedDraws prepare(const std::vector<MeshInstancer*>& drawables,
                           bool transparent);
     void record(Backend::RenderPassEncoder& pass, const PreparedDraws& prepared,
                 Backend::BindGroup* shadowBindGroup) const;
 
   private:
-    struct TexturedVertexColorResources {
+    struct UnlitResources {
+        struct alignas(16) Params {
+            glm::vec4 baseColor{1.0f};
+            // x: alpha mode, y: cutoff, z: separate red-channel opacity.
+            glm::vec4 alpha{0.0f};
+        } values;
+        std::unique_ptr<Backend::Buffer> params;
+        std::array<std::unique_ptr<Backend::TextureView>, 2> views;
+        std::unique_ptr<Backend::BindGroup> bindGroup;
+        std::array<uintptr_t, 2> textureHandles{};
+    };
+    struct TexturedColorResources {
         std::unique_ptr<Backend::Buffer> params;
         std::array<std::unique_ptr<Backend::TextureView>, 2> views;
         std::unique_ptr<Backend::BindGroup> bindGroup;
@@ -99,7 +114,7 @@ class ForwardPass : public RenderPassBase {
         std::array<uintptr_t, 9> textureHandles{};
     };
 
-    Backend::BindGroupLayout* _texturedVertexColorLayout = nullptr;
+    Backend::BindGroupLayout* _texturedColorLayout = nullptr;
     Backend::BindGroupLayout* _phongLayout = nullptr;
     Backend::BindGroupLayout* _pbrLayout = nullptr;
     Backend::Sampler* _materialSampler = nullptr;
@@ -110,9 +125,11 @@ class ForwardPass : public RenderPassBase {
     Backend::BindGroup* _frameBindGroup = nullptr;
     Backend::BindGroupLayout* _skinGroupLayout = nullptr;
     Backend::PipelineLayout* _skinPipelineLayout = nullptr;
-    Backend::BindGroupLayout* _texturedVertexColorGroupLayout = nullptr;
+    Backend::BindGroupLayout* _unlitGroupLayout = nullptr;
+    std::array<Backend::PipelineLayout*, 2> _unlitPipelineLayouts{};
+    Backend::BindGroupLayout* _texturedColorGroupLayout = nullptr;
     std::array<Backend::PipelineLayout*, 2>
-        _texturedVertexColorPipelineLayouts{};
+        _texturedColorPipelineLayouts{};
     Backend::BindGroupLayout* _groundGroupLayout = nullptr;
     Backend::PipelineLayout* _groundPipelineLayout = nullptr;
     Backend::Buffer* _groundParamsBuffer = nullptr;
@@ -129,12 +146,15 @@ class ForwardPass : public RenderPassBase {
     std::vector<std::unique_ptr<Backend::Sampler>> _samplers;
     std::vector<std::unique_ptr<Backend::Texture>> _textures;
     RasterPipelineLibrary _pipelines;
+    std::map<RasterPipelineKey, Backend::GraphicsPipelineDesc> _pipelineDescs;
     std::optional<RasterPassSignature> _passSignature;
     ShaderLibrary* _shaderLibrary = nullptr;
     uint64_t _shaderGeneration = 0;
     bool _useGroundPbr = false;
-    std::unordered_map<const MeshInstancer*, TexturedVertexColorResources>
-        _texturedVertexColorResources;
+    // Per-batch alpha settings can differ even when the material is shared.
+    std::unordered_map<const MeshInstancer*, UnlitResources> _unlitResources;
+    std::unordered_map<const MeshInstancer*, TexturedColorResources>
+        _texturedColorResources;
     std::unordered_map<const PhongMaterial*, PhongResources> _phongResources;
     std::unordered_map<const PBRMaterial*, PbrResources> _pbrResources;
 };

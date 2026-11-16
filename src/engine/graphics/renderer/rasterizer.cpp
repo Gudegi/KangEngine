@@ -1233,7 +1233,7 @@ void Rasterizer::drawShadowCasters(Backend::RenderTarget* target, int mapSize) {
         if (inst.visibleCount() > 0 && inst.castsShadow())
             casters.push_back(&inst);
     }
-    auto prepared = _shadowPass.prepare(casters);
+    auto prepared = _shadowPass.prepare(casters, _forwardPass.whiteTexture());
 
     auto encoder = _graphicsDevice->createCommandEncoder();
     auto pass = encoder->beginRenderPass(

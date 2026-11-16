@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from .._public import set_public_module
 from .materials import (
+    ColorMaterial,
+    ColorStyle,
     Material,
+    NativeColorMaterial,
     NativeMaterial,
     NativePBRMaterial,
     NativePhongMaterial,
@@ -18,13 +21,16 @@ from .materials import (
     unwrap_native,
 )
 
-for _type in (Material, VertexColorMaterial, PhongMaterial, PBRMaterial):
+for _type in (Material, ColorMaterial, PhongMaterial, PBRMaterial):
     set_public_module(_type, __name__)
 
 del _type
 
 __all__ = [
+    "ColorMaterial",
+    "ColorStyle",
     "Material",
+    "NativeColorMaterial",
     "NativeMaterial",
     "NativePBRMaterial",
     "NativePhongMaterial",

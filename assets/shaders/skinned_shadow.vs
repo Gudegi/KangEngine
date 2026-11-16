@@ -5,6 +5,7 @@ layout(location = 3) in vec4 aInstanceTransform0;
 layout(location = 4) in vec4 aInstanceTransform1;
 layout(location = 5) in vec4 aInstanceTransform2;
 layout(location = 6) in vec4 aInstanceTransform3;
+layout(location = 7) in vec4 aInstanceColor;
 layout(location = 8) in ivec4 aBoneIndices;
 layout(location = 9) in vec4 aBoneWeights;
 
@@ -21,6 +22,7 @@ layout(std140) uniform ke_g2_b0 {
 };
 
 out vec2 vTexCoord;
+out float vAlpha;
 
 void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
@@ -34,4 +36,5 @@ void main() {
 
     gl_Position = lightSpaceMatrices[0] * model * skin * vec4(aPos, 1.0);
     vTexCoord = aTexCoord;
+    vAlpha = aInstanceColor.a;
 }

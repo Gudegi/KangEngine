@@ -15,10 +15,10 @@ from .._public import NativeWrapper, set_public_module, unwrap_native
 
 PhongMaterialType = set_public_module(_ke.PhongMaterialType, __package__)
 PBRMaterialType = set_public_module(_ke.PBRMaterialType, __package__)
-VertexColorStyle = set_public_module(_ke.VertexColorStyle, __package__)
+ColorStyle = set_public_module(_ke.ColorStyle, __package__)
 
 NativeMaterial = set_public_module(_ke.Material, __package__)
-NativeVertexColorMaterial = set_public_module(_ke.VertexColorMaterial, __package__)
+NativeColorMaterial = set_public_module(_ke.ColorMaterial, __package__)
 NativePhongMaterial = set_public_module(_ke.PhongMaterial, __package__)
 NativePBRMaterial = set_public_module(_ke.PBRMaterial, __package__)
 
@@ -30,9 +30,23 @@ class Material(NativeWrapper):
         if native is None:
             raise TypeError(
                 "ke.material.Material wraps an existing native material; "
-                "construct VertexColorMaterial, PhongMaterial, or PBRMaterial instead."
+                "construct ColorMaterial, PhongMaterial, or PBRMaterial instead."
             )
         super().__init__(native)
+
+    @property
+    def unlit(self) -> bool:
+        """Display base color and textures without lighting; defaults to False."""
+        return self._native.unlit
+
+    @unlit.setter
+    def unlit(self, enabled: bool) -> None:
+        self._native.unlit = enabled
+
+    def set_unlit(self, enabled: bool = True):
+        """Set unlit rendering and return this material."""
+        self._native.set_unlit(enabled)
+        return self
 
     @property
     def texture_paths(self) -> dict[str, str]:
@@ -61,12 +75,12 @@ class Material(NativeWrapper):
         self._native.texture_srgb = value
 
 
-class VertexColorMaterial(Material):
-    """Material for vertex/display-color shaders."""
+class ColorMaterial(Material):
+    """Use instance color and optional vertex RGB."""
 
-    def __init__(self, style=VertexColorStyle.UNTEXTURED, native: Any | None = None):
+    def __init__(self, style=ColorStyle.UNTEXTURED, native: Any | None = None):
         if native is None:
-            native = _ke.VertexColorMaterial(style)
+            native = _ke.ColorMaterial(style)
         super().__init__(native)
 
     @property
@@ -76,6 +90,12 @@ class VertexColorMaterial(Material):
     def set_style(self, style):
         self._native.set_style(style)
         return self
+
+
+# Compatibility aliases.
+VertexColorStyle = ColorStyle
+NativeVertexColorMaterial = NativeColorMaterial
+VertexColorMaterial = ColorMaterial
 
 
 class PhongMaterial(Material):
@@ -387,14 +407,18 @@ class PBRMaterial(Material):
 
 
 __all__ = [
+    "ColorStyle",
+    "VertexColorStyle",
+    "VertexColorMaterial",
+    "NativeVertexColorMaterial",
     "PhongMaterialType",
     "PBRMaterialType",
     "NativeMaterial",
-    "NativeVertexColorMaterial",
+    "NativeColorMaterial",
     "NativePhongMaterial",
     "NativePBRMaterial",
     "Material",
-    "VertexColorMaterial",
+    "ColorMaterial",
     "PhongMaterial",
     "PBRMaterial",
     "unwrap_native",

@@ -139,6 +139,23 @@ static void applyMeshInfoTransform(Scene::MeshData& mesh,
 }
 
 static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
+    if ((!dst.colors.empty() && dst.colors.size() != dst.vertices.size()) ||
+        (!part.colors.empty() && part.colors.size() != part.vertices.size()))
+        throw std::invalid_argument(
+            "Cannot merge meshes: colors must be empty or match the vertex count");
+
+    // Keep uncolored meshes sparse; fill only missing segments in a colored mesh.
+    if (!dst.colors.empty() || !part.colors.empty()) {
+        if (dst.colors.empty())
+            dst.colors.resize(dst.vertices.size(), glm::vec3(1.0f));
+        if (part.colors.empty())
+            dst.colors.insert(dst.colors.end(), part.vertices.size(),
+                              glm::vec3(1.0f));
+        else
+            dst.colors.insert(dst.colors.end(), part.colors.begin(),
+                              part.colors.end());
+    }
+
     unsigned int offset = static_cast<unsigned int>(dst.vertices.size());
     for (auto& idx : part.indices)
         idx += offset;

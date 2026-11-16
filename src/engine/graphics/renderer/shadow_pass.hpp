@@ -36,7 +36,8 @@ class ShadowPass : public RenderPassBase {
                                            bool doubleSided) const;
     void initializeResources(Backend::Buffer* shadowBuffer,
                              ShaderLibrary& shaderLibrary);
-    PreparedDraws prepare(const std::vector<MeshInstancer*>& casters);
+    PreparedDraws prepare(const std::vector<MeshInstancer*>& casters,
+                          Backend::Texture* whiteTexture);
     void record(Backend::RenderPassEncoder& pass,
                 const PreparedDraws& prepared) const;
     void initializeSampling();
