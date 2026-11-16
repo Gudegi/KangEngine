@@ -108,6 +108,7 @@ void MotionSequencerPanel::setMotions(std::vector<std::string> motionNames,
     _time = 0.0f;
     _firstFrame = 0;
     _selectedTrack = -1;
+    clearLoopRange();
 }
 
 void MotionSequencerPanel::clearMotions() {
@@ -120,6 +121,7 @@ void MotionSequencerPanel::clearMotions() {
     _time = 0.0f;
     _firstFrame = 0;
     _selectedTrack = -1;
+    clearLoopRange();
 }
 
 void MotionSequencerPanel::setCurrentTime(float time) {
@@ -134,8 +136,28 @@ void MotionSequencerPanel::setPlaying(bool playing) {
     emitPlayingChanged();
 }
 
+void MotionSequencerPanel::setCurrentFrame(int frame) {
+    setPlaying(false);
+    setFrame(frame);
+}
+
 void MotionSequencerPanel::setTimeScale(float timeScale) {
     _timeScale = std::max(0.0f, timeScale);
+}
+
+void MotionSequencerPanel::setLoopRange(int startFrame, int endFrame) {
+    if (startFrame < 0 || endFrame < startFrame || endFrame >= _numFrames)
+        throw std::invalid_argument(
+            "Loop range must satisfy 0 <= start <= end < frame count");
+    _loopRange = std::make_pair(startFrame, endFrame);
+}
+
+std::optional<std::pair<double, double>>
+MotionSequencerPanel::loopRangeTimes() const {
+    if (!_loopRange)
+        return std::nullopt;
+    return std::make_pair(static_cast<double>(_loopRange->first) / _fps,
+                         static_cast<double>(_loopRange->second + 1) / _fps);
 }
 
 void MotionSequencerPanel::setOverlayWidthRatio(float ratio) {
@@ -156,7 +178,36 @@ void MotionSequencerPanel::setPlayingChangedCallback(
     _onPlayingChanged = std::move(callback);
 }
 
-void MotionSequencerPanel::handleFrameShortcuts() {
+void MotionSequencerPanel::handlePlaybackShortcuts() {
+    processPlaybackShortcuts(false, !_playbackManaged);
+}
+
+void MotionSequencerPanel::processPlaybackShortcuts(bool accelerate,
+                                                   bool togglePlayback) {
+    if (!GImGui || !GImGui->WithinFrameScope)
+        return;
+    const int frame = ImGui::GetFrameCount();
+    if (frame == _lastPlaybackShortcutFrame)
+        return;
+    _lastPlaybackShortcutFrame = frame;
+    const ImGuiIO& io = ImGui::GetIO();
+    if (_trackNames.empty() || io.WantTextInput || ImGui::IsAnyItemActive() ||
+        io.KeyCtrl || io.KeyAlt || io.KeySuper ||
+        ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+        _leftArrowHoldTime = _rightArrowHoldTime = 0.0f;
+        return;
+    }
+    if (togglePlayback && ImGui::IsKeyPressed(ImGuiKey_Space, false))
+        setPlaying(!isPlaying());
+    if (ImGui::IsKeyPressed(ImGuiKey_Home, false))
+        setCurrentFrame(0);
+    else if (ImGui::IsKeyPressed(ImGuiKey_End, false))
+        setCurrentFrame(_numFrames - 1);
+    else
+        handleFrameShortcuts(accelerate);
+}
+
+void MotionSequencerPanel::handleFrameShortcuts(bool accelerate) {
     const ImGuiIO& io = ImGui::GetIO();
     _leftArrowHoldTime = ImGui::IsKeyDown(ImGuiKey_LeftArrow)
                              ? _leftArrowHoldTime + io.DeltaTime
@@ -165,8 +216,8 @@ void MotionSequencerPanel::handleFrameShortcuts() {
                               ? _rightArrowHoldTime + io.DeltaTime
                               : 0.0f;
 
-    const int leftStep = _leftArrowHoldTime >= 5.0f ? 30 : 1;
-    const int rightStep = _rightArrowHoldTime >= 5.0f ? 30 : 1;
+    const int leftStep = accelerate && _leftArrowHoldTime >= 5.0f ? 30 : 1;
+    const int rightStep = accelerate && _rightArrowHoldTime >= 5.0f ? 30 : 1;
     const int leftPresses = ImGui::GetKeyPressedAmount(
         ImGuiKey_LeftArrow, io.KeyRepeatDelay, io.KeyRepeatRate);
     const int rightPresses = ImGui::GetKeyPressedAmount(
@@ -174,8 +225,7 @@ void MotionSequencerPanel::handleFrameShortcuts() {
     const int stepOffset = rightPresses * rightStep - leftPresses * leftStep;
     if (stepOffset == 0)
         return;
-    setPlaying(false);
-    setFrame(currentFrame() + stepOffset);
+    setCurrentFrame(currentFrame() + stepOffset);
 }
 
 void MotionSequencerPanel::buildPanel() {
@@ -196,8 +246,8 @@ void MotionSequencerPanel::buildPanel() {
         rowHeight * (static_cast<float>(_trackNames.size()) + 1.0f) +
         logicalPx(8.0f);
     const float expandedMinHeight = panelPaddingY * 2.0f +
-                                    ImGui::GetFrameHeight() * 2.0f +
-                                    sequencerMinHeight + itemSpacingY * 2.0f;
+                                    ImGui::GetFrameHeight() * 3.0f +
+                                    sequencerMinHeight + itemSpacingY * 3.0f;
     const float expandedMaxHeight =
         std::max(logicalPx(190.0f), expandedMinHeight);
     const float expandedHeight = std::clamp(
@@ -260,7 +310,8 @@ void MotionSequencerPanel::buildPanel() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                         ImVec2(logicalPx(8.0f), itemSpacingY));
     ImGui::Begin(name().c_str(), nullptr, windowFlags);
-    handleFrameShortcuts();
+    // Preserve built-in arrow acceleration and leave Space to the application.
+    processPlaybackShortcuts(true, false);
 
     const float d = duration();
     const float playbackD = playbackDuration();
@@ -285,8 +336,11 @@ void MotionSequencerPanel::buildPanel() {
     ImGui::SameLine();
     ImGui::Text("%d HZ", static_cast<int>(_fps));
     ImGui::SameLine();
-    const float statusWidth =
-        ImGui::CalcTextSize("Frame 000000/000000  0000.000s / 0000.000s").x;
+    const float frameInputWidth = ImGui::CalcTextSize("000000").x +
+                                  style.FramePadding.x * 2.0f;
+    const float statusWidth = ImGui::CalcTextSize("Frame").x + frameInputWidth +
+        ImGui::CalcTextSize("/000000  0000.000s / 0000.000s").x +
+        style.ItemSpacing.x * 2.0f;
     const float statusStartX = ImGui::GetCursorPosX();
     const float playButtonWidth =
         std::max(buttonMinWidth("Play", 58.0f), buttonMinWidth("Pause", 58.0f));
@@ -304,8 +358,18 @@ void MotionSequencerPanel::buildPanel() {
     const bool inlineControls =
         ImGui::GetContentRegionAvail().x >=
         statusWidth + style.ItemSpacing.x + inlineControlsWidth;
-    ImGui::Text("Frame %d/%d  %.3fs / %.3fs", currentFrame(),
-                std::max(_numFrames - 1, 0), displayTime, d);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Frame");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(frameInputWidth);
+    int inputFrame = currentFrame();
+    ImGui::BeginDisabled(_trackNames.empty());
+    if (ImGui::InputInt("##current_frame", &inputFrame, 0, 0,
+                        ImGuiInputTextFlags_EnterReturnsTrue))
+        setCurrentFrame(inputFrame);
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::Text("/%d  %.3fs / %.3fs", std::max(_numFrames - 1, 0), displayTime, d);
 
     if (_folded) {
         ImGui::End();
@@ -322,7 +386,7 @@ void MotionSequencerPanel::buildPanel() {
         setPlaying(!_playing);
     ImGui::SameLine();
     if (ImGui::Button("Reset"))
-        setFrame(0);
+        setCurrentFrame(0);
     ImGui::SameLine();
     ImGui::Checkbox("Loop", &_loop);
     ImGui::SameLine();
@@ -340,6 +404,31 @@ void MotionSequencerPanel::buildPanel() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(speedSliderWidth);
     ImGui::SliderFloat("Speed", &_timeScale, 0.0f, 4.0f);
+
+    ImGui::BeginDisabled(!_loop || _trackNames.empty());
+    bool useRange = _loopRange.has_value();
+    if (ImGui::Checkbox("Loop range", &useRange)) {
+        if (useRange)
+            setLoopRange(0, _numFrames - 1);
+        else
+            clearLoopRange();
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!useRange);
+    auto [startFrame, endFrame] =
+        _loopRange.value_or(std::make_pair(0, _numFrames - 1));
+    ImGui::SetNextItemWidth(frameInputWidth);
+    if (ImGui::InputInt("Start", &startFrame, 0, 0,
+                        ImGuiInputTextFlags_EnterReturnsTrue))
+        setLoopRange(std::clamp(startFrame, 0, endFrame), endFrame);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(frameInputWidth);
+    if (ImGui::InputInt("End", &endFrame, 0, 0,
+                        ImGuiInputTextFlags_EnterReturnsTrue))
+        setLoopRange(_loopRange->first,
+                     std::clamp(endFrame, _loopRange->first, _numFrames - 1));
+    ImGui::EndDisabled();
+    ImGui::EndDisabled();
 
     int frame = currentFrame();
     MotionSequence sequence(std::max(_numFrames - 1, 0), _trackNames,
@@ -377,7 +466,7 @@ void MotionSequencerPanel::buildPanel() {
                       &_firstFrame, UI::SequencerChangeFrame, config);
     _legendWidth = legendWidth / std::max(_uiScale.value(), 1e-6f);
     if (changed)
-        setFrame(frame);
+        setCurrentFrame(frame);
 
     if (_showProgressBar) {
         const float progress = d > 1e-6f ? displayTime / d : 0.0f;
@@ -417,6 +506,16 @@ int MotionSequencerPanel::currentFrame() const {
 }
 
 void MotionSequencerPanel::wrapOrClampTime() {
+    if (_playing && _loop && _loopRange) {
+        const auto [start, end] = *loopRangeTimes();
+        // Compare boundaries in the same precision as the stored time.
+        if (_time < static_cast<float>(start))
+            _time = static_cast<float>(start);
+        else if (_time >= static_cast<float>(end))
+            _time = static_cast<float>(
+                start + std::fmod(_time - static_cast<float>(end), end - start));
+        return;
+    }
     const float d = duration();
     const float playbackD = playbackDuration();
     if (playbackD <= 1e-6f) {

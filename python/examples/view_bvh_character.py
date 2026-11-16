@@ -42,6 +42,7 @@ class BVHCharacterViewer(ke.App):
         self.editor = ke.motion_module.MotionEditor(
             self.motion, motion_name=motion_name
         )
+        self.add_playback_target(self.editor)
 
         config = visual.SkeletalVisualConfig()
         config.bone_radius = 0.03

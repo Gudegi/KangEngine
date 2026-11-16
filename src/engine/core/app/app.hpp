@@ -17,6 +17,7 @@
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "engine/scene/types/camera.hpp"
@@ -156,7 +157,7 @@ class App {
                           glm::mat4& outTransform) const;
     bool setPickTransform(const RayPickResult& result,
                           const glm::mat4& transform);
-    void processSimulationHotkeys();
+    void processPlaybackHotkeys();
     void registerBuiltinRenderResources();
 
   public:
@@ -337,6 +338,10 @@ class App {
     // External simulation loops consume a paused single-step request once.
     bool consumeSimulationStep();
     void setSimulationHotkeysEnabled(bool enabled);
+    // A registered playback controller owns Space instead of simulation hotkeys.
+    void setPlaybackToggleCallback(std::function<void()> callback) {
+        _playbackToggle = std::move(callback);
+    }
     bool getSimulationHotkeysEnabled() const {
         return _simulationHotkeysEnabled;
     }
@@ -356,6 +361,7 @@ class App {
     float _renderHz = 0.0f;
     FixedStepClock _fixedStepClock;
     bool _simulationHotkeysEnabled = false;
+    std::function<void()> _playbackToggle;
     bool _simulationPauseKeyWasDown = false;
     bool _simulationStepKeyWasDown = false;
     float _measuredRenderFPS = 0.0f;

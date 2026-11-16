@@ -292,15 +292,23 @@ class MotionPlayer:
     def reset(self) -> None:
         self.time = 0.0
 
-    def update(self, dt: float) -> bool:
+    def update(self, dt: float, *, loop_range: tuple[float, float] | None = None) -> bool:
+        """Advance playback; loop_range uses seconds with an exclusive end."""
         if not self.playing:
             return False
         old_time = self.time
         self.time += max(0.0, float(dt)) * self.time_scale
-        self._wrap_or_clamp()
+        self._wrap_or_clamp(loop_range)
         return abs(self.time - old_time) > 1e-9
 
-    def _wrap_or_clamp(self) -> None:
+    def _wrap_or_clamp(self, loop_range: tuple[float, float] | None = None) -> None:
+        if self.loop and loop_range is not None:
+            start, end = loop_range
+            if self.time < start:
+                self.time = start
+            elif self.time >= end:
+                self.time = start + (self.time - end) % (end - start)
+            return
         if self.playback_duration <= 1e-6:
             self.time = 0.0
             return
@@ -339,10 +347,11 @@ class MotionEditor:
         )
 
     def set_playing(self, playing: bool):
-        self.player.playing = playing
+        self.player.playing = bool(playing)
+        self.panel.set_playing(self.player.playing)
 
     def update(self, dt: float) -> bool:
-        is_changed = self.player.update(dt)
+        is_changed = self.player.update(dt, loop_range=self.panel._loop_range_seconds())
         if is_changed:
             self.update_modules()
         return is_changed
@@ -405,9 +414,10 @@ class MotionEditor:
         )
 
         if imgui.button("Pause" if player.playing else "Play"):
-            player.playing = not player.playing
+            self.set_playing(not player.playing)
         imgui.same_line()
         if imgui.button("Reset"):
+            self.set_playing(False)
             player.reset()
             is_changed = True
         imgui.same_line()
@@ -440,6 +450,7 @@ class MotionEditor:
             self.legend_width,
         )
         if seq_is_changed:
+            self.set_playing(False)
             player.set_frame(current_frame)
             is_changed = True
             self.update_modules()
@@ -467,9 +478,9 @@ class MotionEditor:
 
         player = self.player
         previous_time = player.time
-        self.panel.set_current_time(player.time)
         self.panel.set_playing(player.playing)
         self.panel.set_loop(player.loop)
+        self.panel.set_current_time(player.time)
         self.panel.set_time_scale(player.time_scale)
         self.panel.set_legend_width(self.legend_width)
         self.panel.build_panel()

@@ -6,7 +6,9 @@
 #include "ui_scale.hpp"
 
 #include <functional>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace KE {
@@ -24,12 +26,20 @@ class MotionSequencerPanel : public Panel {
                     std::vector<int> numFrames, std::vector<float> fps);
     void clearMotions();
     void setCurrentTime(float time);
+    // Pause and seek to a clamped, zero-based frame, notifying listeners.
+    void setCurrentFrame(int frame);
     float currentTime() const { return _time; }
     float duration() const;
     void setPlaying(bool playing);
     bool isPlaying() const { return _playing; }
     void setLoop(bool loop) { _loop = loop; }
     bool loop() const { return _loop; }
+    // Inclusive zero-based frames; applies only while playing with Loop enabled.
+    void setLoopRange(int startFrame, int endFrame);
+    void clearLoopRange() { _loopRange.reset(); }
+    std::optional<std::pair<int, int>> loopRange() const { return _loopRange; }
+    // Exclusive end time includes the full duration of the last frame.
+    std::optional<std::pair<double, double>> loopRangeTimes() const;
     void setTimeScale(float timeScale);
     float timeScale() const { return _timeScale; }
     void setTransparent(bool transparent) { _transparent = transparent; }
@@ -48,16 +58,20 @@ class MotionSequencerPanel : public Panel {
     bool showProgressBar() const { return _showProgressBar; }
     void setFrameChangedCallback(FrameChangedCallback callback);
     void setPlayingChangedCallback(PlayingChangedCallback callback);
+    void setPlaybackManaged(bool managed) { _playbackManaged = managed; }
     void buildPanel() override;
+    // For custom timeline UIs, call once after ImGui::NewFrame().
+    void handlePlaybackShortcuts();
+    int currentFrame() const;
 
   private:
     class MotionSequence;
 
-    int currentFrame() const;
     float playbackDuration() const;
     void wrapOrClampTime();
     void setFrame(int frame);
-    void handleFrameShortcuts();
+    void processPlaybackShortcuts(bool accelerate, bool togglePlayback);
+    void handleFrameShortcuts(bool accelerate);
     void emitPlayingChanged();
 
     std::string _motionName = "Motion";
@@ -67,7 +81,9 @@ class MotionSequencerPanel : public Panel {
     float _fps = 30.0f;
     float _time = 0.0f;
     bool _playing = true;
+    bool _playbackManaged = false;
     bool _loop = true;
+    std::optional<std::pair<int, int>> _loopRange;
     bool _fitToContent = true;
     bool _expanded = true;
     bool _transparent = false;
@@ -79,6 +95,7 @@ class MotionSequencerPanel : public Panel {
     float _timeScale = 1.0f;
     float _leftArrowHoldTime = 0.0f;
     float _rightArrowHoldTime = 0.0f;
+    int _lastPlaybackShortcutFrame = -1;
     int _firstFrame = 0;
     int _selectedTrack = -1;
     UIScale _uiScale;

@@ -21,6 +21,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -139,6 +140,64 @@ void bind_imgui(py::module& m) {
         },
         py::arg("name"), py::arg("flags") = 0);
     imgui.def("end", []() { ImGui::End(); });
+    imgui.def("collapsing_header", [](const std::string& label) {
+        return ImGui::CollapsingHeader(label.c_str());
+    }, py::arg("label"));
+    imgui.def("begin_disabled", [](bool disabled) { ImGui::BeginDisabled(disabled); },
+              py::arg("disabled") = true);
+    imgui.def("end_disabled", []() { ImGui::EndDisabled(); });
+    imgui.def("dock_window", [](const std::string& name, const std::string& target,
+                                 const std::string& position, float ratio) {
+        ImGuiDir direction = ImGuiDir_None;
+        if (position == "above") direction = ImGuiDir_Up;
+        else if (position == "below") direction = ImGuiDir_Down;
+        else if (position != "tab") throw py::value_error("position must be above, below, or tab");
+        if (ratio <= 0.0f || ratio >= 1.0f)
+            throw py::value_error("Dock ratio must be between zero and one");
+        ImGuiWindow* window = ImGui::FindWindowByName(target.c_str());
+        if (!window || window->DockId == 0) return false;
+        const ImGuiID root = window->DockId;
+        ImGuiID destination = root;
+        if (direction != ImGuiDir_None) {
+            ImGuiID remaining = 0;
+            destination = ImGui::DockBuilderSplitNode(root, direction, ratio, nullptr, &remaining);
+            ImGui::DockBuilderDockWindow(target.c_str(), remaining);
+        }
+        ImGui::DockBuilderDockWindow(name.c_str(), destination);
+        ImGui::DockBuilderFinish(root);
+        if (ImGuiDockNode* node = ImGui::DockBuilderGetNode(destination)) {
+            node->SelectedTabId = ImHashStr("#TAB", 0, ImHashStr(name.c_str()));
+            if (node->TabBar)
+                node->TabBar->NextSelectedTabId = node->SelectedTabId;
+        }
+        ImGui::SetNextWindowFocus();
+        return true;
+    }, py::arg("name"), py::arg("target"), py::arg("position") = "tab",
+       py::arg("ratio") = 0.25f,
+       "Dock once relative to an existing window; retry while false.");
+    imgui.def("content_region_avail", []() {
+        const ImVec2 size = ImGui::GetContentRegionAvail();
+        return py::make_tuple(size.x, size.y);
+    });
+    imgui.def(
+        "dock_window_below",
+        [](const std::string& name, const std::string& target, float ratio) {
+            if (ratio <= 0.0f || ratio >= 1.0f)
+                throw py::value_error("Dock ratio must be between zero and one");
+            ImGuiWindow* window = ImGui::FindWindowByName(target.c_str());
+            if (!window || window->DockId == 0)
+                return false;
+            const ImGuiID root = window->DockId;
+            ImGuiID upper = 0;
+            const ImGuiID lower = ImGui::DockBuilderSplitNode(
+                root, ImGuiDir_Down, ratio, nullptr, &upper);
+            ImGui::DockBuilderDockWindow(target.c_str(), upper);
+            ImGui::DockBuilderDockWindow(name.c_str(), lower);
+            ImGui::DockBuilderFinish(root);
+            return true;
+        },
+        py::arg("name"), py::arg("target"), py::arg("ratio") = 0.28f,
+        "Dock a window below a docked target within its area. Call once; returns false until target exists.");
     imgui.def(
         "begin_child",
         [](const std::string& id, float width, float height, bool border,
@@ -152,6 +211,11 @@ void bind_imgui(py::module& m) {
     imgui.def("text", [](const std::string& text) {
         ImGui::TextUnformatted(text.c_str());
     });
+    imgui.def("text_wrapped", [](const std::string& text) {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextUnformatted(text.c_str());
+        ImGui::PopTextWrapPos();
+    }, py::arg("text"));
     imgui.def("text_disabled", [](const std::string& text) {
         ImGui::TextDisabled("%s", text.c_str());
     });
@@ -263,6 +327,60 @@ void bind_imgui(py::module& m) {
                               viewport->WorkSize.x, viewport->WorkSize.y);
     });
     imgui.def(
+        "interval_track",
+        [](const std::string& label, int currentFrame, int frameMin, int frameMax,
+           const std::vector<std::array<int, 2>>& intervals,
+           const std::vector<glm::vec4>& colors, float width, float height) {
+            if (frameMax < frameMin || height <= 0.0f)
+                throw py::value_error("Invalid track frame range or height");
+            if (intervals.size() != colors.size())
+                throw py::value_error("Each interval requires one color");
+            const float trackWidth = width > 0.0f
+                ? width : std::max(1.0f, ImGui::GetContentRegionAvail().x);
+            const ImVec2 origin = ImGui::GetCursorScreenPos();
+            ImGui::InvisibleButton(label.c_str(), ImVec2(trackWidth, height));
+            const bool active = ImGui::IsItemActive();
+            const bool pressed = ImGui::IsItemActivated();
+            const double count = double(frameMax) - double(frameMin) + 1.0;
+            int frame = std::clamp(currentFrame, frameMin, frameMax);
+            if (active) {
+                const double fraction = std::clamp(
+                    double(ImGui::GetMousePos().x - origin.x) / trackWidth,
+                    0.0, 1.0);
+                frame = static_cast<int>(std::min(double(frameMax),
+                    double(frameMin) + std::floor(fraction * count)));
+            }
+            ImDrawList* draw = ImGui::GetWindowDrawList();
+            draw->AddRectFilled(origin, ImVec2(origin.x + trackWidth, origin.y + height),
+                                IM_COL32(38, 42, 49, 255), 3.0f);
+            for (size_t index = 0; index < intervals.size(); ++index) {
+                const auto& interval = intervals[index];
+                if (interval[1] < interval[0] || interval[1] < frameMin || interval[0] > frameMax)
+                    continue;
+                const float left = float((double(std::max(interval[0], frameMin)) - frameMin) / count);
+                const float right = float((double(std::min(interval[1], frameMax)) - frameMin + 1.0) / count);
+                const auto& color = colors[index];
+                draw->AddRectFilled(
+                    ImVec2(origin.x + left * trackWidth, origin.y + 2.0f),
+                    ImVec2(origin.x + right * trackWidth, origin.y + height - 2.0f),
+                    ImGui::ColorConvertFloat4ToU32(ImVec4(color.r, color.g, color.b, color.a)));
+            }
+            const float cursor = origin.x + float((double(frame) - frameMin + 0.5) / count) * trackWidth;
+            draw->AddLine(ImVec2(cursor, origin.y), ImVec2(cursor, origin.y + height),
+                          IM_COL32(255, 255, 255, 255), 2.0f);
+            if (ImGui::IsItemHovered()) {
+                const double fraction = std::clamp(double(ImGui::GetMousePos().x - origin.x) / trackWidth, 0.0, 1.0);
+                const int hovered = static_cast<int>(std::min(double(frameMax),
+                    double(frameMin) + std::floor(fraction * count)));
+                ImGui::SetTooltip("Frame %d | click to seek, drag to select", hovered);
+            }
+            return py::make_tuple(active, frame, pressed);
+        },
+        py::arg("label"), py::arg("current_frame"), py::arg("frame_min"), py::arg("frame_max"),
+        py::arg("intervals"), py::arg("colors"), py::arg("width") = 0.0f, py::arg("height") = 22.0f,
+        "Draw inclusive colored frame intervals and a playhead. Returns (active, frame, pressed). "
+        "Later intervals overlay earlier ones; dragging outside clamps to the frame range.");
+    imgui.def(
         "set_next_window_pos",
         [](float x, float y) {
             ImGui::SetNextWindowPos(ImVec2(x, y), ImGuiCond_Always);
@@ -364,6 +482,37 @@ void bind_imgui(py::module& m) {
             return py::make_tuple(changed, v);
         },
         py::arg("label"), py::arg("value"));
+    imgui.def(
+        "slider_int",
+        [](const std::string& label, int value, int min, int max) {
+            if (min > max)
+                throw py::value_error("Slider minimum must not exceed maximum");
+            int v = value;
+            bool changed = ImGui::SliderInt(label.c_str(), &v, min, max, "%d",
+                                           ImGuiSliderFlags_AlwaysClamp);
+            const std::string popupLabel = "Edit value##slider_int_" + label;
+            if (ImGui::IsItemHovered() &&
+                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                v = value;
+                changed = false;
+                ImGui::OpenPopup(popupLabel.c_str());
+            }
+            if (ImGui::BeginPopup(popupLabel.c_str())) {
+                if (ImGui::IsWindowAppearing())
+                    ImGui::SetKeyboardFocusHere();
+                ImGui::SetNextItemWidth(160.0f);
+                if (ImGui::InputInt("##slider_int_value", &v, 0, 0,
+                                   ImGuiInputTextFlags_EnterReturnsTrue)) {
+                    v = std::clamp(v, min, max);
+                    changed = true;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+            return py::make_tuple(changed, v);
+        },
+        py::arg("label"), py::arg("value"), py::arg("min"), py::arg("max"),
+        "Drag integer steps or double-click to enter an integer; returns (changed, value).");
     imgui.def(
         "slider_float",
         [](const std::string& label, float value, float min, float max) {
@@ -608,11 +757,30 @@ void bind_viewer(py::module& m) {
              "Remove every motion track and reset playback state.")
         .def("set_current_time", &MotionSequencerPanel::setCurrentTime)
         .def("current_time", &MotionSequencerPanel::currentTime)
+        .def("set_current_frame", &MotionSequencerPanel::setCurrentFrame,
+             py::arg("frame"), "Pause and seek to a clamped, zero-based frame.")
+        .def("current_frame", &MotionSequencerPanel::currentFrame,
+             "Return the displayed zero-based frame index.")
+        .def("handle_playback_shortcuts", &MotionSequencerPanel::handlePlaybackShortcuts,
+             "Handle Left/Right steps, Home/End jumps, and Space playback for custom timelines. "
+             "Call instead of build_panel; ignores active widgets and popups. "
+             "App-registered panels leave Space to the shared playback controller.")
         .def("duration", &MotionSequencerPanel::duration)
         .def("set_playing", &MotionSequencerPanel::setPlaying)
+        .def("set_playing_changed_callback", &MotionSequencerPanel::setPlayingChangedCallback,
+             py::arg("callback"), "Notify a playback owner when the panel changes play/pause state.")
+        .def("_set_playback_managed", &MotionSequencerPanel::setPlaybackManaged)
         .def("is_playing", &MotionSequencerPanel::isPlaying)
         .def("set_loop", &MotionSequencerPanel::setLoop)
         .def("loop", &MotionSequencerPanel::loop)
+        .def("set_loop_range", &MotionSequencerPanel::setLoopRange,
+             py::arg("start_frame"), py::arg("end_frame"),
+             "Set inclusive zero-based loop bounds; requires Loop enabled during playback.")
+        .def("clear_loop_range", &MotionSequencerPanel::clearLoopRange,
+             "Restore whole-motion looping.")
+        .def("loop_range", &MotionSequencerPanel::loopRange,
+             "Return inclusive frame bounds, or None for the whole motion.")
+        .def("_loop_range_seconds", &MotionSequencerPanel::loopRangeTimes)
         .def("set_time_scale", &MotionSequencerPanel::setTimeScale)
         .def("time_scale", &MotionSequencerPanel::timeScale)
         .def("set_transparent", &MotionSequencerPanel::setTransparent)
@@ -681,6 +849,7 @@ void bind_viewer(py::module& m) {
              "Enable Enter play/pause and Space pause/single-step shortcuts.")
         .def("get_simulation_hotkeys_enabled",
              &App::getSimulationHotkeysEnabled)
+        .def("_set_playback_toggle_callback", &App::setPlaybackToggleCallback)
         .def("get_dropped_wall_time", &App::getDroppedWallTime)
         .def(
             "get_ui_scale",

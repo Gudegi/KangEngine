@@ -1013,7 +1013,7 @@ class App(_NativeApp):
         self._textures_by_uri = {}
         self._scene_hook_resource_handles = {}
         self._render_hook_resource_usage = {}
-        self.playback_controller = PlaybackController()
+        self.playback_controller = PlaybackController(self)
 
     def get_native_scene(self):
         """Return the native SceneBackend escape hatch.
@@ -1116,6 +1116,12 @@ class App(_NativeApp):
         return removed
 
     def add_playback_target(self, target):
+        """Link a motion editor or panel to shared play/pause controls.
+
+        Space controls registered targets and the simulation clock. Legacy
+        simulation Enter/Space shortcuts are bypassed while targets are registered.
+        The first target adopts the App's current paused/running state.
+        """
         self.playback_controller.add_target(target)
 
     def package_asset_path(self, *parts: str) -> str:
@@ -1742,10 +1748,7 @@ class App(_NativeApp):
         pass
 
     def pre_update(self):
-        if self.playback_controller.has_targets:
-            if self.was_key_pressed(keys.SPACE):
-                playing = self.playback_controller.toggle_play()
-                self.set_simulation_paused(not playing)
+        pass
 
     def fixed_update(self, fixed_dt):
         pass

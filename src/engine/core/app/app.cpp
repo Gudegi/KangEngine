@@ -198,6 +198,7 @@ void App::close() {
     _initialized = false;
     _automationRequested.store(false, std::memory_order_relaxed);
     _frameCaptureActive = false;
+    _playbackToggle = {};
     if (auto* window = _window.getGlfwWindow())
         glfwMakeContextCurrent(window);
 
@@ -680,7 +681,7 @@ void App::processEvents() {
                           : 0.0f;
     _lastEventTime = now;
     processInput();
-    processSimulationHotkeys();
+    processPlaybackHotkeys();
 }
 
 void App::updateAndDraw() { executeFrame(true); }
@@ -1031,8 +1032,8 @@ void App::setSimulationHotkeysEnabled(bool enabled) {
     _simulationStepKeyWasDown = false;
 }
 
-void App::processSimulationHotkeys() {
-    if (!_simulationHotkeysEnabled)
+void App::processPlaybackHotkeys() {
+    if (!_simulationHotkeysEnabled && !_playbackToggle)
         return;
 
     GLFWwindow* window = getWindow();
@@ -1042,18 +1043,41 @@ void App::processSimulationHotkeys() {
     const bool pauseKeyDown =
         glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_KP_ENTER) == GLFW_PRESS;
-    if (pauseKeyDown && !_simulationPauseKeyWasDown)
-        setSimulationPaused(!isSimulationPaused());
+    const bool pausePressed = pauseKeyDown && !_simulationPauseKeyWasDown;
     _simulationPauseKeyWasDown = pauseKeyDown;
 
     const bool stepKeyDown = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-    if (stepKeyDown && !_simulationStepKeyWasDown) {
+    const bool spacePressed = stepKeyDown && !_simulationStepKeyWasDown;
+    _simulationStepKeyWasDown = stepKeyDown;
+    if (!pausePressed && !spacePressed)
+        return;
+    for (int key : {GLFW_KEY_LEFT_CONTROL, GLFW_KEY_RIGHT_CONTROL,
+                    GLFW_KEY_LEFT_ALT, GLFW_KEY_RIGHT_ALT,
+                    GLFW_KEY_LEFT_SUPER, GLFW_KEY_RIGHT_SUPER}) {
+        if (glfwGetKey(window, key) == GLFW_PRESS)
+            return;
+    }
+
+    // Consume key edges even while editing, so held keys do not fire on focus loss.
+    if (!_hideUI && ImGui::GetCurrentContext()) {
+        if (isKeyboardInputCaptured() || ImGui::IsAnyItemActive() ||
+            ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId |
+                                          ImGuiPopupFlags_AnyPopupLevel))
+            return;
+    }
+    if (_playbackToggle) {
+        if (spacePressed)
+            _playbackToggle();
+        return;
+    }
+    if (pausePressed)
+        setSimulationPaused(!isSimulationPaused());
+    if (spacePressed) {
         if (isSimulationPaused())
             requestSimulationStep();
         else
             setSimulationPaused(true);
     }
-    _simulationStepKeyWasDown = stepKeyDown;
 }
 
 double App::getDroppedWallTime() const {
@@ -1185,8 +1209,10 @@ void App::renderShortcutHelp() {
         shortcut("Edit mode gizmo", "Transform Object");
         shortcut("Escape", "Cancel / Close");
 
-        section("Simulation");
-        if (_simulationHotkeysEnabled) {
+        section(_playbackToggle ? "Playback" : "Simulation");
+        if (_playbackToggle) {
+            shortcut("Space", "Play / Pause");
+        } else if (_simulationHotkeysEnabled) {
             shortcut("Enter", "Pause / Resume");
             shortcut("Space", "Pause / Step");
         } else {
