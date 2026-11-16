@@ -39,6 +39,70 @@ python ./python/examples/view_obj_scene.py --obj-file /path/to/model.obj
 
 </details>
 
+## PLY meshes and point clouds
+
+`asset.load_ply()` returns `scene.MeshData` without an App or graphics context:
+
+```python
+import kangengine as ke
+
+mesh: ke.scene.MeshData = ke.asset.load_ply(path="model.ply")
+```
+
+PLY 1.0 ASCII and little-/big-endian binary files are supported. Coordinates and
+scale are preserved. The loader reads positions, normals, RGB, and vertex UVs
+(`u/v`, `s/t`, or `texture_u/texture_v`). Separate `multi_texture_vertex` /
+`multi_texture_face` UV tables support one texture and use the OBJ UV convention
+after loading. Multiple texture IDs are rejected.
+
+Triangulate concave polygons before loading; convex faces are triangulated
+automatically. Missing mesh normals are generated, and missing UVs become zero.
+Point clouds have empty `indices` and keep missing attributes empty.
+
+Integer RGB is normalized to `[0, 1]`; floating RGB must already be in that range.
+Colors are linear by default; pass `colors_srgb=True` for sRGB input. Alpha and
+unknown properties are ignored. Materials and image references are not loaded.
+
+Inside `App.setup()`, add a mesh:
+
+```python
+material: ke.material.ColorMaterial = self.create_color_material()
+material.unlit = True
+self.scene.add_mesh(
+    path="/ply", mesh_data=mesh, material=material, color=ke.Vec4(1, 1, 1, 1),
+)
+```
+
+For point clouds, add alpha to the RGB values for the point drawing API:
+
+```python
+import numpy as np
+
+points = np.asarray(mesh.vertices, dtype=np.float32)
+rgb = mesh.colors
+colors = None
+if rgb:
+    colors = np.ones((len(points), 4), dtype=np.float32)
+    colors[:, :3] = np.asarray(rgb)
+self.debug.overlay.points(path="/ply", points=points, colors=colors, size=6.0)
+```
+
+The viewer selects mesh or point rendering automatically. `--up-axis Y|Z`
+sets the viewer's up axis (default `Y`), without rotating the source coordinates:
+
+```bash
+python python/examples/asset/view_ply.py --ply-path /path/to/model.ply
+```
+
+For a mesh with UVs, use `--texture-path` to supply an image. The viewer loads it
+as sRGB and displays it without lighting; image paths are not detected automatically:
+
+```bash
+python python/examples/asset/view_ply.py \
+  --ply-path "/path/to/model.ply" \
+  --texture-path "/path/to/model_color.jpg" --up-axis Z
+```
+
 ## Rigid body sources
 
 These loaders prepare descriptions for the [Rigid Bodies](../simulation/RIGID_BODIES.md)

@@ -9,8 +9,6 @@
 #include <tiny_obj_loader.h>
 #include <vector>
 
-// Support obj and stl.
-
 namespace KE {
 namespace Asset {
 
@@ -43,6 +41,7 @@ struct ObjMeshInfo {
     int primaryMaterialIndex = -1;
 };
 
+// TODO: Standardize loader file arguments as path.
 Scene::MeshData
 loadObj(std::string inputFile,
         std::optional<tinyobj::ObjReaderConfig> render_config = std::nullopt);
@@ -55,6 +54,10 @@ ObjMeshInfo loadObjWithMaterials(
 /// @param path Path to the .stl file
 /// @return MeshData with vertices, normals, and indices (UVs are empty)
 Scene::MeshData loadStl(const std::string& path);
+
+// Load ASCII/binary PLY meshes or points with single-texture UVs.
+// colorsSrgb decodes vertex RGB to linear. Load images separately.
+Scene::MeshData loadPly(const std::string& path, bool colorsSrgb = false);
 
 /// Rebuild indices by sharing vertices with identical position/normal/uv.
 /// Useful after loaders expand face corners for face-varying attributes.

@@ -1,7 +1,7 @@
 ke.asset
 ========
 
-Loaders, model assets, and result types for MJCF, BVH, FBX, USD, AMASS,
+Loaders, model assets, and result types for OBJ, STL, PLY, MJCF, BVH, FBX, USD, AMASS,
 SMPL, SMPL-H, and SMPL-X.
 
 .. currentmodule:: kangengine.asset
@@ -12,6 +12,9 @@ API overview
 .. autosummary::
    :nosignatures:
 
+   load_obj
+   load_stl
+   load_ply
    MJCFLoader
    BVHLoader
    FBXLoader
@@ -62,6 +65,12 @@ Loader return contracts
 Missing or unreadable files and malformed source data raise ``RuntimeError``;
 invalid argument values raise ``ValueError`` where validation is available.
 Inspect ``ImportDiagnostics`` for supported non-fatal import warnings.
+
+.. autofunction:: load_obj
+
+.. autofunction:: load_stl
+
+.. autofunction:: load_ply
 
 .. autoclass:: ImportDiagnostics
 

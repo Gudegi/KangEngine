@@ -358,6 +358,17 @@ void bind_asset(py::module& m) {
         py::arg("path"), "Load an STL file and return scene.MeshData.");
 
     asset.def(
+        "load_ply",
+        [](const std::string& path, bool colorsSrgb) {
+            return std::make_shared<KE::Scene::MeshData>(
+                KE::Asset::loadPly(path, colorsSrgb));
+        },
+        py::arg("path"), py::kw_only(), py::arg("colors_srgb") = false,
+        "Load PLY meshes or points as scene.MeshData. "
+        "colors_srgb decodes vertex colors to linear RGB. "
+        "Single-texture UVs supported; load images separately.");
+
+    asset.def(
         "load_heightmap_terrain",
         [](const std::string& path, KE::UpAxis upAxis, float horizontalScale,
            float heightScale, float heightOffset, int sampleStride) {

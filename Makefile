@@ -171,6 +171,7 @@ validate_wheel:
 
 validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/asset/ply_loader_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_add_obj_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py

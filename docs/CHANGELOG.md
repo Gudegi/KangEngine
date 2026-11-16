@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `asset.load_ply()` for ASCII and binary PLY meshes and colored point clouds.
 - Add optional normals and linear RGB vertex colors to `MeshData.from_arrays()`,
   with vertex colors supported on static and skinned meshes.
 - Add `unlit` rendering to ColorMaterial, PhongMaterial, and PBRMaterial.
