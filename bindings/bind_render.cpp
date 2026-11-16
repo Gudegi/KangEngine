@@ -323,6 +323,11 @@ void bind_render(py::module& m) {
              py::arg("first_index") = 0, py::arg("base_vertex") = 0,
              py::arg("first_instance") = 0);
     py::class_<RenderHookContext>(m, "RenderHookContext")
+        .def("bind_scene_globals", [](RenderHookContext& context) {
+            if (!context.frameBindings)
+                throw std::runtime_error("Scene frame bindings are unavailable");
+            context.pass.setBindGroup(0, context.frameBindings);
+        }, "Bind scene camera and lighting data after setting the pipeline.")
         .def_property_readonly(
             "pass_encoder", [](RenderHookContext& context) {
                 return &context.pass;

@@ -291,6 +291,9 @@ class RenderPassEncoder:
 
 class RenderHookContext:
     """Borrowed scene-pass state passed to a render-hook callback."""
+    def bind_scene_globals(self) -> None:
+        """Bind scene camera and lighting data after setting the pipeline."""
+        ...
     @property
     def pass_encoder(self) -> RenderPassEncoder:
         """Return the borrowed command encoder; do not retain it."""
