@@ -208,7 +208,8 @@ void App::close() {
     if (auto* window = _window.getGlfwWindow())
         glfwMakeContextCurrent(window);
 
-    // Scene registrations and GL owners must be released while the context lives.
+    // Scene registrations and GL owners must be released while the context
+    // lives.
     _sceneRenderSystem.clear();
     _sceneRenderSystem.bind(nullptr);
     _sceneResourceManager.clear();
@@ -346,9 +347,9 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     registerBuiltinRenderResources();
 
     DirectionalLight defaultLight;
-    defaultLight.direction = (_upAxis == UpAxis::Z)
-                                 ? glm::normalize(glm::vec3(-0.2f, -0.5f, -1.0f))
-                                 : glm::normalize(glm::vec3(-0.5f, -1.0f, -0.2f));
+    defaultLight.direction =
+        (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(-0.2f, -0.5f, -1.0f))
+                               : glm::normalize(glm::vec3(-0.5f, -1.0f, -0.2f));
     if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
         lightPrim->setDirectionalLight(defaultLight);
     else
@@ -502,7 +503,8 @@ void App::registerBuiltinRenderResources() {
 void App::start(bool closeOnExit) {
     requireOwnerThread();
     if (_closed || !_initialized)
-        throw std::runtime_error("App must be initialized and open before start");
+        throw std::runtime_error(
+            "App must be initialized and open before start");
     if (_setupStarted)
         throw std::runtime_error("App.start can only be called once");
 
@@ -672,7 +674,8 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
 void App::processEvents() {
     requireOwnerThread();
     if (_closed || !_initialized)
-        throw std::runtime_error("App must be initialized and open before processing events");
+        throw std::runtime_error(
+            "App must be initialized and open before processing events");
     if (shouldClose())
         return;
     {
@@ -682,9 +685,8 @@ void App::processEvents() {
     if (shouldClose())
         return;
     const double now = glfwGetTime();
-    _eventDeltaTime = _lastEventTime >= 0.0
-                          ? static_cast<float>(now - _lastEventTime)
-                          : 0.0f;
+    _eventDeltaTime =
+        _lastEventTime >= 0.0 ? static_cast<float>(now - _lastEventTime) : 0.0f;
     _lastEventTime = now;
     processInput();
     processPlaybackHotkeys();
@@ -697,7 +699,8 @@ void App::drawFrame() { executeFrame(false); }
 void App::executeFrame(bool update) {
     requireOwnerThread();
     if (_closed || !_initialized)
-        throw std::runtime_error("App must be initialized and open before rendering");
+        throw std::runtime_error(
+            "App must be initialized and open before rendering");
     if (_inFrame)
         throw std::runtime_error("App cannot render a nested frame");
     struct FrameGuard {
@@ -820,7 +823,7 @@ void App::executeFrame(bool update) {
     }
 
     // ImGui::NewFrame() must come before any ImGui widget calls
-    if (!_hideUI) {
+    if (!_hideUI || _showExitConfirmation) {
         _panelManager.preRender();
     }
 
@@ -958,13 +961,17 @@ void App::executeFrame(bool update) {
     }
 
     // default framebuffer
-    if (!_hideUI) {
+    if (!_hideUI || _showExitConfirmation) {
         auto uiScope = profile.cpuScope("render/ui");
-        _panelManager.render();
-        renderShortcutHelp();
-        renderRecordingIndicator();
-        if (_panelManager.getLayoutMode() != UILayoutMode::Editor)
-            renderSelectionGizmo();
+        if (!_hideUI) {
+            _panelManager.render();
+            renderShortcutHelp();
+            renderRecordingIndicator();
+            if (!_showExitConfirmation &&
+                _panelManager.getLayoutMode() != UILayoutMode::Editor)
+                renderSelectionGizmo();
+        }
+        renderExitConfirmation();
         auto gpuUI = _graphicsDevice->profileExternalScope("render/ui");
         _panelManager.postRender();
     }
@@ -972,7 +979,8 @@ void App::executeFrame(bool update) {
         auto scope = profile.cpuScope("render/post_callback");
         this->postRender();
     }
-    if (_videoRecordingToggleRequested || _frameCaptureActive || automationFrame) {
+    if (_videoRecordingToggleRequested || _frameCaptureActive ||
+        automationFrame) {
         this->onFrameRenderedInternal();
         _videoRecordingToggleRequested = false;
     }
@@ -1040,7 +1048,9 @@ bool App::isSimulationPaused() const { return _fixedStepClock.isPaused(); }
 
 void App::requestSimulationStep() { _fixedStepClock.requestSingleStep(); }
 
-bool App::consumeSimulationStep() { return _fixedStepClock.consumeSingleStep(); }
+bool App::consumeSimulationStep() {
+    return _fixedStepClock.consumeSingleStep();
+}
 
 void App::setSimulationHotkeysEnabled(bool enabled) {
     _simulationHotkeysEnabled = enabled;
@@ -1067,18 +1077,21 @@ void App::processPlaybackHotkeys() {
     _simulationStepKeyWasDown = stepKeyDown;
     if (!pausePressed && !spacePressed)
         return;
-    for (int key : {GLFW_KEY_LEFT_CONTROL, GLFW_KEY_RIGHT_CONTROL,
-                    GLFW_KEY_LEFT_ALT, GLFW_KEY_RIGHT_ALT,
-                    GLFW_KEY_LEFT_SUPER, GLFW_KEY_RIGHT_SUPER}) {
+    if (_showExitConfirmation)
+        return;
+    for (int key :
+         {GLFW_KEY_LEFT_CONTROL, GLFW_KEY_RIGHT_CONTROL, GLFW_KEY_LEFT_ALT,
+          GLFW_KEY_RIGHT_ALT, GLFW_KEY_LEFT_SUPER, GLFW_KEY_RIGHT_SUPER}) {
         if (glfwGetKey(window, key) == GLFW_PRESS)
             return;
     }
 
-    // Consume key edges even while editing, so held keys do not fire on focus loss.
+    // Consume key edges even while editing, so held keys do not fire on focus
+    // loss.
     if (!_hideUI && ImGui::GetCurrentContext()) {
         if (isKeyboardInputCaptured() || ImGui::IsAnyItemActive() ||
             ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId |
-                                          ImGuiPopupFlags_AnyPopupLevel))
+                                            ImGuiPopupFlags_AnyPopupLevel))
             return;
     }
     if (_playbackToggle) {
@@ -1111,10 +1124,12 @@ std::vector<uint8_t> App::readRgbPixelsResized(int width, int height,
                                                bool flipY) {
     requireOwnerThread();
     if (width <= 0 || height <= 0)
-        throw std::invalid_argument("Capture width and height must be positive");
+        throw std::invalid_argument(
+            "Capture width and height must be positive");
     if (!_lastPresentedFramebuffer)
         throw std::runtime_error("No completed scene frame is available");
-    return _lastPresentedFramebuffer->readColorPixelsResized(width, height, flipY);
+    return _lastPresentedFramebuffer->readColorPixelsResized(width, height,
+                                                             flipY);
 }
 
 bool App::writePixelsPNG(const std::string& path, bool flipY) {
@@ -1817,13 +1832,14 @@ void App::logDebugLines(const std::string& path,
                         bool hidden, bool overlay) {
     if (_rasterizer)
         _rasterizer->logDebugLines(path, starts, ends, colors, width, hidden,
-                                 overlay);
+                                   overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::mat4& transform,
                        float length, float width, bool hidden, bool overlay) {
     if (_rasterizer)
-        _rasterizer->logDebugAxes(path, transform, length, width, hidden, overlay);
+        _rasterizer->logDebugAxes(path, transform, length, width, hidden,
+                                  overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::vec3& origin,
@@ -2076,6 +2092,45 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
         _io->isMouseRightClicked = false;
 }
 
+void App::renderExitConfirmation() {
+    if (!_showExitConfirmation)
+        return;
+
+    constexpr const char* title = "Exit Confirmation";
+    const bool opening = !ImGui::IsPopupOpen(title);
+    if (opening)
+        ImGui::OpenPopup(title);
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
+                            ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal(title, nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("Are you sure you want to exit?");
+        ImGui::Spacing();
+        const float buttonWidth = 100.0f;
+        const float buttonsWidth =
+            buttonWidth * 2 + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetCursorPosX(
+            ImGui::GetCursorPosX() +
+            std::max(0.0f,
+                     (ImGui::GetContentRegionAvail().x - buttonsWidth) * 0.5f));
+        const bool yes = ImGui::Button("Yes", ImVec2(buttonWidth, 0));
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        const bool no = ImGui::Button("No", ImVec2(buttonWidth, 0));
+        const bool enter = ImGui::IsKeyPressed(ImGuiKey_Enter, false) ||
+                           ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false);
+        const bool escape =
+            !opening && ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+        if (yes || enter || no || escape) {
+            ImGui::CloseCurrentPopup();
+            _showExitConfirmation = false;
+            if (yes || enter)
+                requestClose();
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void App::processInput() {
     // Capture accumulated deltas, reset for next frame.
     double deltaMouseX = _io->deltaMouseX;
@@ -2084,6 +2139,11 @@ void App::processInput() {
     _io->deltaMouseY = 0;
 
     GLFWwindow* window = this->getWindow();
+    const bool escPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+    const bool escapePressed = escPressed && !_io->isEscKeyPressed;
+    _io->isEscKeyPressed = escPressed;
+    if (_showExitConfirmation)
+        return;
 
     // Hide UI
     bool hPressed = glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS;
@@ -2117,12 +2177,37 @@ void App::processInput() {
         _io->isPickMode = false;
     }
 
+    const bool uiOwnsEscape =
+        !_hideUI &&
+        (ImGui::GetIO().WantTextInput || ImGui::IsAnyItemActive() ||
+         ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId |
+                                         ImGuiPopupFlags_AnyPopupLevel));
+    if (escapePressed && !uiOwnsEscape) {
+        _mousePickRequested = false;
+        _io->leftMouseAction = IO::LeftMouseAction::None;
+        _io->isPickMode = false;
+        bool endedForceDrag = false;
+        if (_interaction.cancelActiveInteraction(endedForceDrag)) {
+            if (endedForceDrag)
+                onForceDragEnd();
+        } else {
+            if (_hideUI) {
+                // Hidden UI has no ImGui frames to consume queued key events.
+                auto& io = ImGui::GetIO();
+                io.ClearEventsQueue();
+                io.ClearInputKeys();
+                io.ClearInputMouse();
+            }
+            _showExitConfirmation = true;
+        }
+        return;
+    }
+
     // Let ImGui own mouse input except over the editor viewport image.
     if (shouldBlockMouseInput()) {
         return;
     }
-    float cameraSpeed =
-        static_cast<float>(_cameraMoveSpeed * _eventDeltaTime);
+    float cameraSpeed = static_cast<float>(_cameraMoveSpeed * _eventDeltaTime);
     float scaleDistance = _camera.getCamToLookDistance();
     glm::vec3 cameraPos = _camera.getCameraPos();
     glm::vec3 cameraFront = _camera.getCameraLookDir();
@@ -2130,23 +2215,12 @@ void App::processInput() {
     glm::vec3 cameraRight = _camera.getCameraRightDir();
     glm::vec3 globalUp = _camera.getUpVector();
 
-    bool escPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
-    if (escPressed && !_io->isEscKeyPressed) {
-        bool endedForceDrag = false;
-        if (_interaction.cancelActiveInteraction(endedForceDrag)) {
-            if (endedForceDrag)
-                onForceDragEnd();
-        } else {
-            requestClose();
-        }
-    }
-    _io->isEscKeyPressed = escPressed;
-
     if (_gizmo.isUsing() || _io->leftMouseAction == IO::LeftMouseAction::Gizmo)
         return;
 
     // look at specifc target or // look at forward direction
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             glm::vec3 nextCameraPos = cameraPos + cameraSpeed * cameraUp;
             glm::vec3 nextCameraFront =
@@ -2167,7 +2241,8 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             glm::vec3 nextCameraPos = cameraPos - cameraSpeed * cameraUp;
             glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos;
@@ -2184,7 +2259,8 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             cameraPos -= cameraSpeed * cameraRight;
         } else {
@@ -2196,7 +2272,8 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             cameraPos += cameraSpeed * cameraRight;
         } else {
@@ -2295,6 +2372,8 @@ bool App::isEditorViewportInputActive() const {
 }
 
 bool App::shouldBlockMouseInput() const {
+    if (_showExitConfirmation)
+        return true;
     if (_hideUI)
         return false;
     if (_editorViewportPanel &&
@@ -2305,6 +2384,8 @@ bool App::shouldBlockMouseInput() const {
 }
 
 bool App::isKeyboardInputCaptured() const {
+    if (_showExitConfirmation)
+        return true;
     if (_hideUI || !ImGui::GetCurrentContext())
         return false;
     const auto& io = ImGui::GetIO();
@@ -2465,23 +2546,23 @@ void App::renderSelectedLightOverlay() {
 
     switch (component->type()) {
     case Scene::LightType::Directional: {
-        const Scene::DirectionalLight light = evaluateWorldLight(
-            component->directionalLight(), world);
+        const Scene::DirectionalLight light =
+            evaluateWorldLight(component->directionalLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, origin, 0.15f, 24);
         Scene::DebugGeometry::appendDirectionArrowWire(starts, ends, origin,
                                                        light.direction, 2.0f);
         break;
     }
     case Scene::LightType::Point: {
-        const Scene::PointLight light = evaluateWorldLight(
-            component->pointLight(), world);
+        const Scene::PointLight light =
+            evaluateWorldLight(component->pointLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, light.position,
                                                light.range);
         break;
     }
     case Scene::LightType::Spot: {
-        const Scene::SpotLight light = evaluateWorldLight(
-            component->spotLight(), world);
+        const Scene::SpotLight light =
+            evaluateWorldLight(component->spotLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, origin, 0.08f, 16);
         Scene::DebugGeometry::appendConeWire(starts, ends, light.position,
                                              light.direction, light.range,
@@ -2584,7 +2665,8 @@ void App::renderSelectionGizmo() {
 
 void App::renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                                const ImVec2& rectSize, ImDrawList* drawList) {
-    if (_hideUI || !_interaction.hasEditableSelection() ||
+    if (_hideUI || _showExitConfirmation ||
+        !_interaction.hasEditableSelection() ||
         (_editorViewportPanel &&
          _editorViewportPanel->viewGuizmoCapturesMouse()))
         return;

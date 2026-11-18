@@ -2,22 +2,32 @@
 
 ## Unreleased
 
-- Rename `app.ray_pick()` to `app.raycast()`, retaining the old name as an alias.
-  World-space rays now intersect triangle surfaces for undeformed meshes with
-  CPU transforms; skinned/deformed meshes and GPU-only transforms are excluded.
-- Change object selection from Shift + left click to left click. Clicking empty
-  space clears selection; Shift + drag applies force in Force mode.
-- Change viewport picking from AABB intersections to mesh surface picking at
-  the current animated pose.
+### Added
+
 - Add `asset.load_ply()` for ASCII and binary PLY meshes and colored point clouds.
 - Add optional normals and linear RGB vertex colors to `MeshData.from_arrays()`,
   with vertex colors supported on static and skinned meshes.
 - Add `unlit` rendering to ColorMaterial, PhongMaterial, and PBRMaterial.
-- Rename `VertexColorMaterial`, `VertexColorStyle`, and
+
+### Changed
+
+- Change object selection from Shift + left click to left click. Clicking empty
+  space clears selection; Shift + drag applies force in Force mode.
+- Change viewport picking from AABB intersections to mesh surface picking at
+  the current animated pose.
+- Rename `app.ray_pick()` to `app.raycast()`, retaining the old name as an alias.
+  World-space rays now intersect triangle surfaces for undeformed meshes with
+  CPU transforms; skinned/deformed meshes and GPU-only transforms are excluded.
+- Change ESC-triggered exit from immediate shutdown to a confirmation dialog.
+  Choose Yes or press Enter to exit.
+- Rename material APIs from `VertexColorMaterial`, `VertexColorStyle`, and
   `app.create_vertex_color_material()` to `ColorMaterial`, `ColorStyle`, and
   `app.create_color_material()`. Previous names remain available as aliases.
-- Preserve vertex colors when merging articulation visual meshes, and apply
-  instance alpha to alpha-masked shadows.
+
+### Fixed
+
+- Preserve vertex colors when merging articulation visual meshes.
+- Apply instance alpha to alpha-masked shadows.
 - Fix Python callbacks in `Prim.traverse()`.
 
 ## 0.3.0

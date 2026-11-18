@@ -134,6 +134,7 @@ class App {
     Scene::SceneResourceManager _sceneResourceManager;
     InteractionController _interaction;
     bool _externalForceDragEnabled = false;
+    bool _showExitConfirmation = false;
     GizmoController _gizmo;
     ViewportPanel* _editorViewportPanel = nullptr;
     std::string _activeSceneCameraPath;
@@ -145,6 +146,7 @@ class App {
     bool writeScreenshotFrame();
     void renderRecordingIndicator();
     void renderShortcutHelp();
+    void renderExitConfirmation();
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
