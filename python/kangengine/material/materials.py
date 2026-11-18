@@ -49,6 +49,15 @@ class Material(NativeWrapper):
         return self
 
     @property
+    def texture_resources(self) -> dict[str, int]:
+        """SceneResourceManager texture source handles by slot for SceneRenderer."""
+        return self._native.texture_resources
+
+    @texture_resources.setter
+    def texture_resources(self, value: dict[str, int]) -> None:
+        self._native.texture_resources = value
+
+    @property
     def texture_paths(self) -> dict[str, str]:
         """Texture file paths loaded when attaching a visual.
 

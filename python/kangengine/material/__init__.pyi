@@ -61,6 +61,7 @@ class ColorStyle(Enum):
 class NativeMaterial:
     """Native renderer material base used for advanced interop."""
     texture_paths: dict[str, str]
+    texture_resources: dict[str, int]
     texture_srgb: dict[str, bool]
     unlit: bool
     def set_unlit(self, enabled: bool = True) -> None:
@@ -98,6 +99,12 @@ class Material:
         ...
     @texture_paths.setter
     def texture_paths(self, value: dict[str, str]) -> None: ...
+    @property
+    def texture_resources(self) -> dict[str, int]:
+        """Scene-local texture source handles for SceneRenderer; assign a dictionary."""
+        ...
+    @texture_resources.setter
+    def texture_resources(self, value: dict[str, int]) -> None: ...
     @property
     def texture_srgb(self) -> dict[str, bool]:
         """sRGB decoding by texture-path slot. Defaults to False (linear)."""

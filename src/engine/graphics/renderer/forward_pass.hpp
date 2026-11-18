@@ -2,6 +2,7 @@
 
 #include "engine/graphics/renderer/raster_pipeline_library.hpp"
 #include "engine/graphics/renderer/render_pass_base.hpp"
+#include "engine/scene/render_material_data.hpp"
 
 #include <array>
 #include <glm/vec4.hpp>
@@ -64,20 +65,24 @@ class ForwardPass : public RenderPassBase {
                   const Backend::TextureInitialData* initialData = nullptr);
     void registerPipeline(RasterPipelineKey key,
                           const Backend::GraphicsPipelineDesc& desc);
-    Backend::GraphicsPipeline* pipelineFor(const MeshInstancer& inst,
-                                           bool transparent);
+    Backend::GraphicsPipeline*
+    pipelineFor(const MeshInstancer& inst, bool transparent,
+                const Scene::RenderMaterialData& input);
     void configureMaterialBindings(
         Backend::BindGroupLayout* texturedColorLayout,
         Backend::BindGroupLayout* phongLayout,
         Backend::BindGroupLayout* pbrLayout, Backend::Sampler* sampler,
         Backend::Texture* whiteTexture, Backend::Texture* normalTexture);
-    Backend::BindGroup* updatePhongMaterial(PhongMaterial& material,
-                                            const MeshInstancer& inst);
-    Backend::BindGroup* updatePbrMaterial(PBRMaterial& material,
-                                          const MeshInstancer& inst);
     Backend::BindGroup*
-    updateTexturedColorMaterial(const MeshInstancer& inst);
-    Backend::BindGroup* updateUnlitMaterial(const MeshInstancer& inst);
+    updatePhongMaterial(PhongMaterial& material, const MeshInstancer& inst,
+                        const Scene::RenderMaterialData& input);
+    Backend::BindGroup*
+    updatePbrMaterial(PBRMaterial& material, const MeshInstancer& inst,
+                      const Scene::RenderMaterialData& input);
+    Backend::BindGroup* updateTexturedColorMaterial(const MeshInstancer& inst);
+    Backend::BindGroup*
+    updateUnlitMaterial(const MeshInstancer& inst,
+                        const Scene::RenderMaterialData& input);
     PreparedDraws prepare(const std::vector<MeshInstancer*>& drawables,
                           bool transparent);
     void record(Backend::RenderPassEncoder& pass, const PreparedDraws& prepared,

@@ -624,12 +624,22 @@ void bind_scene(py::module& m) {
              "backend.")
         .def("bind_scene", &KE::Scene::SceneResourceManager::bindScene,
              py::arg("scene"), "Bind the scene used for Resource prim mirrors.")
+        .def("register_texture_source",
+             [](KE::Scene::SceneResourceManager& resources,
+                const std::string& name, const std::string& imagePath,
+                bool srgb, bool flip, const KE::Backend::SamplerDesc& sampler) {
+                 return resources.registerTextureSource(name, {imagePath, srgb, flip, sampler});
+             }, py::arg("name"), py::arg("image_path"), py::kw_only(),
+             py::arg("srgb") = false, py::arg("flip") = true,
+             py::arg("sampler") = KE::Backend::SamplerDesc(),
+             "Register an immutable image file source without creating a GPU texture.")
         .def("register_mesh", &KE::Scene::SceneResourceManager::registerMesh,
              py::arg("name"), py::arg("mesh"), py::arg("uri") = "",
              "Register mesh data and return a resource handle.")
         .def("register_material",
              &KE::Scene::SceneResourceManager::registerMaterial,
              py::arg("name"), py::arg("material"), py::arg("uri") = "",
+             py::keep_alive<1, 3>(),
              "Register a non-owned material and return a resource handle.")
         .def("register_texture",
              &KE::Scene::SceneResourceManager::registerTexture, py::arg("name"),

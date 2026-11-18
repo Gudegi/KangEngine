@@ -8,6 +8,7 @@
 #include "engine/scene/native/prim.hpp"
 #include "geometry/bounds.hpp"
 #include "geometry/mesh_bvh.hpp"
+#include "engine/scene/render_scene_data.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -116,6 +117,18 @@ class MeshInstancer {
     uint64_t _externalBufferVersion = 0;
 
     std::vector<Scene::Prim*> _prims;
+    const Scene::RenderInstanceData* _sceneInstances = nullptr;
+
+    bool usesSceneData() const {
+        return _sceneInstances && !_useExternalTransforms &&
+               !_hasExternalBufferDesc && !_hasDirectCudaTransforms;
+    }
+    const std::vector<glm::mat4>& transforms() const {
+        return usesSceneData() ? _sceneInstances->transforms : _transforms;
+    }
+    const std::vector<glm::vec4>& colors() const {
+        return usesSceneData() && !_colorsDirty ? _sceneInstances->colors : _colors;
+    }
 
     void _initMeshData(const Scene::MeshData& mesh);
     void _setupSkinningAttribs(const Scene::SkinnedMeshData& skinnedMesh);
@@ -156,9 +169,13 @@ class MeshInstancer {
 
     void addPrim(Scene::Prim* prim);
     void removePrim(Scene::Prim* prim);
+    // Borrows adapter-owned arrays while the batch is in use.
+    void setSceneData(const Scene::RenderInstanceData& input) {
+        _sceneInstances = &input;
+    }
+    Scene::RenderInstanceId sceneInstanceId(int instanceIndex) const;
 
-    // Collect visible prim transforms + colors, upload to instance VBOs.
-    // Call once per frame before render().
+    // Consume scene input or the legacy dynamic path before render().
     void update();
 
     // Track B mode: directly upload transforms (and optionally colors), then
@@ -280,7 +297,7 @@ class MeshInstancer {
     }
     Material* material() const { return _material; }
     bool hasTransparent() const { return _hasTransparent; }
-    int instanceCount() const { return static_cast<int>(_transforms.size()); }
+    int instanceCount() const { return static_cast<int>(transforms().size()); }
     int visibleCount() const { return _visibleCount; }
 };
 

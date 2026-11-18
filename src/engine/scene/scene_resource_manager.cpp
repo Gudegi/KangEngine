@@ -83,7 +83,15 @@ ResourceHandle SceneResourceManager::registerMaterial(const std::string& name,
     entry.name = name;
     entry.uri = uri;
     entry.material = material;
-    return registerEntry(std::move(entry));
+    const auto handle = registerEntry(std::move(entry));
+    if (material)
+        _materialHandles[material] = handle;
+    return handle;
+}
+
+ResourceHandle SceneResourceManager::materialHandle(const Material* material) const {
+    const auto found = _materialHandles.find(material);
+    return found == _materialHandles.end() ? InvalidResourceHandle : found->second;
 }
 
 ResourceHandle SceneResourceManager::registerTexture(const std::string& name,
@@ -95,6 +103,25 @@ ResourceHandle SceneResourceManager::registerTexture(const std::string& name,
     entry.uri = uri;
     entry.texture = texture;
     return registerEntry(std::move(entry));
+}
+
+ResourceHandle SceneResourceManager::registerTextureSource(
+    const std::string& name, TextureSourceResource source) {
+    if (source.path.empty())
+        throw std::invalid_argument("Texture source requires an image path");
+    Entry entry;
+    entry.type = ResourceType::Texture;
+    entry.name = name;
+    entry.uri = source.path;
+    entry.textureSource =
+        std::make_shared<const TextureSourceResource>(std::move(source));
+    return registerEntry(std::move(entry));
+}
+
+std::shared_ptr<const TextureSourceResource>
+SceneResourceManager::textureSource(ResourceHandle handle) const {
+    const auto* resource = entry(handle);
+    return resource ? resource->textureSource : nullptr;
 }
 
 ResourceHandle SceneResourceManager::registerShaderSource(
@@ -310,6 +337,10 @@ void SceneResourceManager::rebuildUsageCache() const {
         Material* material = prim->getMaterial();
         addHandles(usedByPrim, materialHandles, material);
         if (material) {
+            for (const auto& [slot, handle] : material->textureResources) {
+                if (textureSource(handle))
+                    usedByPrim.insert(handle);
+            }
             std::vector<Backend::Texture*> textures;
             collectMaterialTextures(material, textures);
             for (Backend::Texture* texture : textures)
@@ -338,11 +369,12 @@ void SceneResourceManager::clear() {
             _scene->removePrim(path);
     }
     _entries.clear();
+    _materialHandles.clear();
     _usageCache.clear();
     _usagePathCache.clear();
     _externalUsagePaths.clear();
     invalidateUsageCache();
-    _nextHandle = 1;
+    // Retired handles must not resolve to new resources in live render adapters.
 }
 
 Prim* SceneResourceManager::ensureResourcePrim(const Entry& entry) {

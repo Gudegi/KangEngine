@@ -15,6 +15,7 @@
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include "engine/scene/scene_render_bridge.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/types/camera.hpp"
 #include "geometry/bounds.hpp"
@@ -39,7 +40,7 @@ namespace KE {
 // Two-source transform ownership
 //
 // Source A — SceneGraph-driven
-//   addRenderable(material, prim) → instancer polls Prim attributes every frame
+//   addRenderable(material, prim) -> scene input collects Prim state for batches
 //   Use for: static geometry, any object the scene graph owns
 //
 // Source B — ExternalBuffer-driven
@@ -77,6 +78,9 @@ class Rasterizer : public RenderPipeline {
         }
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
+    // Native compatibility adapter; Prim access stays outside static GPU batches.
+    std::unordered_map<const MeshInstancer*, std::unique_ptr<Scene::SceneRenderBridge>>
+        _sceneBridges;
     // Retain immutable sources with the render batches; build BVHs on query.
     std::map<const Scene::MeshData*, Geometry::MeshBVH> _raycastMeshes;
 
@@ -91,6 +95,10 @@ class Rasterizer : public RenderPipeline {
         _primSourceRegistrations;
     void registerPrimSource(Scene::Prim* prim, TransformSource source);
     void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
+    // Native resource creation consumes source data, never a Prim.
+    RenderableHandle registerMeshBatch(const Scene::RenderMeshData& input,
+                                      Material* material,
+                                      TransformSource source);
 
     struct RenderHookEntry {
         RenderHookHandle handle = InvalidRenderHook;

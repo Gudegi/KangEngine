@@ -5,6 +5,8 @@
 #include "engine/graphics/material/pbrMaterials.hpp"
 #include "engine/graphics/material/phongMaterials.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/scene/render_material_data.hpp"
+#include "engine/scene/component/resource_component.hpp"
 
 #include <glm/glm.hpp>
 #include <string>
@@ -12,27 +14,13 @@
 
 namespace KE {
 
-enum class MaterialShadingModel {
-    Color,
-    Phong,
-    PBR,
-    Custom,
-    VertexColor = Color,
-};
-
-enum class ColorStyle {
-    Untextured,
-    Textured,
-    Checkerboard,
-    DebugChecker,
-    Unlit,
-};
-
 class Material {
   private:
     bool _unlit = false;
 
   public:
+    // Scene-local source texture handles, resolved by render adapters.
+    std::unordered_map<std::string, Scene::ResourceHandle> textureResources;
     // Source files are resolved into scene-local textures by the owning App.
     std::unordered_map<std::string, std::string> texturePaths;
     // Per-slot decoding for deferred textures. Defaults to false (linear).

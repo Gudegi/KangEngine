@@ -322,6 +322,7 @@ if(IS_PYTHON_LIB)
         "${BIND_DIR}/bind_geometry.cpp"
         "${BIND_DIR}/bind_animation.cpp"
         "${BIND_DIR}/bind_scene.cpp"
+        "${BIND_DIR}/bind_scene_input.cpp"
         "${BIND_DIR}/bind_asset.cpp"
         "${BIND_DIR}/bind_articulation_desc.cpp"
         "${BIND_DIR}/bind_sim_visual.cpp"

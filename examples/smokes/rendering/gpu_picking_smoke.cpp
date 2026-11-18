@@ -234,6 +234,41 @@ int main() {
                 externalHandle,
             "resized viewport changed picking");
 
+    // A cached selection follows its Prim after another instance is removed.
+    auto* stableFirst = define("/stable_first", cube);
+    auto* stableSecond = define("/stable_second", cube);
+    stableFirst->setLocalTranslation({1, 2, 0});
+    stableSecond->setLocalTranslation({2, 2, 0});
+    const auto stableHandle = raster.addRenderable(&material, stableFirst);
+    raster.addRenderable(&material, stableSecond);
+    sync();
+    const auto stablePick = pick(2, 2);
+    require(stablePick.prim == stableSecond, "stable selection was not picked");
+    raster.setRenderableColors(stableHandle, {glm::vec4(0.0f)});
+    require(!pick(2, 2).hit, "immediate batch color override was ignored");
+    sync();
+    require(pick(2, 2).prim == stableSecond,
+            "scene colors were not restored on the next frame");
+    auto stableMask = device.createFramebuffer({128, 128, false, false, 0});
+    auto stableMaskView = device.createTextureView(stableMask->getColorTexture(), {});
+    raster.renderSelectionMaskPass(stablePick, stableMask.get(), 128, 128);
+    const auto originalMask = device.readTexture(stableMaskView.get());
+    raster.removePrim(stableHandle, stableFirst);
+    scene.removePrim("/stable_first");
+    require(raster.raycast({{2, 2, 6}, {0, 0, -1}}).prim == stableSecond,
+            "removing one owner invalidated another before the next frame");
+    sync();
+    raster.renderSelectionMaskPass(stablePick, stableMask.get(), 128, 128);
+    require(originalMask.values == device.readTexture(stableMaskView.get()).values,
+            "batch compaction changed the cached selection outline");
+    stableSecond->setVisible(false);
+    sync();
+    raster.renderSelectionMaskPass(stablePick, stableMask.get(), 128, 128);
+    const auto hiddenMask = device.readTexture(stableMaskView.get());
+    for (size_t i = 0; i < hiddenMask.values.size(); i += 4)
+        require(hiddenMask.values[i] == 0.0f,
+                "hidden selection retained the previous frame's outline");
+
 #ifdef KANGENGINE_USE_CUDA_GL_INTEROP
     auto checkCuda = [](cudaError_t status) {
         if (status != cudaSuccess)

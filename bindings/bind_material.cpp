@@ -131,6 +131,8 @@ void bind_material(py::module& m) {
         .def_property("unlit", &Material::isUnlit, &Material::setUnlit,
                       "Display base color and textures without lighting.")
         .def("set_unlit", &Material::setUnlit, py::arg("enabled") = true)
+        .def_readwrite("texture_resources", &Material::textureResources,
+                       "Scene-local source texture handles by slot; assign a dictionary.")
         .def_readwrite("texture_paths", &Material::texturePaths,
                        "Source texture paths keyed by texture slot. Reading "
                        "returns a copy; assign a dictionary to update paths.")

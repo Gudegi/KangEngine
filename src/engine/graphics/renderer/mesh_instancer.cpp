@@ -244,6 +244,8 @@ void MeshInstancer::_updateWorldBounds(
 }
 
 bool MeshInstancer::_hasVisibleOwnerPrim() const {
+    if (_sceneInstances)
+        return !_sceneInstances->ids.empty();
     if (_prims.empty())
         return true;
 
@@ -285,7 +287,7 @@ void MeshInstancer::_updateTransparency() {
 
     // Preserve legacy color-alpha behavior for renderables that have not opted
     // into an explicit Mask or Blend mode.
-    for (const auto& color : _colors) {
+    for (const auto& color : colors()) {
         if (color.a < 1.0f) {
             _hasTransparent = true;
             break;
@@ -325,7 +327,7 @@ void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
     const size_t count = _hasExternalBufferDesc
                              ? static_cast<size_t>(_externalBufferDesc.count)
                              : (_hasDirectCudaTransforms ? _colors.size()
-                                                         : _transforms.size());
+                                                         : transforms().size());
     if (!colors.empty() && colors.size() != 1 && colors.size() != count)
         throw std::invalid_argument(
             "colors must be empty, length 1, or match the instance count");
@@ -353,10 +355,10 @@ void MeshInstancer::updateFromTransforms(
     if (_colors.size() != _transforms.size())
         _colors.assign(_transforms.size(), glm::vec4(1.0f));
 
+    _useExternalTransforms = true;
     _updateTransparency();
     _updateWorldBounds(_transforms);
     _uploadInstanceData(_transforms, _colors);
-    _useExternalTransforms = true;
 }
 
 void MeshInstancer::setExternalBuffer(const ExternalBufferDesc& desc) {
@@ -508,6 +510,13 @@ void MeshInstancer::_consumeExternalBuffer() {
 }
 
 void MeshInstancer::update() {
+    if (usesSceneData()) {
+        _colorsDirty = false;
+        _updateTransparency();
+        _updateWorldBounds(transforms());
+        _uploadInstanceData(transforms(), colors());
+        return;
+    }
     if (_hasDirectCudaTransforms) {
         if (!_hasVisibleOwnerPrim())
             _visibleCount = 0;
@@ -604,23 +613,25 @@ void MeshInstancer::updateRenderableSkinningMatrices(
 void MeshInstancer::applyFrustumCulling(const Geometry::Frustum* frustum) {
     if (_usesGpuExternalTransforms)
         return;
-    if (!frustum || _hasSkinning || _worldBounds.size() != _transforms.size()) {
-        _uploadInstanceData(_transforms, _colors);
+    const auto& instanceTransforms = transforms();
+    const auto& instanceColors = colors();
+    if (!frustum || _hasSkinning || _worldBounds.size() != instanceTransforms.size()) {
+        _uploadInstanceData(instanceTransforms, instanceColors);
         return;
     }
 
     _culledTransforms.clear();
     _culledColors.clear();
-    if (_culledTransforms.capacity() < _transforms.size())
-        _culledTransforms.reserve(_transforms.size());
-    if (_culledColors.capacity() < _colors.size())
-        _culledColors.reserve(_colors.size());
+    if (_culledTransforms.capacity() < instanceTransforms.size())
+        _culledTransforms.reserve(instanceTransforms.size());
+    if (_culledColors.capacity() < instanceColors.size())
+        _culledColors.reserve(instanceColors.size());
 
-    for (size_t i = 0; i < _transforms.size(); ++i) {
+    for (size_t i = 0; i < instanceTransforms.size(); ++i) {
         if (!Geometry::intersects(*frustum, _worldBounds[i]))
             continue;
-        _culledTransforms.push_back(_transforms[i]);
-        _culledColors.push_back(i < _colors.size() ? _colors[i]
+        _culledTransforms.push_back(instanceTransforms[i]);
+        _culledColors.push_back(i < instanceColors.size() ? instanceColors[i]
                                                    : glm::vec4(1.0f));
     }
 
@@ -651,7 +662,10 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
         return false;
 
     bool hit = false;
+    const auto& instanceTransforms = transforms();
     for (size_t i = 0; i < _worldBounds.size(); ++i) {
+        if (usesSceneData() && !_sceneInstances->pickable[i])
+            continue;
         Scene::Prim* prim = i < _instancePrims.size() ? _instancePrims[i]
                                                     : nullptr;
         if (prim && !pickable(prim))
@@ -662,7 +676,7 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
         if (distance >= outDistance)
             continue;
 
-        const glm::mat4& transform = _transforms[i];
+        const glm::mat4& transform = instanceTransforms[i];
         const float determinant = glm::determinant(glm::mat3(transform));
         if (!std::isfinite(determinant) || determinant == 0.0f)
             continue;
@@ -711,9 +725,9 @@ bool MeshInstancer::findPrimInstance(Scene::Prim* prim, int& outInstanceIndex,
 bool MeshInstancer::getInstanceTransform(int instanceIndex,
                                          glm::mat4& outTransform) const {
     if (instanceIndex < 0 ||
-        instanceIndex >= static_cast<int>(_transforms.size()))
+        instanceIndex >= static_cast<int>(transforms().size()))
         return false;
-    outTransform = _transforms[static_cast<size_t>(instanceIndex)];
+    outTransform = transforms()[static_cast<size_t>(instanceIndex)];
     return true;
 }
 
@@ -945,6 +959,8 @@ void MeshInstancer::recordSkinnedMaterialDraw(
 }
 
 MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
+    const auto& instanceTransforms = transforms();
+    const auto& instanceColors = colors();
     PickInstances result;
     if (!_hasVisibleOwnerPrim())
         return result;
@@ -962,7 +978,7 @@ MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
     }
     result.count = _usesGpuExternalTransforms
                        ? static_cast<uint32_t>(_visibleCount)
-                       : static_cast<uint32_t>(_transforms.size());
+                       : static_cast<uint32_t>(instanceTransforms.size());
     if (result.count == 0)
         return result;
 
@@ -973,12 +989,14 @@ MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
         desc.size = result.count * sizeof(glm::mat4);
         desc.label = "pick_transforms";
         result.transforms = _device->createBuffer(desc);
-        result.transforms->setData(_transforms.data(), desc.size);
+        result.transforms->setData(instanceTransforms.data(), desc.size);
     }
     std::vector<float> opacity(result.count, 1.0f);
     for (uint32_t i = 0; i < result.count; ++i) {
-        if (i < _colors.size())
-            opacity[i] = _colors[i].a;
+        if (i < instanceColors.size())
+            opacity[i] = instanceColors[i].a;
+        if (usesSceneData() && !_sceneInstances->pickable[i])
+            opacity[i] = -1.0f;
         Scene::Prim* prim = i < _instancePrims.size() ? _instancePrims[i]
                                                     : nullptr;
         if (prim) {
@@ -1004,9 +1022,17 @@ void MeshInstancer::recordPickDraw(Backend::RenderPassEncoder& pass,
                     instances.count, textured, _hasSkinning);
 }
 
+Scene::RenderInstanceId MeshInstancer::sceneInstanceId(int instanceIndex) const {
+    if (!usesSceneData() || instanceIndex < 0 ||
+        static_cast<size_t>(instanceIndex) >= _sceneInstances->ids.size())
+        return Scene::InvalidRenderInstance;
+    return _sceneInstances->ids[static_cast<size_t>(instanceIndex)];
+}
+
 RayPickResult MeshInstancer::pickInstance(int instanceIndex) const {
     RayPickResult result;
     result.hit = true;
+    result.sceneInstanceId = sceneInstanceId(instanceIndex);
     result.instanceIndex = instanceIndex;
     result.transformSource = _transformSource;
     const size_t i = static_cast<size_t>(instanceIndex);
@@ -1028,9 +1054,9 @@ void MeshInstancer::recordInstanceMask(Backend::RenderPassEncoder& pass,
         return;
     }
     if (instanceIndex < 0 ||
-        instanceIndex >= static_cast<int>(_transforms.size()))
+        instanceIndex >= static_cast<int>(transforms().size()))
         return;
-    _uploadOverrideTransform(_transforms[static_cast<size_t>(instanceIndex)]);
+    _uploadOverrideTransform(transforms()[static_cast<size_t>(instanceIndex)]);
     _recordGeometry(pass, _overrideTransformVBO.get(), 1, includeTexCoord,
                     includeSkinning);
 }

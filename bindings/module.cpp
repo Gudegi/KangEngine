@@ -10,6 +10,7 @@ void bind_material(py::module&);
 void bind_geometry(py::module&);
 void bind_animation(py::module&);
 void bind_scene(py::module&);
+void bind_scene_input(py::module&);
 void bind_asset(py::module&);
 void bind_articulation_desc(py::module&);
 void bind_sim_visual(py::module&);
@@ -41,6 +42,7 @@ PYBIND11_MODULE(_kangengine, m) {
     bind_geometry(m);
     bind_animation(m);
     bind_scene(m);
+    bind_scene_input(m);
     bind_asset(m);
     bind_articulation_desc(m);
 #ifdef KANGENGINE_USE_PHYSX

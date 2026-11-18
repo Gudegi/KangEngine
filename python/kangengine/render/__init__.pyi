@@ -5,6 +5,19 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Callable, overload
 
+class SceneRenderer:
+    """Synchronous static PBR scene rendering through Native or optional ovrtx."""
+    def __init__(self, scene: Any, resources: Any, *, camera_path: str,
+                 backend: str = "native", width: int = 512, height: int = 512) -> None: ...
+    def render(self) -> Any:
+        """Return an owned top-down uint8 RGB [height, width, 3] image."""
+        ...
+    def close(self) -> None:
+        """Release renderer resources without destroying the source scene."""
+        ...
+    def __enter__(self) -> SceneRenderer: ...
+    def __exit__(self, *args: Any) -> None: ...
+
 class BackendType(Enum):
     """Graphics backend selected by the application."""
     OPENGL: BackendType

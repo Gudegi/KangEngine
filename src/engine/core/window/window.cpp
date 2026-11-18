@@ -12,8 +12,6 @@ Window::Window() {
     _height = 1080;
     _logicalWidth = _width;
     _logicalHeight = _height;
-    this->initGlfw();
-    this->initGlad(); // TODO: Remove OpenGL dependency
 }
 
 Window::~Window() { close(); }
@@ -27,11 +25,10 @@ void Window::close() {
 }
 
 void Window::init(int width, int height, bool headless) {
-    if (_window == nullptr)
-        return;
-
     _width = width;
     _height = height;
+    if (!_window)
+        initGlfw();
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     if (!monitor) {
         monitor = glfwGetPrimaryMonitor();
@@ -46,13 +43,27 @@ void Window::init(int width, int height, bool headless) {
         windowHeight = static_cast<int>(_height / yscale);
     }
 #endif
-    glfwSetWindowSize(_window, windowWidth, windowHeight);
+    if (!_window) {
+        // Avoid asynchronous resizing from a temporary default window size.
+        _window = glfwCreateWindow(windowWidth, windowHeight, "KangEngine",
+                                   nullptr, nullptr);
+        if (!_window) {
+            glfwTerminate();
+            throw std::runtime_error("Failed to create GLFW window");
+        }
+        glfwMakeContextCurrent(_window);
+        initGlad();
+        setVSync(_vsync);
+    } else {
+        glfwSetWindowSize(_window, windowWidth, windowHeight);
+    }
     if (headless)
         glfwHideWindow(_window);
     else
         glfwShowWindow(_window);
     // Read back actual logical size (differ due to DPI scaling)
     glfwGetWindowSize(_window, &_logicalWidth, &_logicalHeight);
+    glfwGetFramebufferSize(_window, &_width, &_height);
     glViewport(0, 0, _width, _height); // TODO: Remove OpenGL dependency
 }
 
@@ -80,15 +91,6 @@ void Window::initGlfw() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-
-    _window = glfwCreateWindow(_width, _height, "KangEngine", nullptr, nullptr);
-    if (_window == NULL) {
-        glfwTerminate();
-        throw std::runtime_error("Failed to create GLFW window");
-    }
-    glfwMakeContextCurrent(_window);
-    // glfwSetWindowUserPointer(_window, this);
-    setVSync(true);
 }
 
 void Window::setVSync(bool enabled) {

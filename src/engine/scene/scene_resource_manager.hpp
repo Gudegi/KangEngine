@@ -38,6 +38,14 @@ struct PipelineResource {
     std::string stateSummary;
 };
 
+// Immutable file source; each renderer owns its decoded image and GPU texture.
+struct TextureSourceResource {
+    std::string path;
+    bool srgb = false;
+    bool flip = true;
+    Backend::SamplerDesc sampler;
+};
+
 // Scene-owned manager for shared resource identities and editor mirrors.
 //
 // SceneResourceManager is deliberately not a frame-updated system. It records
@@ -64,6 +72,7 @@ class SceneResourceManager {
         std::shared_ptr<MeshData> mesh;
         Material* material = nullptr;
         Backend::Texture* texture = nullptr;
+        std::shared_ptr<const TextureSourceResource> textureSource;
         std::shared_ptr<ShaderSourceResource> shaderSource;
         std::shared_ptr<PipelineResource> pipeline;
     };
@@ -81,6 +90,10 @@ class SceneResourceManager {
     ResourceHandle registerTexture(const std::string& name,
                                    Backend::Texture* texture,
                                    const std::string& uri = {});
+    ResourceHandle registerTextureSource(const std::string& name,
+                                         TextureSourceResource source);
+    std::shared_ptr<const TextureSourceResource>
+    textureSource(ResourceHandle handle) const;
     ResourceHandle registerShaderSource(
         const std::string& name, ShaderSourceResource shaderSource,
         const std::string& uri = {});
@@ -93,6 +106,7 @@ class SceneResourceManager {
 
     std::shared_ptr<MeshData> mesh(ResourceHandle handle) const;
     Material* material(ResourceHandle handle) const;
+    ResourceHandle materialHandle(const Material* material) const;
     Backend::Texture* texture(ResourceHandle handle) const;
     const ShaderSourceResource* shaderSource(ResourceHandle handle) const;
     const PipelineResource* pipeline(ResourceHandle handle) const;
@@ -117,6 +131,7 @@ class SceneResourceManager {
     SceneBackend* _scene = nullptr;
     ResourceHandle _nextHandle = 1;
     std::unordered_map<ResourceHandle, Entry> _entries;
+    std::unordered_map<const Material*, ResourceHandle> _materialHandles;
     mutable bool _usageCacheDirty = true;
     mutable std::unordered_map<ResourceHandle, std::size_t> _usageCache;
     mutable std::unordered_map<ResourceHandle, std::vector<std::string>>

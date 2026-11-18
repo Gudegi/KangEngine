@@ -184,10 +184,10 @@ Rasterizer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
     return hIt->second;
 }
 
-RenderableHandle Rasterizer::addRenderable(Material* material,
-                                           Scene::Prim* prim,
-                                           TransformSource transformSource) {
-    auto meshData = prim->resolveMeshData();
+RenderableHandle Rasterizer::registerMeshBatch(
+    const Scene::RenderMeshData& input, Material* material,
+    TransformSource transformSource) {
+    const auto& meshData = input.mesh;
     if (!material || !meshData || meshData->vertices.empty() ||
         meshData->indices.empty())
         return InvalidHandle;
@@ -201,9 +201,6 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
         _raycastMeshes.try_emplace(meshData.get(), meshData);
         it = newIt;
     }
-    registerPrimSource(prim, transformSource);
-    it->second.addPrim(prim);
-
     auto hIt = _handleMap.find(key);
     if (hIt == _handleMap.end()) {
         RenderableHandle h = static_cast<RenderableHandle>(_handleTable.size());
@@ -214,18 +211,55 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
     return hIt->second;
 }
 
+RenderableHandle Rasterizer::addRenderable(Material* material,
+                                           Scene::Prim* prim,
+                                           TransformSource transformSource) {
+    if (!prim)
+        return InvalidHandle;
+    const auto input = Scene::SceneRenderBridge::meshData(*prim);
+    const auto handle = registerMeshBatch(input, material, transformSource);
+    if (handle == InvalidHandle)
+        return handle;
+
+    registerPrimSource(prim, transformSource);
+    auto* instancer = _handleTable[handle];
+    if (transformSource == TransformSource::SceneGraph) {
+        auto& sceneBridge = _sceneBridges[instancer];
+        if (!sceneBridge)
+            sceneBridge = std::make_unique<Scene::SceneRenderBridge>();
+        sceneBridge->add(*prim);
+        instancer->setSceneData(sceneBridge->instances());
+    } else {
+        instancer->addPrim(prim);
+    }
+    return handle;
+}
+
 void Rasterizer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     unregisterPrimSource(prim, _handleTable[handle]->transformSource());
+    const auto input = _sceneBridges.find(_handleTable[handle]);
+    if (input != _sceneBridges.end() && prim) {
+        input->second->remove(*prim);
+        if (!input->second->empty())
+            return;
+    }
     _handleTable[handle]->removePrim(prim);
 }
 
 void Rasterizer::removePrim(Scene::Prim* prim) {
     if (!prim)
         return;
-    for (auto& [key, instancer] : _instancers)
+    for (auto& [key, instancer] : _instancers) {
+        const auto input = _sceneBridges.find(&instancer);
+        if (input != _sceneBridges.end()) {
+            input->second->remove(*prim);
+            if (!input->second->empty())
+                continue;
+        }
         instancer.removePrim(prim);
+    }
     _primSourceRegistrations.erase(prim);
 }
 
@@ -321,8 +355,18 @@ void Rasterizer::setRenderableTexture(RenderableHandle handle,
 RayPickResult Rasterizer::pickScreen(glm::vec2 ndc, const glm::mat4& view,
                                      const glm::mat4& projection,
                                      int width, int height) {
-    return _pickingPass.pick(_handleTable, _shaderLibrary, view, projection,
-                             ndc, width, height);
+    for (auto& [instancer, input] : _sceneBridges)
+        input->refreshSelection();
+    auto result = _pickingPass.pick(_handleTable, _shaderLibrary, view,
+                                    projection, ndc, width, height);
+    if (result.hit) {
+        const auto* instancer = _handleTable[result.handle];
+        const auto input = _sceneBridges.find(instancer);
+        if (input != _sceneBridges.end())
+            result.prim = input->second->resolve(
+                instancer->sceneInstanceId(result.instanceIndex));
+    }
+    return result;
 }
 
 RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
@@ -332,6 +376,8 @@ RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
         throw std::invalid_argument("raycast requires a finite, nonzero ray");
     RayPickResult best;
     best.distance = std::numeric_limits<float>::infinity();
+    for (const auto& [instancer, input] : _sceneBridges)
+        input->refreshSelection();
     for (const auto& [key, handle] : _handleMap) {
         const MeshInstancer* inst = _handleTable[handle];
         const auto mesh = _raycastMeshes.find(key.mesh);
@@ -348,7 +394,12 @@ RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
         if (distance >= best.distance)
             continue;
 
+        const auto input = _sceneBridges.find(inst);
+        if (input != _sceneBridges.end())
+            prim = input->second->resolve(inst->sceneInstanceId(instanceIndex));
+
         best.hit = true;
+        best.sceneInstanceId = inst->sceneInstanceId(instanceIndex);
         best.handle = static_cast<RenderableHandle>(handle);
         best.instanceIndex = instanceIndex;
         best.transformSource = inst->transformSource();
@@ -372,10 +423,20 @@ bool Rasterizer::buildPrimSelection(Scene::Prim* prim,
 
         int instanceIndex = -1;
         Geometry::AABB bounds;
-        if (!inst->findPrimInstance(prim, instanceIndex, &bounds))
+        const auto input = _sceneBridges.find(inst);
+        if (input != _sceneBridges.end()) {
+            if (!prim)
+                continue;
+            instanceIndex = input->second->instanceIndex(*prim);
+            if (instanceIndex < 0)
+                continue;
+            bounds = inst->pickInstance(instanceIndex).bounds;
+        } else if (!inst->findPrimInstance(prim, instanceIndex, &bounds)) {
             continue;
+        }
 
         outSelection.hit = true;
+        outSelection.sceneInstanceId = inst->sceneInstanceId(instanceIndex);
         outSelection.handle = static_cast<RenderableHandle>(handle);
         outSelection.instanceIndex = instanceIndex;
         outSelection.transformSource = TransformSource::SceneGraph;
@@ -671,6 +732,8 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     _lightDirty = false;
 
     // Update all instancers (must run before shadow pass AND scene pass)
+    for (auto& [instancer, input] : _sceneBridges)
+        input->collect();
     for (auto& [key, inst] : _instancers)
         inst.update();
 }
@@ -952,8 +1015,13 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
 
     if (width <= 0 || height <= 0)
         return;
+    int instanceIndex = selection.instanceIndex;
+    const auto input = _sceneBridges.find(inst);
+    if (input != _sceneBridges.end() && selection.sceneInstanceId != 0) {
+        instanceIndex = input->second->instanceIndex(selection.sceneInstanceId);
+    }
     auto prepared =
-        _selectionMaskPass.prepare(inst, selection.instanceIndex, target);
+        _selectionMaskPass.prepare(inst, instanceIndex, target);
     auto scope =
         _graphicsDevice->profileContext()->cpuScope("render/selection_mask");
     auto encoder = _graphicsDevice->createCommandEncoder();

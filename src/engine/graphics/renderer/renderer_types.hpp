@@ -188,6 +188,8 @@ struct RayPickResult {
     float distance = 0.0f;
     glm::vec3 position = glm::vec3(0.0f);
     Geometry::AABB bounds;
+    // Static scene registration identity, independent of compacted batch indices.
+    uint64_t sceneInstanceId = 0;
 };
 
 } // namespace KE
