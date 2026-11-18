@@ -57,8 +57,8 @@ int main() {
     small->setLocalTranslation({-0.5f, 0.5f, 0});
     raster.addRenderable(&material, small);
     sync();
-    const auto rayHit = raster.rayPick({{-0.5f, 0.5f, 5.9f}, {0, 0, -1}});
-    require(rayHit.prim == large, "test did not reproduce the AABB overlap bug");
+    const auto rayHit = raster.raycast({{-0.5f, 0.5f, 5.9f}, {0, 0, -1}});
+    require(rayHit.prim == small, "empty AABB space intercepted the ray");
     auto hit = pick(-0.5f, 0.5f);
     require(hit.prim == small, "empty AABB space intercepted the surface pick");
     require(std::abs(hit.position.z - 0.25f) < 0.001f,
@@ -258,6 +258,8 @@ int main() {
     hit = pick(-2, -1);
     require(hit.handle == externalHandle && hit.instanceIndex == 299,
             "CUDA transform buffer was not picked");
+    require(!raster.raycast({{-2, -1, 6}, {0, 0, -1}}).hit,
+            "CPU ray query used stale GPU instance transforms");
     glm::mat4 unavailable;
     require(!raster.getRenderableInstanceTransform(externalHandle, 299,
                                                    unavailable),

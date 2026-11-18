@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rename `app.ray_pick()` to `app.raycast()`, retaining the old name as an alias.
+  World-space rays now intersect triangle surfaces for undeformed meshes with
+  CPU transforms; skinned/deformed meshes and GPU-only transforms are excluded.
 - Change object selection from Shift + left click to left click. Clicking empty
   space clears selection; Shift + drag applies force in Force mode.
 - Change viewport picking from AABB intersections to mesh surface picking at

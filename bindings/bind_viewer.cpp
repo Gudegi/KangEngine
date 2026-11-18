@@ -987,13 +987,16 @@ void bind_viewer(py::module& m) {
         .def("clear_selection", &App::clearSelection,
              "Clear the current scene selection.")
         .def(
-            "ray_pick",
+            "raycast",
             [](const App& self, const glm::vec3& origin,
                const glm::vec3& direction) {
-                return self.rayPick(Geometry::Ray(origin, direction));
+                return self.raycast(Geometry::Ray(origin, direction));
             },
             py::arg("origin"), py::arg("direction"),
-            "Pick the closest renderable intersected by a world-space ray.")
+            "Query the nearest mesh surface along a world-space ray without "
+            "changing selection. Uses the last frame's CPU transforms; skips "
+            "skinned/deformed meshes and GPU-only transforms. Tests both "
+            "triangle sides without material alpha tests.")
         .def("get_graphics_device", &App::getGraphicsDevice,
              py::return_value_policy::reference,
              "Return the application's graphics device.")
@@ -1548,6 +1551,8 @@ void bind_viewer(py::module& m) {
              "Return the framebuffer height in pixels.")
         .def("get_scene", &App::getScene, py::return_value_policy::reference,
              "Return the active scene backend.");
+
+    m.attr("App").attr("ray_pick") = m.attr("App").attr("raycast");
 
     py::class_<Bridge::SkinVisualBridge,
                std::unique_ptr<Bridge::SkinVisualBridge>>(

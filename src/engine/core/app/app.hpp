@@ -520,7 +520,11 @@ class App {
 
     // 마우스 위치로부터 3D 월드 공간의 Ray 객체 생성
     Geometry::Ray getMouseRay();
-    RayPickResult rayPick(const Geometry::Ray& ray) const;
+    // Query undeformed CPU-addressable mesh surfaces without changing selection.
+    RayPickResult raycast(const Geometry::Ray& ray) const;
+    RayPickResult rayPick(const Geometry::Ray& ray) const {
+        return raycast(ray);
+    }
     RayPickResult pickMouse();
     const RayPickResult& getLastRayPickResult() const {
         return _interaction.lastPick();

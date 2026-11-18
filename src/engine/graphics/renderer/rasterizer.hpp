@@ -77,6 +77,8 @@ class Rasterizer : public RenderPipeline {
         }
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
+    // Retain immutable sources with the render batches; build BVHs on query.
+    std::map<const Scene::MeshData*, Geometry::MeshBVH> _raycastMeshes;
 
     std::map<InstancerKey, RenderableHandle> _handleMap;
     std::vector<MeshInstancer*> _handleTable;
@@ -350,7 +352,11 @@ class Rasterizer : public RenderPipeline {
                               TextureRole role);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
-    RayPickResult rayPick(const Geometry::Ray& ray) const;
+    // CPU triangle query: excludes skinning, dynamic geometry and GPU transforms.
+    RayPickResult raycast(const Geometry::Ray& ray) const;
+    RayPickResult rayPick(const Geometry::Ray& ray) const {
+        return raycast(ray);
+    }
     RayPickResult pickScreen(glm::vec2 ndc, const glm::mat4& view,
                               const glm::mat4& projection, int width, int height);
     bool getRenderableInstanceTransform(RenderableHandle handle,

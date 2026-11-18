@@ -198,6 +198,7 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
         newIt->second.init(_graphicsDevice, *meshData, transformSource,
                            material);
+        _raycastMeshes.try_emplace(meshData.get(), meshData);
         it = newIt;
     }
     registerPrimSource(prim, transformSource);
@@ -324,26 +325,26 @@ RayPickResult Rasterizer::pickScreen(glm::vec2 ndc, const glm::mat4& view,
                              ndc, width, height);
 }
 
-RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
+RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
+    if (!std::isfinite(glm::dot(ray.origin, ray.origin)) ||
+        !std::isfinite(glm::dot(ray.direction, ray.direction)) ||
+        glm::dot(ray.direction, ray.direction) == 0.0f)
+        throw std::invalid_argument("raycast requires a finite, nonzero ray");
     RayPickResult best;
     best.distance = std::numeric_limits<float>::infinity();
-    for (size_t handle = 0; handle < _handleTable.size(); ++handle) {
+    for (const auto& [key, handle] : _handleMap) {
         const MeshInstancer* inst = _handleTable[handle];
-        if (!inst)
+        const auto mesh = _raycastMeshes.find(key.mesh);
+        if (!inst || mesh == _raycastMeshes.end())
             continue;
 
         int instanceIndex = -1;
         float distance = 0.0f;
         Geometry::AABB bounds;
         Scene::Prim* prim = nullptr;
-        if (!inst->findRayIntersection(ray, instanceIndex, distance, &bounds,
-                                       &prim))
+        if (!inst->findRayIntersection(ray, mesh->second, instanceIndex,
+                                       distance, &bounds, &prim))
             continue;
-        if (prim) {
-            const auto selection = prim->getSelectionComponent();
-            if (selection && !selection->isPickable())
-                continue;
-        }
         if (distance >= best.distance)
             continue;
 

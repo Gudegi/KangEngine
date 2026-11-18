@@ -30,8 +30,15 @@ def main():
 
     first.set_visible(False)
     app.draw_frame()
-    hidden_pick = app.ray_pick(ke.Vec3(-2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
-    second_pick = app.ray_pick(ke.Vec3(2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
+    hidden_pick = app.raycast(ke.Vec3(-2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
+    second_pick = app.raycast(ke.Vec3(2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
+    legacy_pick = app.ray_pick(ke.Vec3(2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
+    assert legacy_pick.hit == second_pick.hit
+    assert legacy_pick.handle == second_pick.handle
+    assert legacy_pick.instance_index == second_pick.instance_index
+    assert legacy_pick.distance == second_pick.distance
+    assert legacy_pick.prim is second_pick.prim
+    assert not app.has_selection()
     assert not hidden_pick.hit
     assert second_pick.hit
     assert second_pick.prim is second.prim
@@ -58,7 +65,7 @@ def main():
     assert transforms_ref() is not None
 
     app.draw_frame()
-    batch_pick = app.ray_pick(ke.Vec3(0.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
+    batch_pick = app.raycast(ke.Vec3(0.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
     assert batch_pick.hit
     assert batch_pick.transform_source == ke.render.TransformSource.EXTERNAL_BUFFER
     assert batch_pick.prim is None

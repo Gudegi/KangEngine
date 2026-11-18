@@ -2354,9 +2354,9 @@ Geometry::Ray App::getMouseRay() {
     return Geometry::Ray(worldNear, glm::normalize(worldFar - worldNear));
 }
 
-RayPickResult App::rayPick(const Geometry::Ray& ray) const {
+RayPickResult App::raycast(const Geometry::Ray& ray) const {
     RayPickResult result =
-        _rasterizer ? _rasterizer->rayPick(ray) : RayPickResult{};
+        _rasterizer ? _rasterizer->raycast(ray) : RayPickResult{};
     if (result.hit && result.prim && !isPickablePrim(result.prim))
         return RayPickResult{};
     return result;

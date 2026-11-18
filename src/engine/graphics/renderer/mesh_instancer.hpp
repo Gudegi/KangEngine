@@ -7,6 +7,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "geometry/bounds.hpp"
+#include "geometry/mesh_bvh.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -92,6 +93,7 @@ class MeshInstancer {
     AlphaMode _alphaMode = AlphaMode::Opaque;
     float _alphaCutoff = 0.5f;
     bool _hasSkinning = false;
+    bool _hasDynamicGeometry = false;
     bool _hasTangents = false;
     TransformSource _transformSource{};
     Geometry::AABB _localBounds;
@@ -187,8 +189,9 @@ class MeshInstancer {
         const std::vector<glm::mat4>& boneMatrices);
     // Compact instance buffers to objects intersecting the current frustum.
     void applyFrustumCulling(const Geometry::Frustum* frustum);
-    bool findRayIntersection(const Geometry::Ray& ray, int& outInstanceIndex,
-                             float& outDistance,
+    bool findRayIntersection(const Geometry::Ray& ray,
+                             const Geometry::MeshBVH& mesh,
+                             int& outInstanceIndex, float& outDistance,
                              Geometry::AABB* outBounds = nullptr,
                              Scene::Prim** outPrim = nullptr) const;
     bool findPrimInstance(Scene::Prim* prim, int& outInstanceIndex,

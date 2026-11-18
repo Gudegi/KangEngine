@@ -3,6 +3,7 @@
 #include "engine/scene/component/selection_component.hpp"
 #include "geometry/mesh_utils.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
@@ -574,6 +575,7 @@ void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
     if (!normals.empty() && normals.size() != _vertexCount)
         throw std::runtime_error(
             "Dynamic geometry normals must match the uploaded mesh");
+    _hasDynamicGeometry = true;
     if (!_vbos.empty())
         _vbos[0]->setData(positions.data(),
                           sizeof(glm::vec3) * positions.size());
@@ -626,22 +628,56 @@ void MeshInstancer::applyFrustumCulling(const Geometry::Frustum* frustum) {
 }
 
 bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
+                                        const Geometry::MeshBVH& mesh,
                                         int& outInstanceIndex,
                                         float& outDistance,
                                         Geometry::AABB* outBounds,
                                         Scene::Prim** outPrim) const {
     outInstanceIndex = -1;
     outDistance = std::numeric_limits<float>::infinity();
-    if (_worldBounds.empty())
+    if (_hasSkinning || _hasDynamicGeometry || _usesGpuExternalTransforms ||
+        _worldBounds.empty() || !_hasVisibleOwnerPrim())
+        return false;
+
+    auto pickable = [](const Scene::Prim* prim) {
+        if (!prim || !prim->isActiveInHierarchy() ||
+            !prim->isVisibleInHierarchy())
+            return false;
+        const auto selection = prim->getSelectionComponent();
+        return !selection || selection->isPickable();
+    };
+    if (_transformSource == TransformSource::ExternalBuffer &&
+        !std::any_of(_prims.begin(), _prims.end(), pickable))
         return false;
 
     bool hit = false;
     for (size_t i = 0; i < _worldBounds.size(); ++i) {
+        Scene::Prim* prim = i < _instancePrims.size() ? _instancePrims[i]
+                                                    : nullptr;
+        if (prim && !pickable(prim))
+            continue;
         float distance = 0.0f;
-        // Check hit
         if (!Geometry::intersects(ray, _worldBounds[i], distance))
             continue;
-        // Check it is the closest
+        if (distance >= outDistance)
+            continue;
+
+        const glm::mat4& transform = _transforms[i];
+        const float determinant = glm::determinant(glm::mat3(transform));
+        if (!std::isfinite(determinant) || determinant == 0.0f)
+            continue;
+        const glm::mat4 inverse = glm::inverse(transform);
+        const glm::vec3 localDirection =
+            glm::vec3(inverse * glm::vec4(ray.direction, 0.0f));
+        const float directionScale = glm::length(localDirection);
+        if (!std::isfinite(directionScale) || directionScale == 0.0f)
+            continue;
+        const Geometry::Ray localRay(
+            glm::vec3(inverse * glm::vec4(ray.origin, 1.0f)), localDirection);
+        if (!mesh.intersect(localRay, distance))
+            continue;
+        // Local ray normalization changes distance under nonuniform scale.
+        distance /= directionScale;
         if (distance >= outDistance)
             continue;
 
@@ -650,9 +686,8 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
         outInstanceIndex = static_cast<int>(i);
         if (outBounds)
             *outBounds = _worldBounds[i];
-        if (outPrim) {
-            *outPrim = i < _instancePrims.size() ? _instancePrims[i] : nullptr;
-        }
+        if (outPrim)
+            *outPrim = prim;
     }
     return hit;
 }
