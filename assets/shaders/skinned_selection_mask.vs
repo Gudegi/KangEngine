@@ -23,10 +23,15 @@ void main() {
                       aInstanceTransform2, aInstanceTransform3);
     mat4 skin = mat4(0.0);
 
-    skin += aBoneWeights.x * boneMatrices[aBoneIndices.x];
-    skin += aBoneWeights.y * boneMatrices[aBoneIndices.y];
-    skin += aBoneWeights.z * boneMatrices[aBoneIndices.z];
-    skin += aBoneWeights.w * boneMatrices[aBoneIndices.w];
+    float weightSum = 0.0;
+    for (int i = 0; i < 4; ++i) {
+        if (aBoneIndices[i] >= 0) {
+            skin += aBoneWeights[i] * boneMatrices[aBoneIndices[i]];
+            weightSum += aBoneWeights[i];
+        }
+    }
+    if (weightSum <= 0.0)
+        skin = mat4(1.0);
 
     gl_Position = projection * view * model * skin * vec4(aPos, 1.0);
     vTexCoord = aTexCoord;

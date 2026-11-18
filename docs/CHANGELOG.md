@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Change object selection from Shift + left click to left click. Clicking empty
+  space clears selection; Shift + drag applies force in Force mode.
+- Change viewport picking from AABB intersections to mesh surface picking at
+  the current animated pose.
 - Add `asset.load_ply()` for ASCII and binary PLY meshes and colored point clouds.
 - Add optional normals and linear RGB vertex colors to `MeshData.from_arrays()`,
   with vertex colors supported on static and skinned meshes.

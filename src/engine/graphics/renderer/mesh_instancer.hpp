@@ -135,7 +135,7 @@ class MeshInstancer {
     void _recordGeometry(Backend::RenderPassEncoder& pass,
                          Backend::Buffer* transformBuffer,
                          uint32_t instanceCount, bool includeTexCoord,
-                         bool includeSkinning) const;
+                         bool includeSkinning, uint64_t transformOffset = 0) const;
 
   public:
     MeshInstancer() = default;
@@ -196,6 +196,16 @@ class MeshInstancer {
     bool getInstanceTransform(int instanceIndex, glm::mat4& outTransform) const;
     bool setInstanceTransform(int instanceIndex, const glm::mat4& transform);
     TransformSource transformSource() const { return _transformSource; }
+
+    struct PickInstances {
+        std::unique_ptr<Backend::Buffer> transforms;
+        std::unique_ptr<Backend::Buffer> opacity;
+        uint32_t count = 0;
+    };
+    PickInstances preparePickInstances() const;
+    void recordPickDraw(Backend::RenderPassEncoder& pass,
+                        const PickInstances& instances, bool textured) const;
+    RayPickResult pickInstance(int instanceIndex) const;
 
     // Record the currently visible instance batch without touching backend
     // state. Resources are only consumed when the command buffer is submitted.

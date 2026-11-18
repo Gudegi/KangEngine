@@ -74,11 +74,10 @@ class InteractionController {
     }
 
     bool handlePick(const RayPickResult& pick,
-                    const glm::vec3& forcePlaneNormal) {
+                    const glm::vec3& forcePlaneNormal, bool forceDrag) {
         setLastPick(pick);
-        if (pick.hit)
-            select(pick);
-        if (_mode != InteractionMode::Force || !pick.hit)
+        select(pick);
+        if (!forceDrag || _mode != InteractionMode::Force || !pick.hit)
             return false;
         beginForceDrag(pick, pick.position, forcePlaneNormal);
         return true;
@@ -150,6 +149,7 @@ class InteractionController {
 class GizmoController {
   public:
     bool isUsing() const;
+    bool isOver() const;
     GizmoOperation operation() const { return _operation; }
     void setOperation(GizmoOperation operation) { _operation = operation; }
     GizmoSpace space() const { return _space; }

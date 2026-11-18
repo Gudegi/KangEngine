@@ -3,6 +3,7 @@
 
 #include "engine/graphics/renderer/render_pipeline.hpp"
 #include "engine/graphics/renderer/selection_mask_pass.hpp"
+#include "engine/graphics/renderer/picking_pass.hpp"
 #include "engine/graphics/renderer/shader_library.hpp"
 #include "engine/graphics/renderer/forward_pass.hpp"
 #include "engine/graphics/renderer/shadow_pass.hpp"
@@ -142,6 +143,7 @@ class Rasterizer : public RenderPipeline {
     // Selection Mask Pipeline - opaque, alpha-mask, and skinned variants
     // =====================================================================
     SelectionMaskPass _selectionMaskPass;
+    PickingPass _pickingPass;
 
     // Shadow configuration and per-frame cascade state.
     float _shadowRadius = 3.0f;
@@ -349,6 +351,8 @@ class Rasterizer : public RenderPipeline {
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
     RayPickResult rayPick(const Geometry::Ray& ray) const;
+    RayPickResult pickScreen(glm::vec2 ndc, const glm::mat4& view,
+                              const glm::mat4& projection, int width, int height);
     bool getRenderableInstanceTransform(RenderableHandle handle,
                                         int instanceIndex,
                                         glm::mat4& outTransform) const;

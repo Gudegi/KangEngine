@@ -152,6 +152,12 @@ void App::registerCallbacks() {
                                GLFWCallbackWrapper::mouseButtonCallbackWrapper);
 }
 struct App::IO {
+    enum class LeftMouseAction { None, Select, Camera, Gizmo, Force };
+    LeftMouseAction leftMouseAction = LeftMouseAction::None;
+    double pressMouseX = 0.0;
+    double pressMouseY = 0.0;
+    glm::vec2 pickNDC{0.0f};
+    bool forcePickRequested = false;
     bool isMouseMiddleClicked = false;
     bool isMouseLeftClicked = false;
     bool isMouseRightClicked = false;
@@ -166,7 +172,7 @@ struct App::IO {
     bool isScreenshotKeyPressed = false; // t
     bool isEscKeyPressed = false;
     bool isSHIFTKeyPressed = false;
-    bool isPickMode = false; // left click + shift
+    bool isPickMode = false; // Force-drag hover callbacks.
 };
 
 struct App::RenderVariable {
@@ -830,15 +836,25 @@ void App::executeFrame(bool update) {
         getRenderer().syncSceneLights(getScene());
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
         sceneSync.end();
+        const RayPickResult mousePick =
+            _mousePickRequested
+                ? _rasterizer->pickScreen(_io->pickNDC, _viewMatrix,
+                                          _projectionMatrix, _width, _height)
+                : (_io->isPickMode ? pickMouse() : RayPickResult{});
         if (_mousePickRequested) {
-            const RayPickResult pick = selectablePick(pickMouse());
+            const RayPickResult pick = selectablePick(mousePick);
             _mousePickRequested = false;
+            const bool forceDrag = _io->forcePickRequested;
+            _io->forcePickRequested = false;
             const glm::vec3 pickLookDir = useSceneCameraForMainView
                                               ? _sceneCamera.getCameraLookDir()
                                               : _camera.getCameraLookDir();
-            const RayPickResult interactionPick = pickAllowedForMode(
-                pick, _interaction.mode(), _externalForceDragEnabled);
-            if (_interaction.handlePick(interactionPick, pickLookDir)) {
+            const RayPickResult interactionPick =
+                forceDrag ? pickAllowedForMode(pick, _interaction.mode(),
+                                               _externalForceDragEnabled)
+                          : pick;
+            if (_interaction.handlePick(interactionPick, pickLookDir,
+                                        forceDrag)) {
                 onForceDragBegin(_interaction.forceDragPick(),
                                  _interaction.forceDragPlanePoint());
             }
@@ -850,7 +866,7 @@ void App::executeFrame(bool update) {
                 onForceDragUpdate(_interaction.forceDragPick(), target);
         }
         if (_io->isPickMode) {
-            _interaction.handleHoverPick(pickMouse());
+            _interaction.handleHoverPick(mousePick);
             onRayPickHover(_interaction.lastPick());
         }
         Camera& shadowCamera =
@@ -1204,8 +1220,8 @@ void App::renderShortcutHelp() {
         shortcut("Mouse wheel", "Dolly Camera");
 
         section("Interaction");
-        shortcut("Shift + Left click", "Select Object");
-        shortcut("Shift + Left drag", "Force Drag");
+        shortcut("Left click", "Select / Clear Selection");
+        shortcut("Shift + Left drag", "Apply Force (Force Mode)");
         shortcut("Edit mode gizmo", "Transform Object");
         shortcut("Escape", "Cancel / Close");
 
@@ -1983,6 +1999,13 @@ void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
     _io->mouseX = xpos;
     _io->mouseY = ypos;
+    if (_io->leftMouseAction == IO::LeftMouseAction::Select) {
+        const double dx = xpos - _io->pressMouseX;
+        const double dy = ypos - _io->pressMouseY;
+        // Logical pixels keep click tolerance independent of framebuffer DPI.
+        if (dx * dx + dy * dy > 16.0)
+            _io->leftMouseAction = IO::LeftMouseAction::Camera;
+    }
     if (_io->isMouseLeftClicked == true || _io->isMouseMiddleClicked == true ||
         _io->isMouseRightClicked == true) {
         _io->deltaMouseX += _io->mouseX - _io->prevMouseX;
@@ -1998,16 +2021,44 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
     _io->deltaMouseY = 0;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         _io->isMouseLeftClicked = true;
+        _io->pressMouseX = _io->mouseX;
+        _io->pressMouseY = _io->mouseY;
+        _io->leftMouseAction = IO::LeftMouseAction::None;
         const bool shiftPressed =
             (mods & GLFW_MOD_SHIFT) != 0 ||
             glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-        if (!shouldBlockMouseInput() && shiftPressed) {
-            _mousePickRequested = true;
-            _io->isPickMode = true;
+        if (!shouldBlockMouseInput()) {
+            if (!_hideUI && _interaction.hasEditableSelection() &&
+                (_gizmo.isOver() || _gizmo.isUsing())) {
+                _io->leftMouseAction = IO::LeftMouseAction::Gizmo;
+            } else if (shiftPressed &&
+                       _interaction.mode() == InteractionMode::Force) {
+                _io->leftMouseAction = IO::LeftMouseAction::Force;
+                _io->forcePickRequested = true;
+                _io->pickNDC = getMouseNDC();
+                _mousePickRequested = true;
+                _io->isPickMode = true;
+            } else if (!shiftPressed &&
+                       !(mods &
+                         (GLFW_MOD_CONTROL | GLFW_MOD_ALT | GLFW_MOD_SUPER))) {
+                _io->leftMouseAction = IO::LeftMouseAction::Select;
+            }
         }
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        const bool gizmoCaptured = !_hideUI &&
+                                   _interaction.hasEditableSelection() &&
+                                   (_gizmo.isOver() || _gizmo.isUsing());
+        if (_io->leftMouseAction == IO::LeftMouseAction::Select &&
+            !shouldBlockMouseInput() && !gizmoCaptured) {
+            _io->pickNDC = getMouseNDC();
+            _mousePickRequested = true;
+        }
+        // A press and release between frames must not leave a force drag
+        // active.
+        _io->forcePickRequested = false;
+        _io->leftMouseAction = IO::LeftMouseAction::None;
         _io->isMouseLeftClicked = false;
         _io->isPickMode = false;
         if (_interaction.isForceDragActive()) {
@@ -2091,7 +2142,7 @@ void App::processInput() {
     }
     _io->isEscKeyPressed = escPressed;
 
-    if (_gizmo.isUsing())
+    if (_gizmo.isUsing() || _io->leftMouseAction == IO::LeftMouseAction::Gizmo)
         return;
 
     // look at specifc target or // look at forward direction
@@ -2158,7 +2209,8 @@ void App::processInput() {
         _camera.setCameraPos(cameraPos);
     }
 
-    if (_io->isMouseLeftClicked && !_io->isSHIFTKeyPressed) {
+    if (_io->leftMouseAction == IO::LeftMouseAction::Camera &&
+        !_io->isSHIFTKeyPressed) {
         // Orbit cam
         float dx = deltaMouseX * 0.1f;
         float dy = deltaMouseY * 0.1f;
@@ -2243,6 +2295,8 @@ bool App::isEditorViewportInputActive() const {
 }
 
 bool App::shouldBlockMouseInput() const {
+    if (_hideUI)
+        return false;
     if (_editorViewportPanel &&
         _editorViewportPanel->viewGuizmoCapturesMouse()) {
         return true;
@@ -2308,7 +2362,12 @@ RayPickResult App::rayPick(const Geometry::Ray& ray) const {
     return result;
 }
 
-RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
+RayPickResult App::pickMouse() {
+    if (!_rasterizer)
+        return {};
+    return _rasterizer->pickScreen(getMouseNDC(), _viewMatrix,
+                                   _projectionMatrix, _width, _height);
+}
 
 bool App::setActiveSceneCamera(Scene::Prim* prim) {
     if (!prim || prim->getType() != Scene::PrimType::Camera)
@@ -2538,6 +2597,8 @@ void App::renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                                    rectSize.x, rectSize.y, drawList)) {
         setPickTransform(_interaction.selection(), transform);
     }
+    if (_io->isMouseLeftClicked && _gizmo.isUsing())
+        _io->leftMouseAction = IO::LeftMouseAction::Gizmo;
 }
 
 } // namespace KE

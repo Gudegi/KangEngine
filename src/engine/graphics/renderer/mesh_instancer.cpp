@@ -1,5 +1,6 @@
 #include "mesh_instancer.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "geometry/mesh_utils.hpp"
 #include <algorithm>
 #include <cstring>
@@ -702,7 +703,8 @@ void MeshInstancer::_recordGeometry(Backend::RenderPassEncoder& pass,
                                     Backend::Buffer* transformBuffer,
                                     uint32_t instanceCount,
                                     bool includeTexCoord,
-                                    bool includeSkinning) const {
+                                    bool includeSkinning,
+                                    uint64_t transformOffset) const {
     Backend::Buffer* positionBuffer = nullptr;
     Backend::Buffer* texCoordBuffer = nullptr;
     Backend::Buffer* boneIndexBuffer = nullptr;
@@ -724,7 +726,7 @@ void MeshInstancer::_recordGeometry(Backend::RenderPassEncoder& pass,
                          positionBuffer);
     pass.setVertexBuffer(
         vertexBufferSlot(MeshVertexBufferSlot::InstanceTransform),
-        transformBuffer);
+        transformBuffer, transformOffset);
     if (includeTexCoord) {
         if (!texCoordBuffer)
             throw std::runtime_error(
@@ -907,9 +909,89 @@ void MeshInstancer::recordSkinnedMaterialDraw(
     recordMaterialDraw(pass, true, requireTangent, true);
 }
 
+MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
+    PickInstances result;
+    if (!_hasVisibleOwnerPrim())
+        return result;
+    if (_transformSource == TransformSource::ExternalBuffer && !_prims.empty()) {
+        const bool pickable = std::any_of(
+            _prims.begin(), _prims.end(), [](const auto* prim) {
+                if (!prim || !prim->isActiveInHierarchy() ||
+                    !prim->isVisibleInHierarchy())
+                    return false;
+                auto selection = prim->getSelectionComponent();
+                return !selection || selection->isPickable();
+            });
+        if (!pickable)
+            return result;
+    }
+    result.count = _usesGpuExternalTransforms
+                       ? static_cast<uint32_t>(_visibleCount)
+                       : static_cast<uint32_t>(_transforms.size());
+    if (result.count == 0)
+        return result;
+
+    // Picking uses original instance order, independent of frustum compaction.
+    Backend::BufferDesc desc;
+    desc.usage = Backend::BufferUsage::Vertex | Backend::BufferUsage::CopyDst;
+    if (!_usesGpuExternalTransforms) {
+        desc.size = result.count * sizeof(glm::mat4);
+        desc.label = "pick_transforms";
+        result.transforms = _device->createBuffer(desc);
+        result.transforms->setData(_transforms.data(), desc.size);
+    }
+    std::vector<float> opacity(result.count, 1.0f);
+    for (uint32_t i = 0; i < result.count; ++i) {
+        if (i < _colors.size())
+            opacity[i] = _colors[i].a;
+        Scene::Prim* prim = i < _instancePrims.size() ? _instancePrims[i]
+                                                    : nullptr;
+        if (prim) {
+            auto selection = prim->getSelectionComponent();
+            if (selection && !selection->isPickable())
+                opacity[i] = -1.0f;
+        }
+    }
+    desc.size = opacity.size() * sizeof(float);
+    desc.label = "pick_opacity";
+    result.opacity = _device->createBuffer(desc);
+    result.opacity->setData(opacity.data(), desc.size);
+    return result;
+}
+
+void MeshInstancer::recordPickDraw(Backend::RenderPassEncoder& pass,
+                                   const PickInstances& instances,
+                                   bool textured) const {
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceColor),
+                         instances.opacity.get());
+    _recordGeometry(pass, instances.transforms ? instances.transforms.get()
+                                               : _transformVBO.get(),
+                    instances.count, textured, _hasSkinning);
+}
+
+RayPickResult MeshInstancer::pickInstance(int instanceIndex) const {
+    RayPickResult result;
+    result.hit = true;
+    result.instanceIndex = instanceIndex;
+    result.transformSource = _transformSource;
+    const size_t i = static_cast<size_t>(instanceIndex);
+    if (_transformSource == TransformSource::SceneGraph &&
+        i < _instancePrims.size())
+        result.prim = _instancePrims[i];
+    if (i < _worldBounds.size())
+        result.bounds = _worldBounds[i];
+    return result;
+}
+
 void MeshInstancer::recordInstanceMask(Backend::RenderPassEncoder& pass,
                                        int instanceIndex, bool includeTexCoord,
                                        bool includeSkinning) {
+    if (_usesGpuExternalTransforms) {
+        if (instanceIndex >= 0 && instanceIndex < _visibleCount)
+            _recordGeometry(pass, _transformVBO.get(), 1, includeTexCoord,
+                            includeSkinning, sizeof(glm::mat4) * instanceIndex);
+        return;
+    }
     if (instanceIndex < 0 ||
         instanceIndex >= static_cast<int>(_transforms.size()))
         return;

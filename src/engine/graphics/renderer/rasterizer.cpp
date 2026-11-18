@@ -71,6 +71,7 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _shadowPass.initialize(_graphicsDevice);
     _skyboxPass.initialize(_graphicsDevice);
     _selectionMaskPass.initialize(_graphicsDevice);
+    _pickingPass.initialize(_graphicsDevice);
     Backend::BufferDesc uniformDesc;
     uniformDesc.size = 2 * sizeof(glm::mat4);
     uniformDesc.usage =
@@ -314,6 +315,13 @@ void Rasterizer::setRenderableTexture(RenderableHandle handle,
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setTexture(tex, slot);
+}
+
+RayPickResult Rasterizer::pickScreen(glm::vec2 ndc, const glm::mat4& view,
+                                     const glm::mat4& projection,
+                                     int width, int height) {
+    return _pickingPass.pick(_handleTable, _shaderLibrary, view, projection,
+                             ndc, width, height);
 }
 
 RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
