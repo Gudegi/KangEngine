@@ -252,6 +252,10 @@ Backend::Texture* Renderer::presentedTexture() {
     return output ? output->getColorTexture() : nullptr;
 }
 
+const CudaRenderImage* Renderer::cudaImage() const {
+    return _renderBackend ? _renderBackend->cudaImage() : nullptr;
+}
+
 Backend::Texture* Renderer::renderCameraPreview(const glm::mat4& view,
                                                 const glm::mat4& projection,
                                                 int width, int height) {

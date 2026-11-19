@@ -2282,8 +2282,11 @@ void ViewportPanel::buildPanel() {
         }
 
         ImGui::SetCursorScreenPos(_imageMin);
+        // ovrtx uploads use top-down rows; Native textures use bottom-up rows.
         ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(),
-                     _imageSize, ImVec2(0, 1), ImVec2(1, 0));
+                     _imageSize,
+                     _app->presentedImageTopDown() ? ImVec2(0, 0) : ImVec2(0, 1),
+                     _app->presentedImageTopDown() ? ImVec2(1, 1) : ImVec2(1, 0));
     }
 
     ImGui::SetCursorScreenPos(_contentMin);
@@ -2330,12 +2333,15 @@ void ViewportPanel::buildPanel() {
                         ImGui::SetTooltip("%s", tooltip);
                 };
 
+                ImGui::BeginDisabled(
+                    !_app->getRenderer().capabilities().screenPicking);
                 modeButton(ICON_FA_ARROW_POINTER "##InspectMode", "Inspect",
                            InteractionMode::Inspect);
                 modeButton(ICON_FA_UP_DOWN_LEFT_RIGHT "##EditMode",
                            "Edit Transform", InteractionMode::Edit);
                 modeButton(ICON_FA_HAND_FIST "##ForceMode", "Apply Force",
                            InteractionMode::Force);
+                ImGui::EndDisabled();
             }
             ImGui::EndChild();
             ImGui::PopStyleColor();

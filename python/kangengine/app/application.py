@@ -1871,16 +1871,17 @@ class App(_NativeApp):
         *,
         render_backend="native",
     ):
-        """Initialize Native rendering or the optional offscreen ovrtx backend.
+        """Initialize Native rendering or the optional ovrtx backend.
 
-        ovrtx requires ``headless=True, hide_ui=True`` and supports opaque lit
-        PBR meshes, one directional light with zero ambient, and perspective
-        cameras. Unsupported scene features raise when submitted.
+        ovrtx supports opaque lit PBR meshes, one directional light with zero
+        ambient, and perspective cameras. Its window uses CUDA–OpenGL image
+        copies on the same GPU and requires a CUDA interop build. Viewport
+        picking is not supported. ``headless=True, hide_ui=True`` keeps CPU
+        offscreen output; explicit screenshots also download to CPU.
+        Unsupported scene features raise when submitted.
         """
         if render_backend not in ("native", "ovrtx"):
             raise ValueError("render_backend must be 'native' or 'ovrtx'")
-        if render_backend != "native" and (not hide_ui or not headless):
-            raise ValueError("ovrtx requires headless=True and hide_ui=True")
         if render_backend != "native" and graphics_backend_type is not None:
             raise ValueError("ovrtx manages its graphics device; omit graphics_backend_type")
         self.initial_width = width
@@ -1914,6 +1915,8 @@ class App(_NativeApp):
             result = self._initialize_scene_renderer(
                 self.initial_width, self.initial_height, self.up_axis,
                 self.scene_backend_type, OvrtxAppAdapter,
+                hide_ui=self.hide_ui, headless=self.headless,
+                gpu_output=not (self.headless and self.hide_ui),
             )
         # Native initialize() recreates the SceneBackend. Keep the resource
         # registry mirrored into the live scene used by ScenePanel/rendering.

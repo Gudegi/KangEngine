@@ -109,6 +109,9 @@ class Renderer {
     RenderImage readImage(bool flipY = true);
     RenderImage readImageResized(int width, int height, bool flipY = true);
 
+    // External GPU output (currently ovrtx) for App's image presenter.
+    const CudaRenderImage* cudaImage() const;
+
     // Native GPU output for existing viewport and camera-preview consumers.
     Backend::Texture* presentedTexture();
     Backend::Texture* renderCameraPreview(const glm::mat4& view,

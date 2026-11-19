@@ -31,6 +31,8 @@ struct RenderBackendCapabilities {
     bool sceneBatches = false;
     bool memoryTextures = false;
     bool screenPicking = false;
+    // External GPU image output, currently used by ovrtx presentation.
+    bool cudaImages = false;
 };
 
 struct SceneBatchState {
@@ -122,6 +124,8 @@ class RenderBackend {
     // Synchronous owned RGB8; flipY=true is top-down, false is bottom-up.
     virtual RenderImage readImage(bool flipY) = 0;
     virtual RenderImage readImageResized(int width, int height, bool flipY) = 0;
+    // Borrowed GPU output; Native exposes its texture through Renderer instead.
+    virtual const CudaRenderImage* cudaImage() const { return nullptr; }
 };
 
 } // namespace KE

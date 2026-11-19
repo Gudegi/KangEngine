@@ -43,8 +43,6 @@ def Scope "Render" {
         rel camera = </World/Camera>
         int2 resolution = (256, 256)
         token omni:rtx:rendermode = "PathTracing"
-        int omni:rtx:pathtracing:spp = 4
-        int omni:rtx:pathtracing:totalSpp = 16
         rel orderedVars = </Render/Camera/LdrColor>
         def RenderVar "LdrColor" {
             string sourceName = "LdrColor"

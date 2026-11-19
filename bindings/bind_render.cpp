@@ -487,6 +487,7 @@ void bind_render(py::module& m) {
                 result["scene_batches"] = caps.sceneBatches;
                 result["memory_textures"] = caps.memoryTextures;
                 result["screen_picking"] = caps.screenPicking;
+                result["cuda_images"] = caps.cudaImages;
                 result["native_extensions"] = renderer.rasterizer() != nullptr;
                 return result;
             },

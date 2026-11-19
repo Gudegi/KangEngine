@@ -582,7 +582,7 @@ class Renderer:
     @property
     def capabilities(self) -> dict[str, bool]:
         """Frame support: screen_presentation, selection_outline, wireframe,
-        static_scene, scene_batches, memory_textures, screen_picking, and
+        static_scene, scene_batches, memory_textures, screen_picking, cuda_images, and
         native_extensions.
         """
         ...

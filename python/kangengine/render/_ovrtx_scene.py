@@ -1,7 +1,11 @@
-"""ovstage resources and synchronous RGB output for static scene inputs."""
+"""ovstage resources and CPU/CUDA images for static scene inputs."""
 
 from contextlib import contextmanager
 import math
+import sys
+
+if sys.platform == "darwin":
+    raise RuntimeError("ovrtx is not supported on macOS; use the native render backend.")
 
 import numpy as np
 import ovrtx
@@ -22,6 +26,7 @@ def _texture_key(source):
 class OvrtxSceneAdapter:
     def __init__(self, width, height):
         self._resolution = (width, height)
+        ovrtx.library_telemetry_opt_out()
         self._renderer = ovrtx.Renderer(config=ovrtx.RendererConfig(keep_system_alive=False))
         self._stage = None
         self._attached = False
@@ -29,6 +34,9 @@ class OvrtxSceneAdapter:
         self._geometry = {}
         self._values = {}
         self._ordinal = 1
+        self._output = None
+        self._products = None
+        self._mapped = None
         try:
             self._stage = ovstage.Stage("kangengine.scene-renderer")
             self._renderer.attach_ovstage(self._stage)
@@ -66,8 +74,6 @@ def Scope "Render" {{
         int2 resolution = ({width}, {height})
         token omni:rtx:rendermode = "PathTracing"
         token[] omni:rtx:waitForEvents = ["AllLoadingFinished"]
-        int omni:rtx:pathtracing:spp = 4
-        int omni:rtx:pathtracing:totalSpp = 16
         rel orderedVars = </Render/Camera/LdrColor>
         def RenderVar "LdrColor" {{
             string sourceName = "LdrColor"
@@ -166,7 +172,8 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
 }}
 '''
 
-    def render(self, frame):
+    def _render_output(self, frame):
+        self._release_output()
         # Validate all asset paths before changing stage registrations.
         for item in frame["objects"]:
             for texture in item["textures"].values():
@@ -252,10 +259,22 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
             self._renderer.detach_ovstage()
             self._renderer.attach_ovstage(self._stage)
             self._attached = True
-        products = self._renderer.step(render_products={"/Render/Camera"},
-                                       delta_time=1 / 60, ordinal=self._ordinal)
-        frame = products["/Render/Camera"].frames[-1]
-        mapped = frame.render_vars["/Render/Camera/LdrColor"].map(device=ovrtx.Device.CPU)
+        # The result set owns the native output handles until presentation ends.
+        self._products = self._renderer.step(render_products={"/Render/Camera"},
+                                            delta_time=1 / 60, ordinal=self._ordinal)
+        frame = self._products["/Render/Camera"].frames[-1]
+        self._output = frame.render_vars["/Render/Camera/LdrColor"]
+
+    def render(self, frame):
+        self._render_output(frame)
+        return self.read_image()
+
+    def read_image(self):
+        """Download ovrtx output for CPU rendering results or explicit capture."""
+        if self._mapped is not None:
+            self._mapped.unmap()
+            self._mapped = None
+        mapped = self._output.map(device=ovrtx.Device.CPU)
         try:
             view = np.from_dlpack(mapped)
             pixels = view[..., :3].copy()
@@ -265,10 +284,19 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
         return pixels
 
     def resize(self, width, height):
+        self._release_output()
         self._resolution = (width, height)
+
+    def _release_output(self):
+        if self._mapped is not None:
+            self._mapped.unmap()
+            self._mapped = None
+        self._output = None
+        self._products = None
 
     def close(self):
         try:
+            self._release_output()
             if self._attached:
                 self._attached = False
                 self._renderer.detach_ovstage()
@@ -290,3 +318,18 @@ class OvrtxAppAdapter(OvrtxSceneAdapter):
         from .scene_renderer import _validate_frame
 
         return super().render(_validate_frame(frame, self._texture_paths, self._validated_meshes))
+
+    def render_gpu(self, frame):
+        """Expose ovrtx CUDA image handles for App's OpenGL presenter."""
+        from .scene_renderer import _validate_frame
+
+        self._render_output(_validate_frame(frame, self._texture_paths, self._validated_meshes))
+        # The presenter waits on the event and completes its GPU copy before
+        # this mapping is released by readback, resize, close, or the next frame.
+        self._mapped = self._output.map(device=ovrtx.Device.CUDA_ARRAY, sync_stream=0)
+        tensor = self._mapped[next(iter(self._mapped))]
+        if tensor.shape != (self._resolution[1], self._resolution[0], 4):
+            raise RuntimeError(f"ovrtx presentation requires RGBA8 output, got {tensor.shape}")
+        return {"array": tensor.cuda_array,
+                "device": tensor.__dlpack_device__()[1],
+                "ready_event": self._mapped.wait_event or 0}

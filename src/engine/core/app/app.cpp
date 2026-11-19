@@ -1,6 +1,7 @@
 #include "app.hpp"
 #include "asset/bvh_loader.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/backend/opengl/opengl_image_presenter.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
 #include "engine/scene/component/camera_component.hpp"
@@ -226,6 +227,7 @@ void App::close() {
     _interaction = InteractionController{};
     _panelManager.shutdown();
     _editorViewportPanel = nullptr;
+    _imagePresenter.reset();
     _renderer.release();
     _graphicsDevice.reset();
     _profileContext.reset();
@@ -245,9 +247,12 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
         throw std::runtime_error("App is already initialized");
     if (width <= 0 || height <= 0)
         throw std::invalid_argument("App dimensions must be positive");
-    if (renderBackend && (!hideUI || !headless))
-        throw std::invalid_argument("Custom App render backends currently "
-                                    "require hidden UI and a headless window");
+    const bool customBackend = static_cast<bool>(renderBackend);
+    if (customBackend && (!headless || !hideUI) &&
+        !renderBackend->capabilities().screenPresentation &&
+        !renderBackend->capabilities().cudaImages)
+        throw std::invalid_argument(
+            "Windowed render backend requires screen presentation or CUDA images");
     _width = width;
     _height = height;
     _hideUI = hideUI;
@@ -260,7 +265,11 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     }
     _sceneResourceManager.bindScene(_scene.get());
 
-    if (!renderBackend) {
+    // External GPU initialization must precede the OpenGL presentation context.
+    if (customBackend)
+        _renderer.initialize(std::move(renderBackend), _width, _height);
+
+    if (!customBackend || !headless || !hideUI) {
         _graphicsDevice =
             Backend::GraphicsFactory::createDevice(graphicsBackendType);
         if (!_graphicsDevice)
@@ -313,20 +322,31 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
         auto viewportPanel = std::make_unique<ViewportPanel>(this, &_camera);
         _editorViewportPanel = viewportPanel.get();
         _panelManager.addPanel(std::move(viewportPanel));
-        auto cameraViewPanel = std::make_unique<CameraViewPanel>(this);
-        cameraViewPanel->setOpen(false);
-        _panelManager.addPanel(std::move(cameraViewPanel));
+        if (!customBackend) {
+            auto cameraViewPanel = std::make_unique<CameraViewPanel>(this);
+            cameraViewPanel->setOpen(false);
+            _panelManager.addPanel(std::move(cameraViewPanel));
+        }
         _panelManager.addPanel(std::make_unique<ScenePanel>(this));
         _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
-        _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
+        if (!customBackend)
+            _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
         _panelManager.addPanel(std::make_unique<InspectorPanel>(this));
 
         _graphicsDevice->setDepthTest(true);
         _graphicsDevice->setStencilTest(false);
 
-        _renderer.initialize(*_graphicsDevice, _width, _height);
+        if (customBackend) {
+            _renderer.resizeFrame(_width, _height);
+            _renderer.profiler().bind(_profileContext, _graphicsDevice.get());
+        } else {
+            _renderer.initialize(*_graphicsDevice, _width, _height);
+        }
+        // External output (currently ovrtx) -> OpenGL window and viewport.
+        if (!_renderer.capabilities().screenPresentation)
+            _imagePresenter =
+                std::make_unique<Backend::OpenGLImagePresenter>(*_graphicsDevice);
     } else {
-        _renderer.initialize(std::move(renderBackend), _width, _height);
         _renderer.profiler().bind(_profileContext);
     }
     _renderer.bindSceneResources(_sceneResourceManager);
@@ -808,8 +828,9 @@ void App::executeFrame(bool update) {
         _sceneRenderSystem.syncScene(*_scene, _sceneResourceManager);
         _renderer.syncFrame(getScene(), _viewMatrix, _projectionMatrix);
     }
-    if (_mousePickRequested ||
-        (_io->isPickMode && !_renderer.hasPendingPick())) {
+    if (_renderer.capabilities().screenPicking &&
+        (_mousePickRequested ||
+         (_io->isPickMode && !_renderer.hasPendingPick()))) {
         _pickIsClick = _mousePickRequested;
         _pickForceDrag = _io->forcePickRequested;
         _pickLookDir = useSceneCameraForMainView
@@ -817,6 +838,10 @@ void App::executeFrame(bool update) {
                            : _camera.getCameraLookDir();
         _renderer.requestPick(_mousePickRequested ? _io->pickNDC
                                                   : getMouseNDC());
+        _mousePickRequested = false;
+        _io->forcePickRequested = false;
+    }
+    if (!_renderer.capabilities().screenPicking) {
         _mousePickRequested = false;
         _io->forcePickRequested = false;
     }
@@ -863,9 +888,23 @@ void App::executeFrame(bool update) {
     }
     const bool editorViewportMode =
         !_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor;
-    _renderer.endFrame(_interaction.selection(),
+    _renderer.endFrame(_renderer.capabilities().selectionOutline
+                           ? _interaction.selection()
+                           : RayPickResult{},
                        !editorViewportMode &&
                            _renderer.capabilities().screenPresentation);
+
+    // Copy external GPU output before the viewport samples it; no CPU readback.
+    if (_imagePresenter) {
+        const auto* image = _renderer.cudaImage();
+        if (!image)
+            throw std::runtime_error("Render backend returned no CUDA image");
+        _imagePresenter->upload(*image);
+        if (!editorViewportMode) {
+            auto scope = profile.cpuScope("presentation/blit");
+            _imagePresenter->present(_width, _height);
+        }
+    }
 
     if (editorViewportMode) {
         auto gpuClear =
@@ -1175,7 +1214,8 @@ void App::renderShortcutHelp() {
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 
 Backend::Texture* App::getPresentedTexture() {
-    return _renderer.presentedTexture();
+    return _imagePresenter ? _imagePresenter->texture()
+                           : _renderer.presentedTexture();
 }
 
 void App::setCameraMoveSpeed(float speed) {

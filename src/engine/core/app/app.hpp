@@ -48,6 +48,9 @@ class SkeletonMotion;
 }
 
 class ViewportPanel;
+namespace Backend {
+class OpenGLImagePresenter;
+}
 
 class App {
     friend class ViewportPanel;
@@ -112,6 +115,8 @@ class App {
     double currentTimeSeconds() const;
     std::shared_ptr<Backend::ProfileContext> _profileContext;
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
+    // Displays external CUDA images (currently ovrtx); unused by Native.
+    std::unique_ptr<Backend::OpenGLImagePresenter> _imagePresenter;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     Renderer _renderer;
     Scene::SceneRenderSystem _sceneRenderSystem;
@@ -147,7 +152,7 @@ class App {
     void registerBuiltinRenderResources();
 
   public:
-    // Custom frame backends currently require headless=true and hideUi=true.
+    // Windowed CUDA-image backends use OpenGL only for presentation and UI.
     void initialize(
         int width, int height, bool hideUi, UpAxis upAxis = UpAxis::Y,
         Backend::BackendType graphicsBackendType = Backend::BackendType::OpenGL,
@@ -200,6 +205,8 @@ class App {
         return getRenderer().device();
     }
     Backend::Texture* getPresentedTexture();
+    // ovrtx image uploads start with the top row; Native textures need a UV flip.
+    bool presentedImageTopDown() const { return _imagePresenter != nullptr; }
     Rasterizer* getRasterizer() { return getRenderer().rasterizer(); }
     const Rasterizer* getRasterizer() const {
         return getRenderer().rasterizer();

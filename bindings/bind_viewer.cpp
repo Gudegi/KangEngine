@@ -827,14 +827,18 @@ void bind_viewer(py::module& m) {
         .def(
             "_initialize_scene_renderer",
             [](App& self, int width, int height, UpAxis upAxis,
-               Scene::BackendType sceneBackend, py::object factory) {
-                self.initialize(width, height, true, upAxis,
+               Scene::BackendType sceneBackend, py::object factory,
+               bool hideUI, bool headless, bool gpuOutput) {
+                self.initialize(width, height, hideUI, upAxis,
                                 Backend::BackendType::OpenGL, sceneBackend,
-                                true,
-                                makePythonRenderBackend(std::move(factory)));
+                                headless,
+                                makePythonRenderBackend(std::move(factory),
+                                                        gpuOutput));
             },
             py::arg("width"), py::arg("height"), py::arg("up_axis"),
-            py::arg("scene_backend_type"), py::arg("factory"))
+            py::arg("scene_backend_type"), py::arg("factory"),
+            py::arg("hide_ui") = true, py::arg("headless") = true,
+            py::arg("gpu_output") = false)
         .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"),
              "Set the target render/update frequency in Hz.")
         .def(

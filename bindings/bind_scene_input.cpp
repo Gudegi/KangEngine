@@ -94,8 +94,8 @@ py::dict sceneFrameToDict(const RenderSceneFrame& frame) {
 
 class PythonRenderBackend final : public KE::RenderBackend {
   public:
-    explicit PythonRenderBackend(py::object factory)
-        : _factory(std::move(factory)) {}
+    explicit PythonRenderBackend(py::object factory, bool gpuOutput)
+        : _factory(std::move(factory)), _gpuOutput(gpuOutput) {}
     ~PythonRenderBackend() override {
         py::gil_scoped_acquire gil;
         if (_adapter) {
@@ -109,7 +109,10 @@ class PythonRenderBackend final : public KE::RenderBackend {
         _factory = py::object();
     }
     KE::RenderBackendCapabilities capabilities() const override {
-        return {false, false, false, true, false};
+        KE::RenderBackendCapabilities result;
+        result.staticScene = true;
+        result.cudaImages = _gpuOutput;
+        return result;
     }
     void initialize(int width, int height) override {
         py::gil_scoped_acquire gil;
@@ -123,6 +126,7 @@ class PythonRenderBackend final : public KE::RenderBackend {
         _width = width;
         _height = height;
         _image = {};
+        _cudaImage = {};
     }
     void syncScene(const RenderSceneFrame& scene) override { _scene = scene; }
     KE::RenderableHandle registerSceneBatch(const RenderMeshData&,
@@ -151,9 +155,23 @@ class PythonRenderBackend final : public KE::RenderBackend {
         _scene.camera.nearPlane = camera.getNearPlane();
         _scene.camera.farPlane = camera.getFarPlane();
     }
-    void beginFrame() override { _pending = {}; }
+    void beginFrame() override {
+        _pending = {};
+        _cudaImage = {};
+    }
     void renderScene(const glm::mat4&, const glm::mat4&, bool) override {
         py::gil_scoped_acquire gil;
+        if (_gpuOutput) {
+            // Pass ovrtx image handles to App; the Python adapter owns the mapping.
+            _image = {};
+            auto output = _adapter.attr("render_gpu")(sceneFrameToDict(_scene));
+            _cudaImage = {_width, _height, output["device"].cast<int>(),
+                          output["array"].cast<uintptr_t>(),
+                          output["ready_event"].cast<uintptr_t>()};
+            if (!_cudaImage.array)
+                throw std::runtime_error("Render adapter returned no CUDA image");
+            return;
+        }
         auto output = _adapter.attr("render")(sceneFrameToDict(_scene));
         auto pixels = py::array_t<uint8_t, py::array::c_style>::ensure(output);
         if (!pixels || pixels.ndim() != 3 || pixels.shape(0) != _height ||
@@ -168,6 +186,7 @@ class PythonRenderBackend final : public KE::RenderBackend {
         _image = std::move(_pending);
     }
     KE::RenderImage readImage(bool flipY) override {
+        loadGpuReadback();
         if (_image.pixels.empty())
             throw std::runtime_error("No completed scene frame is available");
         if (flipY)
@@ -183,6 +202,7 @@ class PythonRenderBackend final : public KE::RenderBackend {
     }
     KE::RenderImage readImageResized(int width, int height,
                                      bool flipY) override {
+        loadGpuReadback();
         if (width == _image.width && height == _image.height)
             return readImage(flipY);
         if (_image.pixels.empty())
@@ -222,17 +242,37 @@ class PythonRenderBackend final : public KE::RenderBackend {
         }
         return image;
     }
+    const KE::CudaRenderImage* cudaImage() const override {
+        return _cudaImage.array ? &_cudaImage : nullptr;
+    }
 
   private:
+    // Download ovrtx output only for explicit CPU reads, once per frame.
+    void loadGpuReadback() {
+        if (!_gpuOutput || !_image.pixels.empty() || !_cudaImage.array)
+            return;
+        py::gil_scoped_acquire gil;
+        auto pixels = py::array_t<uint8_t, py::array::c_style>::ensure(
+            _adapter.attr("read_image")());
+        if (!pixels || pixels.ndim() != 3 || pixels.shape(0) != _height ||
+            pixels.shape(1) != _width || pixels.shape(2) != 3)
+            throw std::runtime_error("Render adapter must return RGB8 readback");
+        _image = {_width, _height,
+                  std::vector<uint8_t>(pixels.data(), pixels.data() + pixels.size())};
+        _cudaImage = {};
+    }
     py::object _factory, _adapter;
+    bool _gpuOutput = false;
+    KE::CudaRenderImage _cudaImage;
     RenderSceneFrame _scene;
     KE::RenderImage _image, _pending;
     int _width = 0, _height = 0;
 };
 } // namespace
 
-std::unique_ptr<KE::RenderBackend> makePythonRenderBackend(py::object factory) {
-    return std::make_unique<PythonRenderBackend>(std::move(factory));
+std::unique_ptr<KE::RenderBackend> makePythonRenderBackend(py::object factory,
+                                                        bool gpuOutput) {
+    return std::make_unique<PythonRenderBackend>(std::move(factory), gpuOutput);
 }
 
 void bind_scene_input(py::module& m) {
