@@ -42,8 +42,13 @@ def solve_ik_motion(
     *,
     max_iterations: int = 20,
     control_root_rotation: bool = True,
+    pose_damping: float = 0.01,
 ) -> IKSolveResult:
-    """Solve named full-body IK chains for every frame using native L-BFGS."""
+    """Solve named full-body IK chains for every frame using native L-BFGS.
+
+    Zero max_iterations runs until convergence. pose_damping weights the squared
+    displacement from the seed DOFs against half the squared effector error.
+    """
     targets = np.ascontiguousarray(target_positions, dtype=np.float32)
     if targets.shape != (motion.num_frames(), len(chains), 3):
         raise ValueError("target_positions must have shape [frames, chains, 3]")
@@ -99,6 +104,7 @@ def solve_ik_motion(
         np.asarray([item[0] for item in controls], dtype=np.int32),
         np.asarray([item[1] for item in controls], dtype=np.float32),
         max(0, int(max_iterations)),
+        pose_damping,
     )
     return IKSolveResult(
         corrected,
