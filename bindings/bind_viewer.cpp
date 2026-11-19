@@ -155,7 +155,13 @@ void bind_imgui(py::module& m) {
         ImGuiDir direction = ImGuiDir_None;
         if (position == "above") direction = ImGuiDir_Up;
         else if (position == "below") direction = ImGuiDir_Down;
-        else if (position != "tab") throw py::value_error("position must be above, below, or tab");
+        else if (position == "left")
+            direction = ImGuiDir_Left;
+        else if (position == "right")
+            direction = ImGuiDir_Right;
+        else if (position != "tab")
+            throw py::value_error(
+                "position must be above, below, left, right, or tab");
         if (ratio <= 0.0f || ratio >= 1.0f)
             throw py::value_error("Dock ratio must be between zero and one");
         ImGuiWindow* window = ImGui::FindWindowByName(target.c_str());
