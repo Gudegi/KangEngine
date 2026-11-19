@@ -189,6 +189,9 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/vertex_color_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/unlit_material_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/app_texture_source_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/app_backend_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/memory_texture_source_smoke.py
 
 # build Python + CPU + local USD
 build_usd_python:

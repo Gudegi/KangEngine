@@ -11,8 +11,10 @@ from __future__ import annotations
 from .._core import _ke
 from .._public import set_public_module
 from .scene_renderer import SceneRenderer
+from .texture_source import TextureSource
 
 SceneRenderer = set_public_module(SceneRenderer, __name__)
+TextureSource = set_public_module(TextureSource, __name__)
 
 
 BackendType = set_public_module(_ke.BackendType, __name__)
@@ -65,6 +67,7 @@ GraphicsPipeline = set_public_module(_ke.GraphicsPipeline, __name__)
 
 __all__ = [
     "SceneRenderer",
+    "TextureSource",
     "ProfilerCapabilities",
     "ProfileTimingDomain",
     "ProfileSampleStatus",

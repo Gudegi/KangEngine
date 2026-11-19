@@ -14,6 +14,7 @@ namespace KE {
 namespace Scene {
 
 class RenderComponent;
+class SceneRenderSystem;
 
 // One object's source resources and evaluated world state.
 struct RenderObjectSource {
@@ -22,13 +23,11 @@ struct RenderObjectSource {
     RenderMeshData mesh;
     RenderMaterialData material;
     ResourceHandle materialResource = InvalidResourceHandle;
-    std::map<
-        std::string,
-        std::pair<ResourceHandle, std::shared_ptr<const TextureSourceResource>>>
-        textures;
+    RenderTextureSources textures;
     glm::mat4 world{1.0f};
     glm::vec4 color{1.0f};
     bool visible = true;
+    bool pickable = true;
     bool doubleSided = false;
 };
 
@@ -52,8 +51,18 @@ class RenderSceneDataCollector {
     RenderSceneFrame collect(SceneBackend& scene,
                              const SceneResourceManager& resources,
                              const std::string& cameraPath);
+    // App supplies its camera separately and submits only registered objects.
+    RenderSceneFrame collectRegistered(SceneBackend& scene,
+                                       const SceneResourceManager& resources,
+                                       const SceneRenderSystem& registrations);
+    std::shared_ptr<RenderComponent> resolve(RenderInstanceId id) const;
+    RenderInstanceId instanceId(const Prim& prim) const;
+    void forget(const RenderComponent& component);
 
   private:
+    RenderSceneFrame collectScene(SceneBackend& scene,
+                                  const SceneResourceManager& resources,
+                                  const SceneRenderSystem* registrations);
     struct Identity {
         std::weak_ptr<RenderComponent> component;
         RenderInstanceId id;

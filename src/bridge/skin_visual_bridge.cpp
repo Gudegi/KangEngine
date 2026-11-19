@@ -91,6 +91,8 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     if (!material)
         throw std::runtime_error(
             "SkinVisualBridge::fromFBX requires Material");
+    // This legacy importer owns Native GPU textures as well as skin batches.
+    app->getRenderer().native();
 
     SkinVisualBridge bridge;
     bridge._app = app;

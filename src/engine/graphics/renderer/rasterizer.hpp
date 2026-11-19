@@ -61,6 +61,18 @@ class Rasterizer : public RenderPipeline {
     static constexpr int MaxShadowCascades = 4;
 
   private:
+    friend class NativeRenderSystem;
+    friend class Renderer;
+    void attachScenePrim(RenderableHandle handle, Scene::Prim& prim,
+                         Scene::SceneRenderBridge& bridge);
+    RenderableHandle
+    registerSceneBatch(const Scene::RenderMeshData& mesh, Material* material,
+                       const Scene::RenderInstanceData& instances,
+                       const Scene::SkinnedMeshData* skinnedMesh = nullptr,
+                       TransformSource source = TransformSource::SceneGraph);
+    void removeSceneBatch(const Scene::RenderMeshData& mesh,
+                          Material* material);
+    void invalidateSceneBatch(RenderableHandle handle);
     // =====================================================================
     // Scene Mesh Pipelines - batching and renderable registration
     // =====================================================================
@@ -79,8 +91,12 @@ class Rasterizer : public RenderPipeline {
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
     // Native compatibility adapter; Prim access stays outside static GPU batches.
-    std::unordered_map<const MeshInstancer*, std::unique_ptr<Scene::SceneRenderBridge>>
+    std::unordered_map<const MeshInstancer*, Scene::SceneRenderBridge*>
         _sceneBridges;
+    // Only direct Rasterizer registrations own/collect bridges here.
+    std::unordered_map<const MeshInstancer*,
+                       std::unique_ptr<Scene::SceneRenderBridge>>
+        _legacySceneBridges;
     // Retain immutable sources with the render batches; build BVHs on query.
     std::map<const Scene::MeshData*, Geometry::MeshBVH> _raycastMeshes;
 
@@ -96,9 +112,10 @@ class Rasterizer : public RenderPipeline {
     void registerPrimSource(Scene::Prim* prim, TransformSource source);
     void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
     // Native resource creation consumes source data, never a Prim.
-    RenderableHandle registerMeshBatch(const Scene::RenderMeshData& input,
-                                      Material* material,
-                                      TransformSource source);
+    RenderableHandle
+    registerMeshBatch(const Scene::RenderMeshData& input, Material* material,
+                      TransformSource source,
+                      const Scene::SkinnedMeshData* skinnedMesh = nullptr);
 
     struct RenderHookEntry {
         RenderHookHandle handle = InvalidRenderHook;
@@ -445,7 +462,8 @@ class Rasterizer : public RenderPipeline {
                             RayPickResult& outSelection) const;
     bool getPrimTransformSource(const Scene::Prim* prim,
                                 TransformSource& outSource) const;
-    void renderSelectionMaskPass(const RayPickResult& selection,
+    RayPickResult resolvePick(const RenderPickHit& hit) const;
+    void renderSelectionMaskPass(const RenderPickHit& selection,
                                  Backend::Framebuffer* target, int width,
                                  int height);
 };

@@ -1,8 +1,10 @@
 """Verify identical static scene authoring with either render adapter."""
 
 import argparse
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 import numpy as np
 from PIL import Image
@@ -41,6 +43,28 @@ def main():
 
         initial = capture("initial")
         saved_initial = initial.copy()
+        if args.backend == "native":
+            app = renderer._adapter._app
+            assert app.get_scene_render_system().registration_count == 0
+            assert app.get_scene().get_prim_at_path("/instances") is None
+            np.testing.assert_array_equal(renderer.render(), initial)
+            textures = material.texture_resources
+            cwd = Path.cwd()
+            try:
+                with tempfile.TemporaryDirectory() as directory:
+                    os.chdir(directory)
+                    for _ in range(3):
+                        parent.set_visible(False)
+                        material.texture_resources = {}
+                        renderer.render()
+                        material.texture_resources = textures
+                        renderer.render()
+                        parent.set_visible(True)
+                        np.testing.assert_array_equal(renderer.render(), initial)
+            finally:
+                os.chdir(cwd)
+                material.texture_resources = textures
+                parent.set_visible(True)
         if args.backend == "ovrtx":
             # Rejected asset paths must leave the live stage registrations intact.
             valid_textures = material.texture_resources
@@ -143,7 +167,7 @@ def main():
         assert np.abs(images[first].astype(float) - images[second]).mean() > 1, (first, second)
     np.testing.assert_array_equal(initial, saved_initial)
     assert scene.get_prim_at_path("/group/cube") is not None
-    print(f"PASS: {args.backend} scene renderer, {len(images)} frames; centers={centers}")
+    print(f"PASS: {args.backend} scene renderer, {len(images)} saved frames; centers={centers}")
 
 
 if __name__ == "__main__":

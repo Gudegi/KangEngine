@@ -657,9 +657,16 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
         const auto selection = prim->getSelectionComponent();
         return !selection || selection->isPickable();
     };
-    if (_transformSource == TransformSource::ExternalBuffer &&
-        !std::any_of(_prims.begin(), _prims.end(), pickable))
-        return false;
+    if (_transformSource == TransformSource::ExternalBuffer) {
+        const bool ownerPickable =
+            _sceneInstances
+                ? std::any_of(_sceneInstances->pickable.begin(),
+                              _sceneInstances->pickable.end(),
+                              [](uint8_t value) { return value != 0; })
+                : std::any_of(_prims.begin(), _prims.end(), pickable);
+        if (!ownerPickable)
+            return false;
+    }
 
     bool hit = false;
     const auto& instanceTransforms = transforms();
@@ -964,15 +971,21 @@ MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
     PickInstances result;
     if (!_hasVisibleOwnerPrim())
         return result;
-    if (_transformSource == TransformSource::ExternalBuffer && !_prims.empty()) {
-        const bool pickable = std::any_of(
-            _prims.begin(), _prims.end(), [](const auto* prim) {
-                if (!prim || !prim->isActiveInHierarchy() ||
-                    !prim->isVisibleInHierarchy())
-                    return false;
-                auto selection = prim->getSelectionComponent();
-                return !selection || selection->isPickable();
-            });
+    if (_transformSource == TransformSource::ExternalBuffer) {
+        const bool pickable =
+            _sceneInstances
+                ? std::any_of(_sceneInstances->pickable.begin(),
+                              _sceneInstances->pickable.end(),
+                              [](uint8_t value) { return value != 0; })
+                : _prims.empty() ||
+                      std::any_of(
+                          _prims.begin(), _prims.end(), [](const auto* prim) {
+                              if (!prim || !prim->isActiveInHierarchy() ||
+                                  !prim->isVisibleInHierarchy())
+                                  return false;
+                              auto selection = prim->getSelectionComponent();
+                              return !selection || selection->isPickable();
+                          });
         if (!pickable)
             return result;
     }
@@ -1023,7 +1036,8 @@ void MeshInstancer::recordPickDraw(Backend::RenderPassEncoder& pass,
 }
 
 Scene::RenderInstanceId MeshInstancer::sceneInstanceId(int instanceIndex) const {
-    if (!usesSceneData() || instanceIndex < 0 ||
+    if (_transformSource != TransformSource::SceneGraph || !usesSceneData() ||
+        instanceIndex < 0 ||
         static_cast<size_t>(instanceIndex) >= _sceneInstances->ids.size())
         return Scene::InvalidRenderInstance;
     return _sceneInstances->ids[static_cast<size_t>(instanceIndex)];

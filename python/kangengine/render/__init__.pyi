@@ -241,6 +241,25 @@ class RenderHookPhase(Enum):
     AFTER_OPAQUE: RenderHookPhase
     AFTER_TRANSPARENT: RenderHookPhase
 
+class TextureSource:
+    """Immutable scene-local reference returned by App texture creation."""
+    @property
+    def path(self) -> str | None:
+        """Absolute image path, or None for a memory image."""
+        ...
+    @property
+    def srgb(self) -> bool:
+        """Whether to decode image RGB from sRGB."""
+        ...
+    @property
+    def flip(self) -> bool:
+        """Whether to flip image rows during loading."""
+        ...
+    @property
+    def resource_handle(self) -> int:
+        """Texture source identity in the owning App's resource manager."""
+        ...
+
 class Texture:
     """GPU texture created by a graphics device."""
     @property
@@ -468,8 +487,8 @@ class FrameProfile:
         """Whether all timing results have a terminal status."""
         ...
     @property
-    def backend(self) -> BackendType:
-        """Backend that rendered the captured frame."""
+    def backend(self) -> BackendType | None:
+        """RHI backend, or None for an externally managed renderer."""
         ...
     @property
     def gpu_latency_frames(self) -> int | None:
@@ -560,6 +579,13 @@ class ProfileSummary:
 
 class Renderer:
     """Facade for custom pipelines and renderable resource updates."""
+    @property
+    def capabilities(self) -> dict[str, bool]:
+        """Frame support: screen_presentation, selection_outline, wireframe,
+        static_scene, scene_batches, memory_textures, screen_picking, and
+        native_extensions.
+        """
+        ...
     def set_profiler_enabled(self, enabled: bool) -> None:
         """Enable or disable CPU/GPU pass capture at the next frame boundary."""
         ...

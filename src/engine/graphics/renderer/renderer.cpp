@@ -1,9 +1,10 @@
 #include "renderer.hpp"
+#include "engine/graphics/renderer/render_backend/native/native_render_system.hpp"
 #include "engine/scene/types/light_color.hpp"
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/types/camera.hpp"
-#include "engine/graphics/renderer/fullscreen_pass.hpp"
+#include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -13,69 +14,296 @@
 
 namespace KE {
 
-namespace {
-
-constexpr const char* OffscreenCopyVs = R"(
-#version 410 core
-out vec2 TexCoord;
-void main() {
-    vec2 position = vec2(
-        gl_VertexID == 1 ? 3.0 : -1.0,
-        gl_VertexID == 2 ? 3.0 : -1.0);
-    gl_Position = vec4(position, 0.0, 1.0);
-    TexCoord = position * 0.5 + 0.5;
-}
-)";
-
-constexpr const char* OffscreenCopyFs = R"(
-#version 410 core
-in vec2 TexCoord;
-out vec4 FragColor;
-uniform sampler2D ke_g3_b0;
-void main() {
-    FragColor = texture(ke_g3_b0, TexCoord);
-}
-)";
-
-} // namespace
-
+Renderer::Renderer() = default;
 Renderer::~Renderer() = default;
 
+void Renderer::initialize(Backend::GraphicsDevice& device, int width,
+                          int height, std::unique_ptr<RenderBackend> backend) {
+    if (!backend)
+        backend = std::make_unique<NativeRenderSystem>(device, *this);
+    initialize(std::move(backend), width, height);
+    if (!_device) {
+        _device = &device;
+        _profiler.bind(device.profileContext(), &device);
+    }
+}
+
+void Renderer::initialize(std::unique_ptr<RenderBackend> backend, int width,
+                          int height) {
+    if (_renderBackend || _device)
+        throw std::logic_error("Renderer is already initialized or bound");
+    if (!backend)
+        throw std::invalid_argument("Render backend must not be null");
+    if (width <= 0 || height <= 0)
+        throw std::invalid_argument("Render dimensions must be positive");
+    _renderBackend = std::move(backend);
+    try {
+        _renderBackend->initialize(width, height);
+        _backendCapabilities = _renderBackend->capabilities();
+        _pickView.width = width;
+        _pickView.height = height;
+    } catch (...) {
+        // Initialization may have created resources or bound compatibility
+        // access.
+        release();
+        throw;
+    }
+}
+
+RenderBackend& Renderer::renderBackend() {
+    if (!_renderBackend)
+        throw std::runtime_error("Renderer has no initialized render backend");
+    return *_renderBackend;
+}
+
+NativeRenderSystem& Renderer::nativeRenderSystem() {
+    auto* native = dynamic_cast<NativeRenderSystem*>(_renderBackend.get());
+    if (!native)
+        throw std::runtime_error(
+            "This operation requires the Native render backend");
+    return *native;
+}
+
+NativeRenderExtension& Renderer::native() {
+    if (!_native)
+        throw std::runtime_error(
+            "This operation requires the Native render backend");
+    return *_native;
+}
+
+const NativeRenderExtension& Renderer::native() const {
+    if (!_native)
+        throw std::runtime_error(
+            "This operation requires the Native render backend");
+    return *_native;
+}
+
+RenderBackendCapabilities Renderer::capabilities() const {
+    return _backendCapabilities;
+}
+
+void Renderer::resizeFrame(int width, int height) {
+    if (width <= 0 || height <= 0)
+        throw std::invalid_argument("Render dimensions must be positive");
+    if (_renderBackend)
+        _renderBackend->resize(width, height);
+    cancelPick();
+    _pickView.width = width;
+    _pickView.height = height;
+}
+
+void Renderer::syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
+                         const glm::mat4& projection) {
+    if (_pickView.view != view || _pickView.projection != projection)
+        cancelPick();
+    _pickView.view = view;
+    _pickView.projection = projection;
+    ++_pickView.frame;
+    syncSceneLights(scene);
+    syncSceneInstances();
+    if (_renderBackend)
+        _renderBackend->syncFrame(view, projection);
+    else if (_rasterizer)
+        _rasterizer->updateFrameData(view, projection);
+}
+
+void Renderer::syncSceneInstances() {
+    for (auto& [key, batch] : _sceneBatches) {
+        if (!_rasterizer && !batch->bridge.empty())
+            batch->materialSource = Scene::SceneRenderBridge::materialSource(
+                *batch->material, _sceneResources);
+        batch->bridge.collect();
+    }
+}
+
+void Renderer::bindSceneResources(
+    const Scene::SceneResourceManager& resources) {
+    if (!_sceneBatches.empty())
+        throw std::logic_error(
+            "Bind scene resources before registering batches");
+    _sceneResources = &resources;
+}
+
+void Renderer::syncScene(const Scene::RenderSceneFrame& scene) {
+    if (!capabilities().staticScene)
+        throw std::runtime_error(
+            "Render backend does not support static scene data");
+    renderBackend().syncScene(scene);
+}
+
+void Renderer::prepareFrame(Camera& camera, UpAxis upAxis) {
+    renderBackend().prepareFrame(camera, upAxis);
+}
+
+void Renderer::beginFrame() { renderBackend().beginFrame(); }
+
+uint64_t Renderer::requestPick(glm::vec2 ndc) {
+    if (!capabilities().screenPicking)
+        throw std::runtime_error("Render backend does not support screen picking");
+    if (_pickView.frame == 0)
+        throw std::logic_error("Synchronize the frame before requesting a pick");
+    cancelPick();
+    auto request = _pickView;
+    request.id = _nextPickId++;
+    request.ndc = ndc;
+    for (auto& [key, batch] : _sceneBatches)
+        batch->bridge.refreshSelection();
+    renderBackend().requestPick(request);
+    _pendingPick = request;
+    _pickInstanceRevision = _instanceRevision;
+    return request.id;
+}
+
+std::optional<RenderPickResult> Renderer::pollPick() {
+    if (!_pendingPick)
+        return std::nullopt;
+    auto result = renderBackend().pollPick();
+    if (!result || result->requestId != _pendingPick->id ||
+        result->frame != _pendingPick->frame)
+        return std::nullopt;
+    cancelPick();
+    // External rows and legacy registrations have no stable object identity.
+    if (result->hit.hit && result->hit.sceneInstanceId == 0 &&
+        _pickInstanceRevision != _instanceRevision)
+        return std::nullopt;
+    return result;
+}
+
+bool Renderer::buildPrimSelection(Scene::Prim& prim,
+                                   RayPickResult& selection) const {
+    if (_rasterizer)
+        return native().rasterizer().buildPrimSelection(&prim, selection);
+    for (const auto& [key, batch] : _sceneBatches) {
+        if (std::get<2>(key) != TransformSource::SceneGraph)
+            continue;
+        const int index = batch->bridge.instanceIndex(prim);
+        if (index < 0)
+            continue;
+        selection = {};
+        selection.hit = true;
+        selection.handle = batch->handle;
+        selection.instanceIndex = index;
+        selection.sceneInstanceId = batch->bridge.instances().ids[index];
+        selection.prim = &prim;
+        return true;
+    }
+    return false;
+}
+
+RayPickResult Renderer::resolvePick(const RenderPickHit& hit) const {
+    if (!hit.hit)
+        return {};
+    const auto found = _sceneBatchHandles.find(hit.handle);
+    if (found != _sceneBatchHandles.end() &&
+        hit.transformSource == TransformSource::SceneGraph) {
+        const auto& bridge = found->second->bridge;
+        auto* prim = bridge.resolve(hit.sceneInstanceId);
+        const int index = bridge.instanceIndex(hit.sceneInstanceId);
+        if (!prim || index < 0)
+            return {};
+        RayPickResult result;
+        static_cast<RenderPickHit&>(result) = hit;
+        result.prim = prim;
+        result.instanceIndex = index;
+        return result;
+    }
+    // Existing direct Rasterizer registrations retain Native resolution.
+    if (_rasterizer)
+        return native().rasterizer().resolvePick(hit);
+    if (found == _sceneBatchHandles.end() || found->second->bridge.empty())
+        return {};
+    RayPickResult result;
+    static_cast<RenderPickHit&>(result) = hit;
+    return result;
+}
+
+void Renderer::renderScene(const glm::mat4& view, const glm::mat4& projection,
+                           bool wireframe) {
+    if (wireframe && !capabilities().wireframe)
+        throw std::runtime_error("Render backend does not support wireframe");
+    renderBackend().renderScene(view, projection, wireframe);
+}
+
+void Renderer::endFrame(const RayPickResult& selection, bool presentToScreen) {
+    const auto supported = capabilities();
+    if (selection.hit && !supported.selectionOutline)
+        throw std::runtime_error(
+            "Render backend does not support selection outlines");
+    if (presentToScreen && !supported.screenPresentation)
+        throw std::runtime_error(
+            "Render backend does not support screen presentation");
+    renderBackend().endFrame(selection, presentToScreen);
+}
+
+RenderImage Renderer::readImage(bool flipY) {
+    return renderBackend().readImage(flipY);
+}
+
+RenderImage Renderer::readImageResized(int width, int height, bool flipY) {
+    if (width <= 0 || height <= 0)
+        throw std::invalid_argument(
+            "Capture width and height must be positive");
+    return renderBackend().readImageResized(width, height, flipY);
+}
+
+Backend::Texture* Renderer::presentedTexture() {
+    auto* native = dynamic_cast<NativeRenderSystem*>(_renderBackend.get());
+    auto* output = native ? native->outputFramebuffer() : nullptr;
+    return output ? output->getColorTexture() : nullptr;
+}
+
+Backend::Texture* Renderer::renderCameraPreview(const glm::mat4& view,
+                                                const glm::mat4& projection,
+                                                int width, int height) {
+    return nativeRenderSystem().renderCameraPreview(view, projection, width,
+                                                    height);
+}
+
+RenderImage Renderer::readCameraPreview(bool flipY) {
+    return nativeRenderSystem().readCameraPreview(flipY);
+}
+
+int Renderer::sampleCount() const {
+    const auto* native =
+        dynamic_cast<const NativeRenderSystem*>(_renderBackend.get());
+    return native ? native->sampleCount() : 0;
+}
+
+void Renderer::rebuildSceneRenderTarget() {
+    if (_renderBackend)
+        nativeRenderSystem().rebuildSceneRenderTarget();
+}
+
+void Renderer::rebuildSceneClearTarget(const glm::vec4& clearColor) {
+    if (_renderBackend)
+        nativeRenderSystem().rebuildSceneClearTarget(clearColor);
+}
+
 void Renderer::release() {
-    _offscreenCopyBindGroup.reset();
-    _offscreenCopyPipeline.reset();
-    _offscreenCopySampler.reset();
-    _offscreenCopyPipelineLayout.reset();
-    for (auto& layout : _offscreenCopyGroupLayouts)
-        layout.reset();
-    _offscreenOutputTarget.reset();
-    _offscreenOutputView.reset();
-    _offscreenResolveTarget.reset();
-    _offscreenDrawTarget.reset();
-    _offscreenClearTarget.reset();
-    _offscreenDepthStencilView.reset();
-    _offscreenResolveColorView.reset();
-    _offscreenMsaaColorView.reset();
-    _offscreenMsaaDepthStencil.reset();
-    _offscreenIntermediateColor.reset();
-    _offscreenMsaaColor.reset();
-    _sceneHookFramePipelineLayout.reset();
-    _sceneHookDefaultPipelineLayout.reset();
+    cancelPick();
+    _pickView = {};
+    _native.reset();
     _profiler.bind(nullptr);
     _profiler.setEnabled(false);
     _device = nullptr;
     _rasterizer = nullptr;
     _postProcessor = nullptr;
     _selectionOutlineProcessor = nullptr;
-    _offscreenFramebuffer = nullptr;
-    _offscreenResolvedColor = nullptr;
-    _offscreenWidth = _offscreenHeight = 0;
-    _offscreenOutputFormat = Backend::TextureFormat::Undefined;
+    _renderBackend.reset();
+    _sceneBatchHandles.clear();
+    _sceneBatches.clear();
+    _sceneResources = nullptr;
+    _backendCapabilities = {};
 }
 
 void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
                     PostProcessor* postProcessor,
                     SelectionOutlineProcessor* selectionOutlineProcessor) {
+    if (!device || !rasterizer)
+        throw std::invalid_argument(
+            "Native binding requires a device and Rasterizer");
+    _native = std::make_unique<NativeRenderExtension>(*device, *rasterizer,
+                                                      _settings);
     _device = device;
     _profiler.bind(device->profileContext(), device);
     _rasterizer = rasterizer;
@@ -84,41 +312,43 @@ void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
 }
 
 void Renderer::setViewportSize(int width, int height) {
-    _viewportWidth = width;
-    _viewportHeight = height;
-    if (_rasterizer)
-        _rasterizer->setViewportSize(width, height);
+    native().setViewportSize(width, height);
 }
 
 void Renderer::applyBackgroundSettings() {
-    if (_rasterizer)
-        _rasterizer->setBackgroundSettings(_settings.background);
+    native().rasterizer().setBackgroundSettings(_settings.background);
 }
 
 void Renderer::setLight(const DirectionalLight& light) {
-    if (_rasterizer)
-        _rasterizer->setLight(light);
+    native().rasterizer().setLight(light);
 }
 
 const DirectionalLight& Renderer::light() const {
+    if (!_rasterizer)
+        throw std::runtime_error(
+            "Renderer light access requires the Native backend");
     return _rasterizer->getLight();
 }
 
 void Renderer::setPointLights(std::vector<PointLight> lights) {
-    if (_rasterizer)
-        _rasterizer->setPointLights(std::move(lights));
+    native().rasterizer().setPointLights(std::move(lights));
 }
 
 const std::vector<PointLight>& Renderer::pointLights() const {
+    if (!_rasterizer)
+        throw std::runtime_error(
+            "Renderer light access requires the Native backend");
     return _rasterizer->getPointLights();
 }
 
 void Renderer::setSpotLights(std::vector<SpotLight> lights) {
-    if (_rasterizer)
-        _rasterizer->setSpotLights(std::move(lights));
+    native().rasterizer().setSpotLights(std::move(lights));
 }
 
 const std::vector<SpotLight>& Renderer::spotLights() const {
+    if (!_rasterizer)
+        throw std::runtime_error(
+            "Renderer light access requires the Native backend");
     return _rasterizer->getSpotLights();
 }
 
@@ -201,80 +431,16 @@ Backend::Framebuffer* Renderer::shadowFbo() {
 
 RenderHookHandle Renderer::addRenderHook(RenderHookPhase phase,
                                          RenderHookCallback callback) {
-    return _rasterizer ? _rasterizer->addRenderHook(phase, std::move(callback))
-                       : InvalidRenderHook;
+    return native().rasterizer().addRenderHook(phase, std::move(callback));
 }
 
 bool Renderer::removeRenderHook(RenderHookHandle handle) {
-    return _rasterizer && _rasterizer->removeRenderHook(handle);
+    return native().rasterizer().removeRenderHook(handle);
 }
 
 std::unique_ptr<Backend::GraphicsPipeline>
-Renderer::createSceneHookPipeline(const SceneHookPipelineDesc& hookDesc) {
-    if (!_device || !_rasterizer)
-        throw std::runtime_error(
-            "scene hook pipeline requires a bound renderer");
-    if (hookDesc.shader.stages.empty())
-        throw std::invalid_argument(
-            "scene hook pipeline requires shader stages");
-    for (const Backend::ShaderStage& stage : hookDesc.shader.stages) {
-        if (stage.type == Backend::ShaderType::Compute)
-            throw std::invalid_argument(
-                "compute shaders require a compute pipeline; scene hook "
-                "pipelines are graphics-only");
-    }
-
-    Backend::PipelineLayout* pipelineLayout = hookDesc.pipelineLayout;
-    if (!pipelineLayout && hookDesc.useSceneFrameBindings) {
-        if (!_sceneHookFramePipelineLayout) {
-            Backend::PipelineLayoutDesc layoutDesc;
-            layoutDesc.label = "scene_hook_frame_pipeline_layout";
-            layoutDesc.bindGroupLayouts = {
-                _rasterizer->sceneFrameBindGroupLayout()};
-            _sceneHookFramePipelineLayout =
-                _device->createPipelineLayout(layoutDesc);
-        }
-        pipelineLayout = _sceneHookFramePipelineLayout.get();
-    } else if (!pipelineLayout) {
-        if (!_sceneHookDefaultPipelineLayout) {
-            Backend::PipelineLayoutDesc layoutDesc;
-            layoutDesc.label = "scene_hook_default_pipeline_layout";
-            _sceneHookDefaultPipelineLayout =
-                _device->createPipelineLayout(layoutDesc);
-        }
-        pipelineLayout = _sceneHookDefaultPipelineLayout.get();
-    }
-
-    Backend::GraphicsPipelineDesc pipelineDesc;
-    pipelineDesc.label = hookDesc.label;
-    pipelineDesc.shader = hookDesc.shader;
-    pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.vertexBuffers = hookDesc.vertexBuffers;
-    pipelineDesc.primitive.topology = hookDesc.topology;
-    pipelineDesc.primitive.cullMode = hookDesc.cullMode;
-    pipelineDesc.depthStencil = Backend::DepthStencilState{
-        Backend::TextureFormat::Depth24Stencil8, hookDesc.depthWrite,
-        hookDesc.depthTest ? hookDesc.depthCompare
-                           : Backend::CompareFunction::Always};
-
-    Backend::ColorTargetState colorTarget;
-    colorTarget.format = Backend::TextureFormat::RGBA16Float;
-    if (hookDesc.blend != SceneHookBlendMode::Opaque) {
-        Backend::BlendState blend;
-        blend.color.srcFactor = Backend::BlendFactorValue::SrcAlpha;
-        blend.alpha.srcFactor = Backend::BlendFactorValue::One;
-        if (hookDesc.blend == SceneHookBlendMode::Alpha) {
-            blend.color.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
-            blend.alpha.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
-        } else {
-            blend.color.dstFactor = Backend::BlendFactorValue::One;
-            blend.alpha.dstFactor = Backend::BlendFactorValue::One;
-        }
-        colorTarget.blend = blend;
-    }
-    pipelineDesc.colorTargets = {colorTarget};
-    pipelineDesc.sampleCount = 4;
-    return _device->createGraphicsPipeline(pipelineDesc);
+Renderer::createSceneHookPipeline(const SceneHookPipelineDesc& desc) {
+    return native().createSceneHookPipeline(desc);
 }
 
 void Renderer::renderSceneToFramebuffer(Camera& camera,
@@ -284,324 +450,162 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
                              target, width, height, clear);
 }
 
-void Renderer::ensureOffscreenSceneTarget(Backend::Framebuffer* target,
-                                          int width, int height) {
-    Backend::Texture* resolvedColor =
-        target ? target->getColorTexture() : nullptr;
-    if (!resolvedColor)
-        throw std::runtime_error("offscreen scene target has no color texture");
-    if (_offscreenDrawTarget && _offscreenFramebuffer == target &&
-        _offscreenResolvedColor == resolvedColor && _offscreenWidth == width &&
-        _offscreenHeight == height)
-        return;
-
-    _offscreenResolveTarget.reset();
-    _offscreenDrawTarget.reset();
-    _offscreenDepthStencilView.reset();
-    _offscreenResolveColorView.reset();
-    _offscreenMsaaColorView.reset();
-    _offscreenMsaaDepthStencil.reset();
-    _offscreenMsaaColor.reset();
-    _offscreenIntermediateColor.reset();
-    _offscreenOutputTarget.reset();
-    _offscreenOutputView.reset();
-    _offscreenCopyBindGroup.reset();
-
-    Backend::TextureResourceDesc colorDesc;
-    colorDesc.extent = {static_cast<uint32_t>(width),
-                        static_cast<uint32_t>(height), 1};
-    colorDesc.format = Backend::TextureFormat::RGBA16Float;
-    colorDesc.usage = Backend::TextureUsage::RenderAttachment;
-    colorDesc.sampleCount = 4;
-    colorDesc.label = "offscreen_scene_msaa_color";
-    _offscreenMsaaColor = _device->createTexture(colorDesc);
-
-    Backend::Texture* resolveColor = resolvedColor;
-    if (resolvedColor->getFormat() != Backend::TextureFormat::RGBA16Float) {
-        Backend::TextureResourceDesc intermediateDesc = colorDesc;
-        intermediateDesc.sampleCount = 1;
-        intermediateDesc.usage = Backend::TextureUsage::RenderAttachment |
-                                 Backend::TextureUsage::TextureBinding;
-        intermediateDesc.label = "offscreen_scene_intermediate_color";
-        _offscreenIntermediateColor = _device->createTexture(intermediateDesc);
-        resolveColor = _offscreenIntermediateColor.get();
-    }
-
-    Backend::TextureResourceDesc depthDesc;
-    depthDesc.extent = colorDesc.extent;
-    depthDesc.format = Backend::TextureFormat::Depth24Stencil8;
-    depthDesc.usage = Backend::TextureUsage::RenderAttachment;
-    depthDesc.sampleCount = 4;
-    depthDesc.label = "offscreen_scene_msaa_depth_stencil";
-    _offscreenMsaaDepthStencil = _device->createTexture(depthDesc);
-
-    Backend::TextureViewDesc viewDesc;
-    viewDesc.format = Backend::TextureFormat::RGBA16Float;
-    viewDesc.label = "offscreen_scene_msaa_color_view";
-    _offscreenMsaaColorView =
-        _device->createTextureView(_offscreenMsaaColor.get(), viewDesc);
-    viewDesc.label = "offscreen_scene_resolve_color_view";
-    _offscreenResolveColorView =
-        _device->createTextureView(resolveColor, viewDesc);
-    viewDesc.format = Backend::TextureFormat::Depth24Stencil8;
-    viewDesc.aspect = Backend::TextureAspect::All;
-    viewDesc.label = "offscreen_scene_depth_stencil_view";
-    _offscreenDepthStencilView =
-        _device->createTextureView(_offscreenMsaaDepthStencil.get(), viewDesc);
-
-    Backend::RenderPassDesc passDesc;
-    passDesc.label = "offscreen_scene_resolve_pass";
-    passDesc.colorAttachments = {{_offscreenMsaaColorView.get(),
-                                  _offscreenResolveColorView.get(),
-                                  Backend::LoadOp::Load,
-                                  Backend::StoreOp::Store,
-                                  {}}};
-    passDesc.depthStencilAttachment =
-        Backend::DepthStencilAttachmentDesc{_offscreenDepthStencilView.get(),
-                                            Backend::LoadOp::Load,
-                                            Backend::StoreOp::Store,
-                                            1.0f,
-                                            Backend::LoadOp::Load,
-                                            Backend::StoreOp::Store,
-                                            0};
-    _offscreenResolveTarget = _device->createRenderTarget(passDesc);
-    passDesc.label = "offscreen_scene_draw_pass";
-    passDesc.colorAttachments[0].resolveTarget = nullptr;
-    _offscreenDrawTarget = _device->createRenderTarget(passDesc);
-    _offscreenClearTarget.reset();
-
-    if (_offscreenIntermediateColor)
-        ensureOffscreenFormatConversion(resolvedColor);
-
-    _offscreenFramebuffer = target;
-    _offscreenResolvedColor = resolvedColor;
-    _offscreenWidth = width;
-    _offscreenHeight = height;
-}
-
-void Renderer::ensureOffscreenClearTarget(const glm::vec4& clearColor) {
-    if (_offscreenClearTarget) {
-        const auto& current = _offscreenClearTarget->getDesc()
-                                  .colorAttachments.front()
-                                  .clearValue;
-        if (current.r == clearColor.r && current.g == clearColor.g &&
-            current.b == clearColor.b && current.a == clearColor.a)
-            return;
-    }
-
-    Backend::RenderPassDesc passDesc;
-    passDesc.label = "offscreen_scene_clear_pass";
-    passDesc.colorAttachments = {
-        {_offscreenMsaaColorView.get(),
-         nullptr,
-         Backend::LoadOp::Clear,
-         Backend::StoreOp::Store,
-         {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
-    passDesc.depthStencilAttachment =
-        Backend::DepthStencilAttachmentDesc{_offscreenDepthStencilView.get(),
-                                            Backend::LoadOp::Clear,
-                                            Backend::StoreOp::Store,
-                                            1.0f,
-                                            Backend::LoadOp::Clear,
-                                            Backend::StoreOp::Store,
-                                            0};
-    _offscreenClearTarget = _device->createRenderTarget(passDesc);
-}
-
-void Renderer::ensureOffscreenFormatConversion(Backend::Texture* targetColor) {
-    const Backend::TextureFormat outputFormat = targetColor->getFormat();
-    if (outputFormat != Backend::TextureFormat::RGBA8Unorm &&
-        outputFormat != Backend::TextureFormat::RGBA8UnormSrgb) {
-        throw std::runtime_error(
-            "unsupported RHI offscreen output color format");
-    }
-
-    if (!_offscreenCopyPipelineLayout) {
-        for (size_t i = 0; i < 3; ++i) {
-            Backend::BindGroupLayoutDesc emptyDesc;
-            emptyDesc.label = "offscreen_copy_empty_group_" + std::to_string(i);
-            _offscreenCopyGroupLayouts[i] =
-                _device->createBindGroupLayout(emptyDesc);
-        }
-        Backend::BindGroupLayoutDesc copyLayoutDesc;
-        copyLayoutDesc.label = "offscreen_copy_group_layout";
-        copyLayoutDesc.entries = {
-            {0, Backend::BindingType::SampledTexture,
-             Backend::ShaderStageVisibility::Fragment,
-             Backend::TextureFormat::RGBA16Float},
-            {1, Backend::BindingType::Sampler,
-             Backend::ShaderStageVisibility::Fragment},
-        };
-        _offscreenCopyGroupLayouts[3] =
-            _device->createBindGroupLayout(copyLayoutDesc);
-
-        Backend::PipelineLayoutDesc layoutDesc;
-        layoutDesc.label = "offscreen_copy_pipeline_layout";
-        for (const auto& layout : _offscreenCopyGroupLayouts)
-            layoutDesc.bindGroupLayouts.push_back(layout.get());
-        _offscreenCopyPipelineLayout =
-            _device->createPipelineLayout(layoutDesc);
-
-        Backend::SamplerDesc samplerDesc;
-        samplerDesc.wrapU = Backend::TextureWrap::ClampToEdge;
-        samplerDesc.wrapV = Backend::TextureWrap::ClampToEdge;
-        samplerDesc.minFilter = Backend::TextureFilter::Linear;
-        samplerDesc.magFilter = Backend::TextureFilter::Linear;
-        samplerDesc.label = "offscreen_copy_sampler";
-        _offscreenCopySampler = _device->createSampler(samplerDesc);
-    }
-
-    if (!_offscreenCopyPipeline || _offscreenOutputFormat != outputFormat) {
-        Backend::GraphicsPipelineDesc pipelineDesc;
-        pipelineDesc.label = "offscreen_copy_pipeline";
-        pipelineDesc.shader.name = "offscreen_copy_rhi";
-        pipelineDesc.shader.stages = {
-            {OffscreenCopyVs, Backend::ShaderType::Vertex, "main"},
-            {OffscreenCopyFs, Backend::ShaderType::Fragment, "main"},
-        };
-        pipelineDesc.primitive.cullMode = Backend::CullMode::None;
-        pipelineDesc.colorTargets = {{outputFormat}};
-        pipelineDesc.pipelineLayout = _offscreenCopyPipelineLayout.get();
-        _offscreenCopyPipeline = _device->createGraphicsPipeline(pipelineDesc);
-        _offscreenOutputFormat = outputFormat;
-    }
-
-    Backend::TextureViewDesc outputViewDesc;
-    outputViewDesc.format = outputFormat;
-    outputViewDesc.label = "offscreen_copy_output_view";
-    _offscreenOutputView =
-        _device->createTextureView(targetColor, outputViewDesc);
-    Backend::RenderPassDesc outputPassDesc;
-    outputPassDesc.label = "offscreen_copy_pass";
-    outputPassDesc.colorAttachments = {{_offscreenOutputView.get(),
-                                        nullptr,
-                                        Backend::LoadOp::Clear,
-                                        Backend::StoreOp::Store,
-                                        {0.0f, 0.0f, 0.0f, 1.0f}}};
-    _offscreenOutputTarget = _device->createRenderTarget(outputPassDesc);
-
-    Backend::BindGroupDesc bindDesc;
-    bindDesc.layout = _offscreenCopyGroupLayouts[3].get();
-    bindDesc.label = "offscreen_copy_bind_group";
-    bindDesc.entries = {
-        {0, nullptr, 0, 0, _offscreenResolveColorView.get(), nullptr},
-        {1, nullptr, 0, 0, nullptr, _offscreenCopySampler.get()},
-    };
-    _offscreenCopyBindGroup = _device->createBindGroup(bindDesc);
-}
-
-void Renderer::recordOffscreenFormatConversion(int width, int height) {
-    if (!_offscreenIntermediateColor)
-        return;
-    auto encoder = _device->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(
-        _offscreenOutputTarget.get(),
-        _device->profilePass("render/offscreen/convert"));
-    FullscreenPass::record(
-        *pass, _offscreenCopyPipeline.get(), static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height), _offscreenCopyBindGroup.get());
-    pass->end();
-    auto commands = encoder->finish();
-    _device->submit(*commands);
-}
-
 void Renderer::renderSceneToFramebuffer(const glm::mat4& view,
-                                        const glm::mat4& proj,
+                                        const glm::mat4& projection,
                                         Backend::Framebuffer* target, int width,
                                         int height, bool clear) {
-    if (!_rasterizer || !_device || !target || width <= 0 || height <= 0)
+    auto& extension = native();
+    if (!target || width <= 0 || height <= 0)
         return;
-
     applyBackgroundSettings();
-    _rasterizer->updateFrameData(view, proj);
-    _rasterizer->setViewportSize(width, height);
-    ensureOffscreenSceneTarget(target, width, height);
-    if (clear) {
-        ensureOffscreenClearTarget(_settings.background.backgroundColor);
-        auto encoder = _device->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(
-            _offscreenClearTarget.get(),
-            _device->profilePass("render/offscreen/clear"));
-        pass->end();
-        auto commands = encoder->finish();
-        _device->submit(*commands);
-    }
-    _rasterizer->render(view, proj, _offscreenDrawTarget.get());
-    {
-        auto encoder = _device->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(
-            _offscreenResolveTarget.get(),
-            _device->profilePass("render/offscreen/resolve"));
-        pass->end();
-        auto commands = encoder->finish();
-        _device->submit(*commands);
-    }
-    recordOffscreenFormatConversion(width, height);
-    if (_viewportWidth > 0 && _viewportHeight > 0)
-        _device->setViewport(0, 0, _viewportWidth, _viewportHeight);
-    _rasterizer->setViewportSize(_viewportWidth, _viewportHeight);
+    syncSceneInstances();
+    if (_renderBackend)
+        _renderBackend->syncFrame(view, projection);
+    else
+        extension.rasterizer().updateFrameData(view, projection);
+    extension.renderSceneToFramebuffer(view, projection, target, width, height,
+                                       clear);
 }
 
 RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,
                                          TransformSource transformSource) {
+    if (capabilities().sceneBatches) {
+        if (!prim || !material)
+            return InvalidHandle;
+        return addSceneRenderable(*material, *prim, transformSource, nullptr);
+    }
+    if (_renderBackend && !_rasterizer)
+        throw std::runtime_error(
+            "Render backend does not support Native renderable registration");
     return _rasterizer
                ? _rasterizer->addRenderable(material, prim, transformSource)
                : InvalidHandle;
 }
 
 RenderableHandle
+Renderer::addSceneRenderable(Material& material, Scene::Prim& prim,
+                             TransformSource source,
+                             const Scene::SkinnedMeshData* skinnedMesh) {
+    const auto mesh = Scene::SceneRenderBridge::meshData(prim);
+    if (!mesh.mesh || mesh.mesh->vertices.empty() ||
+        mesh.mesh->indices.empty() ||
+        (skinnedMesh && !skinnedMesh->hasValidVertexSkinning()))
+        return InvalidHandle;
+    const auto key = std::make_tuple(mesh.mesh.get(), &material, source);
+    auto it = _sceneBatches.find(key);
+    if (it == _sceneBatches.end()) {
+        auto batch = std::make_unique<SceneBatch>();
+        batch->mesh = mesh;
+        batch->material = &material;
+        // Native keeps live legacy material bindings; other backends receive
+        // source values and textures only.
+        batch->materialSource = Scene::SceneRenderBridge::materialSource(
+            material, _rasterizer ? nullptr : _sceneResources);
+        auto* native = dynamic_cast<NativeRenderSystem*>(_renderBackend.get());
+        if (native)
+            native->bindLegacyMaterial(batch->materialSource, &material);
+        try {
+            batch->handle = renderBackend().registerSceneBatch(
+                mesh, batch->materialSource, batch->bridge.instances(), source,
+                skinnedMesh);
+        } catch (...) {
+            if (native)
+                native->bindLegacyMaterial(batch->materialSource, nullptr);
+            throw;
+        }
+        if (batch->handle == InvalidHandle) {
+            if (native)
+                native->bindLegacyMaterial(batch->materialSource, nullptr);
+            return InvalidHandle;
+        }
+        it = _sceneBatches.emplace(key, std::move(batch)).first;
+        _sceneBatchHandles.emplace(it->second->handle, it->second.get());
+    }
+    auto& batch = *it->second;
+    batch.bridge.add(prim);
+    if (_rasterizer)
+        _rasterizer->attachScenePrim(batch.handle, prim, batch.bridge);
+    return batch.handle;
+}
+
+RenderableHandle
 Renderer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
                                const Scene::SkinnedMeshData& skinnedMesh,
                                TransformSource transformSource) {
+    if (capabilities().sceneBatches) {
+        if (!prim || !material)
+            return InvalidHandle;
+        return addSceneRenderable(*material, *prim, transformSource,
+                                  &skinnedMesh);
+    }
+    if (_renderBackend && !_rasterizer)
+        throw std::runtime_error(
+            "Render backend does not support Native renderable registration");
     return _rasterizer ? _rasterizer->addSkinnedRenderable(
                              material, prim, skinnedMesh, transformSource)
                        : InvalidHandle;
 }
 
 void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
+    ++_instanceRevision;
     if (_rasterizer)
         _rasterizer->removePrim(handle, prim);
+    else if (prim) {
+        auto it = _sceneBatchHandles.find(handle);
+        if (it != _sceneBatchHandles.end())
+            it->second->bridge.remove(*prim);
+    }
 }
 
 void Renderer::removePrim(Scene::Prim* prim) {
+    ++_instanceRevision;
     if (_rasterizer)
         _rasterizer->removePrim(prim);
+    else if (prim) {
+        for (auto& [key, batch] : _sceneBatches)
+            batch->bridge.remove(*prim);
+    }
 }
 
 void Renderer::updateRenderableTransforms(
     RenderableHandle handle, const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {
-    if (_rasterizer)
+    ++_instanceRevision;
+    if (_renderBackend)
+        _renderBackend->updateRenderableTransforms(handle, transforms, colors);
+    else if (_rasterizer)
         _rasterizer->updateRenderableTransforms(handle, transforms, colors);
 }
 
 void Renderer::setRenderableExternalBuffer(RenderableHandle handle,
                                            const ExternalBufferDesc& desc) {
-    if (_rasterizer)
+    ++_instanceRevision;
+    if (_renderBackend)
+        _renderBackend->setRenderableExternalBuffer(handle, desc);
+    else if (_rasterizer)
         _rasterizer->setRenderableExternalBuffer(handle, desc);
 }
 
 std::vector<Sim::GpuArrayView> Renderer::mapRenderableCudaTransformBuffers(
     const std::vector<RenderableHandle>& handles, int count, int deviceId,
     uint64_t streamHandle) {
-    if (!_rasterizer)
-        throw std::runtime_error("renderer is not initialized");
-    return _rasterizer->mapRenderableCudaTransformBuffers(
+    return native().rasterizer().mapRenderableCudaTransformBuffers(
         handles, count, deviceId, streamHandle);
 }
 
 void Renderer::unmapRenderableCudaTransformBuffers(
     const std::vector<RenderableHandle>& handles, int deviceId,
     uint64_t streamHandle) {
-    if (!_rasterizer)
-        throw std::runtime_error("renderer is not initialized");
-    _rasterizer->unmapRenderableCudaTransformBuffers(handles, deviceId,
-                                                     streamHandle);
+    native().rasterizer().unmapRenderableCudaTransformBuffers(handles, deviceId,
+                                                              streamHandle);
 }
 
 bool Renderer::getRenderableInstanceTransform(RenderableHandle handle,
                                               int instanceIndex,
                                               glm::mat4& outTransform) const {
+    if (_renderBackend)
+        return _renderBackend->getRenderableInstanceTransform(
+            handle, instanceIndex, outTransform);
     return _rasterizer && _rasterizer->getRenderableInstanceTransform(
                               handle, instanceIndex, outTransform);
 }
@@ -609,30 +613,68 @@ bool Renderer::getRenderableInstanceTransform(RenderableHandle handle,
 bool Renderer::setRenderableInstanceTransform(RenderableHandle handle,
                                               int instanceIndex,
                                               const glm::mat4& transform) {
+    if (_renderBackend)
+        return _renderBackend->setRenderableInstanceTransform(
+            handle, instanceIndex, transform);
     return _rasterizer && _rasterizer->setRenderableInstanceTransform(
                               handle, instanceIndex, transform);
 }
 
 void Renderer::setRenderableColors(RenderableHandle handle,
                                    const std::vector<glm::vec4>& colors) {
-    if (_rasterizer)
+    if (_renderBackend)
+        _renderBackend->setRenderableColors(handle, colors);
+    else if (_rasterizer)
         _rasterizer->setRenderableColors(handle, colors);
 }
 
 void Renderer::setRenderableDoubleSided(RenderableHandle handle,
                                         bool doubleSided) {
+    auto batch = _sceneBatchHandles.find(handle);
+    if (batch != _sceneBatchHandles.end()) {
+        batch->second->state.doubleSided = doubleSided;
+        renderBackend().setSceneBatchState(handle, batch->second->state);
+        return;
+    }
     if (_rasterizer)
         _rasterizer->setRenderableDoubleSided(handle, doubleSided);
 }
 
 void Renderer::setRenderableCastsShadow(RenderableHandle handle,
                                         bool castsShadow) {
+    auto batch = _sceneBatchHandles.find(handle);
+    if (batch != _sceneBatchHandles.end()) {
+        batch->second->state.castsShadow = castsShadow;
+        renderBackend().setSceneBatchState(handle, batch->second->state);
+        return;
+    }
     if (_rasterizer)
         _rasterizer->setRenderableCastsShadow(handle, castsShadow);
 }
 
+void Renderer::setSceneBatchState(RenderableHandle handle,
+                                  const SceneBatchState& state) {
+    auto batch = _sceneBatchHandles.find(handle);
+    if (batch != _sceneBatchHandles.end()) {
+        batch->second->state = state;
+        renderBackend().setSceneBatchState(handle, state);
+    } else if (_rasterizer) {
+        _rasterizer->setRenderableDoubleSided(handle, state.doubleSided);
+        _rasterizer->setRenderableCastsShadow(handle, state.castsShadow);
+        _rasterizer->setRenderableAlphaMode(handle, state.alphaMode,
+                                            state.alphaCutoff);
+    }
+}
+
 void Renderer::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
                                       float cutoff) {
+    auto batch = _sceneBatchHandles.find(handle);
+    if (batch != _sceneBatchHandles.end()) {
+        batch->second->state.alphaMode = mode;
+        batch->second->state.alphaCutoff = cutoff;
+        renderBackend().setSceneBatchState(handle, batch->second->state);
+        return;
+    }
     if (_rasterizer)
         _rasterizer->setRenderableAlphaMode(handle, mode, cutoff);
 }
@@ -644,20 +686,23 @@ void Renderer::setRenderableTexture(RenderableHandle handle,
 
 void Renderer::setRenderableTexture(RenderableHandle handle,
                                     Backend::Texture* tex, int slot) {
-    if (_rasterizer)
-        _rasterizer->setRenderableTexture(handle, tex, slot);
+    native().rasterizer().setRenderableTexture(handle, tex, slot);
 }
 
 void Renderer::updateRenderableGeometry(RenderableHandle handle,
                                         const std::vector<glm::vec3>& positions,
                                         const std::vector<glm::vec3>& normals) {
-    if (_rasterizer)
+    if (_renderBackend)
+        _renderBackend->updateRenderableGeometry(handle, positions, normals);
+    else if (_rasterizer)
         _rasterizer->updateRenderableGeometry(handle, positions, normals);
 }
 
 void Renderer::updateRenderableSkinningMatrices(
     RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices) {
-    if (_rasterizer)
+    if (_renderBackend)
+        _renderBackend->updateRenderableSkinningMatrices(handle, boneMatrices);
+    else if (_rasterizer)
         _rasterizer->updateRenderableSkinningMatrices(handle, boneMatrices);
 }
 

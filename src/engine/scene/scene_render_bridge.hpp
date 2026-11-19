@@ -1,25 +1,35 @@
 #pragma once
 
-// Connects scene Prim state and identity to static Native render batches.
+// Connects scene Prim state and identity to renderer-owned batches.
 
 #include "engine/scene/render_scene_data.hpp"
 #include "engine/scene/render_material_data.hpp"
 
 #include <vector>
+#include <utility>
 
 namespace KE {
 
 class Material;
+namespace Backend {
+class Texture;
+} // namespace Backend
 
 namespace Scene {
 
 class Prim;
+class SceneResourceManager;
 
 // The caller removes registrations before destroying their non-owning Prims.
 class SceneRenderBridge {
   public:
     static RenderMeshData meshData(const Prim& prim);
     static RenderMaterialData materialData(const Material& material);
+    static RenderMaterialSource
+    materialSource(const Material& material,
+                   const SceneResourceManager* resources);
+    static std::vector<std::pair<const char*, Backend::Texture*>>
+    materialTextures(const Material& material);
     void add(Prim& prim);
     void remove(const Prim& prim);
     bool empty() const { return _entries.empty(); }

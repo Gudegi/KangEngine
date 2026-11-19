@@ -179,17 +179,22 @@ constexpr int textureRoleSlot(TextureRole role) {
     return RendererTextureSlot::BaseColor;
 }
 
-struct RayPickResult {
+// Backend selection identity and world-space surface hit; no scene pointers.
+struct RenderPickHit {
     bool hit = false;
     RenderableHandle handle = InvalidHandle;
     int instanceIndex = -1;
     TransformSource transformSource = TransformSource::SceneGraph;
-    Scene::Prim* prim = nullptr;
     float distance = 0.0f;
     glm::vec3 position = glm::vec3(0.0f);
     Geometry::AABB bounds;
     // Static scene registration identity, independent of compacted batch indices.
     uint64_t sceneInstanceId = 0;
+};
+
+// Public interaction result resolves the identity on the scene side.
+struct RayPickResult : RenderPickHit {
+    Scene::Prim* prim = nullptr;
 };
 
 } // namespace KE

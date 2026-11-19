@@ -11,6 +11,7 @@ from typing import Any
 
 from .._core import _ke
 from .._public import NativeWrapper, set_public_module, unwrap_native
+from ..render.texture_source import TextureSource
 
 
 PhongMaterialType = set_public_module(_ke.PhongMaterialType, __package__)
@@ -33,6 +34,34 @@ class Material(NativeWrapper):
                 "construct ColorMaterial, PhongMaterial, or PBRMaterial instead."
             )
         super().__init__(native)
+        object.__setattr__(self, "_texture_sources", {})
+        object.__setattr__(self, "_resources", None)
+
+    def _bind_resources(self, resources):
+        for source in self._texture_sources.values():
+            if source._resources is not resources:
+                raise ValueError("Texture source belongs to a different App")
+        object.__setattr__(self, "_resources", resources)
+
+    def _get_texture(self, slot):
+        source = self._texture_sources.get(slot)
+        if source is not None and self._native.texture_resources.get(slot) == source.resource_handle:
+            return source
+        return getattr(self._native, slot)
+
+    def _set_texture(self, slot, texture):
+        resources = self._native.texture_resources
+        if isinstance(texture, TextureSource):
+            if self._resources is not None and texture._resources is not self._resources:
+                raise ValueError("Texture source belongs to a different App")
+            setattr(self._native, slot, None)
+            resources[slot] = texture.resource_handle
+            self._texture_sources[slot] = texture
+        else:
+            setattr(self._native, slot, unwrap_native(texture))
+            resources.pop(slot, None)
+            self._texture_sources.pop(slot, None)
+        self._native.texture_resources = resources
 
     @property
     def unlit(self) -> bool:
@@ -50,7 +79,7 @@ class Material(NativeWrapper):
 
     @property
     def texture_resources(self) -> dict[str, int]:
-        """SceneResourceManager texture source handles by slot for SceneRenderer."""
+        """SceneResourceManager texture source handles by material slot."""
         return self._native.texture_resources
 
     @texture_resources.setter
@@ -160,38 +189,38 @@ class PhongMaterial(Material):
     @property
     def diffuse_map(self):
         """Optional diffuse texture."""
-        return self._native.diffuse_map
+        return self._get_texture("diffuse_map")
 
     @diffuse_map.setter
     def diffuse_map(self, texture) -> None:
-        self._native.diffuse_map = unwrap_native(texture)
+        self._set_texture("diffuse_map", texture)
 
     @property
     def specular_map(self):
         """Optional specular texture."""
-        return self._native.specular_map
+        return self._get_texture("specular_map")
 
     @specular_map.setter
     def specular_map(self, texture) -> None:
-        self._native.specular_map = unwrap_native(texture)
+        self._set_texture("specular_map", texture)
 
     @property
     def alpha_map(self):
         """Optional alpha mask texture, such as OBJ ``map_d``."""
-        return self._native.alpha_map
+        return self._get_texture("alpha_map")
 
     @alpha_map.setter
     def alpha_map(self, texture) -> None:
-        self._native.alpha_map = unwrap_native(texture)
+        self._set_texture("alpha_map", texture)
 
     @property
     def normal_map(self):
         """Optional tangent-space normal map."""
-        return self._native.normal_map
+        return self._get_texture("normal_map")
 
     @normal_map.setter
     def normal_map(self, texture) -> None:
-        self._native.normal_map = unwrap_native(texture)
+        self._set_texture("normal_map", texture)
 
     def set_ambient(self, ambient):
         self._native.set_ambient(ambient)
@@ -210,19 +239,19 @@ class PhongMaterial(Material):
         return self
 
     def set_diffuse_map(self, texture):
-        self._native.set_diffuse_map(unwrap_native(texture))
+        self.diffuse_map = texture
         return self
 
     def set_specular_map(self, texture):
-        self._native.set_specular_map(unwrap_native(texture))
+        self.specular_map = texture
         return self
 
     def set_alpha_map(self, texture):
-        self._native.set_alpha_map(unwrap_native(texture))
+        self.alpha_map = texture
         return self
 
     def set_normal_map(self, texture):
-        self._native.set_normal_map(unwrap_native(texture))
+        self.normal_map = texture
         return self
 
 
@@ -287,76 +316,76 @@ class PBRMaterial(Material):
 
     @property
     def base_color_texture(self):
-        return self._native.base_color_texture
+        return self._get_texture("base_color_texture")
 
     @base_color_texture.setter
     def base_color_texture(self, texture) -> None:
-        self._native.base_color_texture = unwrap_native(texture)
+        self._set_texture("base_color_texture", texture)
 
     @property
     def normal_texture(self):
-        return self._native.normal_texture
+        return self._get_texture("normal_texture")
 
     @normal_texture.setter
     def normal_texture(self, texture) -> None:
-        self._native.normal_texture = unwrap_native(texture)
+        self._set_texture("normal_texture", texture)
 
     @property
     def metallic_roughness_texture(self):
-        return self._native.metallic_roughness_texture
+        return self._get_texture("metallic_roughness_texture")
 
     @metallic_roughness_texture.setter
     def metallic_roughness_texture(self, texture) -> None:
-        self._native.metallic_roughness_texture = unwrap_native(texture)
+        self._set_texture("metallic_roughness_texture", texture)
 
     @property
     def metallic_texture(self):
-        return self._native.metallic_texture
+        return self._get_texture("metallic_texture")
 
     @metallic_texture.setter
     def metallic_texture(self, texture) -> None:
-        self._native.metallic_texture = unwrap_native(texture)
+        self._set_texture("metallic_texture", texture)
 
     @property
     def roughness_texture(self):
-        return self._native.roughness_texture
+        return self._get_texture("roughness_texture")
 
     @roughness_texture.setter
     def roughness_texture(self, texture) -> None:
-        self._native.roughness_texture = unwrap_native(texture)
+        self._set_texture("roughness_texture", texture)
 
     @property
     def ao_texture(self):
-        return self._native.ao_texture
+        return self._get_texture("ao_texture")
 
     @ao_texture.setter
     def ao_texture(self, texture) -> None:
-        self._native.ao_texture = unwrap_native(texture)
+        self._set_texture("ao_texture", texture)
 
     @property
     def orm_texture(self):
-        return self._native.orm_texture
+        return self._get_texture("orm_texture")
 
     @orm_texture.setter
     def orm_texture(self, texture) -> None:
-        self._native.orm_texture = unwrap_native(texture)
+        self._set_texture("orm_texture", texture)
 
     @property
     def emissive_texture(self):
-        return self._native.emissive_texture
+        return self._get_texture("emissive_texture")
 
     @emissive_texture.setter
     def emissive_texture(self, texture) -> None:
-        self._native.emissive_texture = unwrap_native(texture)
+        self._set_texture("emissive_texture", texture)
 
     @property
     def opacity_texture(self):
         """Linear red-channel opacity mask overriding the base-color texture alpha."""
-        return self._native.opacity_texture
+        return self._get_texture("opacity_texture")
 
     @opacity_texture.setter
     def opacity_texture(self, texture) -> None:
-        self._native.opacity_texture = unwrap_native(texture)
+        self._set_texture("opacity_texture", texture)
 
     def set_base_color(self, base_color):
         self._native.set_base_color(base_color)
@@ -379,39 +408,39 @@ class PBRMaterial(Material):
         return self
 
     def set_base_color_texture(self, texture):
-        self._native.set_base_color_texture(unwrap_native(texture))
+        self.base_color_texture = texture
         return self
 
     def set_normal_texture(self, texture):
-        self._native.set_normal_texture(unwrap_native(texture))
+        self.normal_texture = texture
         return self
 
     def set_metallic_roughness_texture(self, texture):
-        self._native.set_metallic_roughness_texture(unwrap_native(texture))
+        self.metallic_roughness_texture = texture
         return self
 
     def set_metallic_texture(self, texture):
-        self._native.set_metallic_texture(unwrap_native(texture))
+        self.metallic_texture = texture
         return self
 
     def set_roughness_texture(self, texture):
-        self._native.set_roughness_texture(unwrap_native(texture))
+        self.roughness_texture = texture
         return self
 
     def set_ao_texture(self, texture):
-        self._native.set_ao_texture(unwrap_native(texture))
+        self.ao_texture = texture
         return self
 
     def set_orm_texture(self, texture):
-        self._native.set_orm_texture(unwrap_native(texture))
+        self.orm_texture = texture
         return self
 
     def set_emissive_texture(self, texture):
-        self._native.set_emissive_texture(unwrap_native(texture))
+        self.emissive_texture = texture
         return self
 
     def set_opacity_texture(self, texture):
-        self._native.set_opacity_texture(unwrap_native(texture))
+        self.opacity_texture = texture
         return self
 
 

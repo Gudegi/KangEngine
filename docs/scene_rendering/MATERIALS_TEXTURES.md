@@ -117,6 +117,12 @@ the texture. `flip=True` (the default) flips the image vertically.
 Use `srgb=True` for color images stored as sRGB. Images storing surface data,
 such as normals, roughness, or metallic values, use `srgb=False` (the default).
 
+For generated images, use `App.create_texture(pixels, srgb=True)`. `pixels`
+must be a contiguous `uint8` NumPy array with shape `(height, width, 3)` for RGB
+or `(height, width, 4)` for RGBA. It copies the source; later edits to the array
+do not change the texture. Create and assign a new texture to replace it.
+The `flip` and `srgb` settings match `load_texture()`.
+
 Phong example:
 
 ```python

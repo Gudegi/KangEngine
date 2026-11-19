@@ -27,7 +27,8 @@ class RendererProfiler {
     applyGpuResults(const std::vector<Backend::ProfileQueryResult>& results);
     void setEnabled(bool enabled) { _requested = enabled; }
     bool enabled() const { return _requested; }
-    FrameScope frame(uint64_t index, Backend::BackendType backend);
+    FrameScope frame(uint64_t index,
+                     std::optional<Backend::BackendType> backend);
     Snapshot latestFrameProfile() const;
     std::vector<Snapshot> frameProfileHistory() const;
     static constexpr size_t HistoryCapacity = 240;

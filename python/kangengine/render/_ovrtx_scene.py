@@ -6,6 +6,7 @@ import math
 import numpy as np
 import ovrtx
 import ovstage
+from .._core import _ke
 
 
 def _tuples(values):
@@ -20,6 +21,7 @@ def _texture_key(source):
 
 class OvrtxSceneAdapter:
     def __init__(self, width, height):
+        self._resolution = (width, height)
         self._renderer = ovrtx.Renderer(config=ovrtx.RendererConfig(keep_system_alive=False))
         self._stage = None
         self._attached = False
@@ -168,6 +170,14 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
         # Validate all asset paths before changing stage registrations.
         for item in frame["objects"]:
             for texture in item["textures"].values():
+                if texture["pixels"] is not None:
+                    raise ValueError("ovrtx does not yet support memory-image textures")
+                if not texture["flip"]:
+                    raise ValueError("ovrtx currently requires flip=True texture sources")
+                sampler = texture["sampler"]
+                if (sampler.min_filter != _ke.TextureFilter.LINEAR_MIPMAP_LINEAR or
+                        sampler.mag_filter != _ke.TextureFilter.LINEAR):
+                    raise ValueError("ovrtx currently requires linear mipmapped filtering")
                 if "@" in texture["path"] or "\n" in texture["path"]:
                     raise ValueError("ovrtx texture asset paths cannot contain @ or a newline")
 
@@ -215,6 +225,8 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
                                       else ovstage.AttributeSemantic.NONE))
 
         camera = frame["camera"]
+        self._write("/Render/Camera", "resolution", self._resolution, dtype=np.int32)
+        self._write("/World/Camera", "horizontalAperture", 24 * self._resolution[0] / self._resolution[1])
         self._matrix("/World/Camera", camera["world"])
         self._write("/World/Camera", "focalLength", 12 / math.tan(math.radians(camera["vertical_fov"]) / 2))
         self._write("/World/Camera", "clippingRange", [camera["near"], camera["far"]])
@@ -252,6 +264,9 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
             mapped.unmap()
         return pixels
 
+    def resize(self, width, height):
+        self._resolution = (width, height)
+
     def close(self):
         try:
             if self._attached:
@@ -261,3 +276,17 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
             if self._stage is not None:
                 self._stage.destroy()
             self._renderer.destroy()
+
+
+class OvrtxAppAdapter(OvrtxSceneAdapter):
+    """Validate App snapshots before passing them to ovrtx."""
+
+    def __init__(self, width, height):
+        super().__init__(width, height)
+        self._texture_paths = {}
+        self._validated_meshes = set()
+
+    def render(self, frame):
+        from .scene_renderer import _validate_frame
+
+        return super().render(_validate_frame(frame, self._texture_paths, self._validated_meshes))

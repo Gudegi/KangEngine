@@ -3,6 +3,7 @@
 
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include "engine/scene/render_scene_data_collector.hpp"
 
 #include <cstddef>
 #include <glm/mat4x4.hpp>
@@ -25,8 +26,8 @@ class Prim;
 class RenderComponent;
 class DebugDraw;
 
-// Owns registration between scene RenderComponents and renderer batches.
-// RenderableHandle remains private to this system during normal scene use.
+// Tracks scene components for backend submission and Native batches.
+// Normal scene use does not require a RenderableHandle.
 class SceneRenderSystem {
   public:
     SceneRenderSystem() = default;
@@ -36,6 +37,9 @@ class SceneRenderSystem {
     SceneRenderSystem& operator=(const SceneRenderSystem&) = delete;
 
     void bind(Renderer* renderer);
+    void syncScene(SceneBackend& scene, const SceneResourceManager& resources);
+    RayPickResult resolvePick(const RenderPickHit& hit) const;
+    RayPickResult buildPrimSelection(Prim& prim) const;
 
     std::shared_ptr<RenderComponent>
     addRenderable(Prim& prim, Material* material,
@@ -75,7 +79,7 @@ class SceneRenderSystem {
                      const RenderComponent& second) const;
     size_t registrationCount() const { return _registrations.size(); }
 
-    // Internal renderer bridges use this after registration; absent -> InvalidHandle.
+    // Native batch handle; absent -> InvalidHandle, source-only -> error.
     RenderableHandle handle(const RenderComponent& component) const;
 
   private:
@@ -85,6 +89,7 @@ class SceneRenderSystem {
     struct Registration {
         std::weak_ptr<RenderComponent> component;
         Prim* prim = nullptr;
+        // Source-only registrations have no Native batch handle.
         RenderableHandle handle = InvalidHandle;
         std::optional<SkinnedMeshData> skinnedMesh;
         std::vector<std::pair<Backend::Texture*, int>> textureBindings;
@@ -92,23 +97,23 @@ class SceneRenderSystem {
 
     void validateRegistration(
         const std::shared_ptr<RenderComponent>& component) const;
-    RenderableHandle
-    registerRenderable(const std::shared_ptr<RenderComponent>& component,
-                       Material* material);
-    RenderableHandle
+    bool registerRenderable(const std::shared_ptr<RenderComponent>& component,
+                            Material* material);
+    bool
     registerSkinnedRenderable(const std::shared_ptr<RenderComponent>& component,
                               Material* material,
                               const SkinnedMeshData& skinnedMesh);
     const Registration&
     requireRegistration(const RenderComponent& component) const;
+    const Registration& requireBatch(const RenderComponent& component) const;
     void syncState(RenderComponent& component);
-    RenderableHandle
-    finishRegistration(const std::shared_ptr<RenderComponent>& component,
-                       RenderableHandle handle,
-                       const SkinnedMeshData* skinnedMesh = nullptr);
+    void finishRegistration(const std::shared_ptr<RenderComponent>& component,
+                            RenderableHandle handle,
+                            const SkinnedMeshData* skinnedMesh = nullptr);
     void clear();
 
     Renderer* _renderer = nullptr;
+    RenderSceneDataCollector _collector;
     std::unordered_map<const RenderComponent*, Registration> _registrations;
 };
 

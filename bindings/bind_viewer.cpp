@@ -9,6 +9,10 @@
 #include "engine/graphics/material/phongMaterials.hpp"
 #include "engine/core/ui/file_dialog.hpp"
 #include "py_array_view.hpp"
+#include "py_render_backend.hpp"
+#include "py_texture_source.hpp"
+#include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
+#include "engine/scene/component/render_component.hpp"
 #include "utils/coordinate_system.hpp"
 
 #include <pybind11/pybind11.h>
@@ -800,15 +804,49 @@ void bind_viewer(py::module& m) {
         m, "App",
         "Native application shell with a window, scene, renderer, and input.")
         .def(py::init<>(), "Create an uninitialized application.")
-        .def("initialize", &App::initialize, py::arg("width"),
-             py::arg("height"), py::arg("hide_ui") = false,
-             py::arg("up_axis") = UpAxis::Y,
-             py::arg("graphics_backend_type") = Backend::BackendType::OpenGL,
-             py::arg("scene_backend_type") = Scene::BackendType::Native,
-             py::arg("headless") = false,
-             "Initialize the window, renderer, input, and scene backend.")
+        .def(
+            "initialize",
+            [](App& self, int width, int height, bool hideUI, UpAxis upAxis,
+               Backend::BackendType graphicsBackend,
+               Scene::BackendType sceneBackend, bool headless) {
+                self.initialize(width, height, hideUI, upAxis, graphicsBackend,
+                                sceneBackend, headless);
+            },
+            py::arg("width"), py::arg("height"), py::arg("hide_ui") = false,
+            py::arg("up_axis") = UpAxis::Y,
+            py::arg("graphics_backend_type") = Backend::BackendType::OpenGL,
+            py::arg("scene_backend_type") = Scene::BackendType::Native,
+            py::arg("headless") = false,
+            "Initialize the window, renderer, input, and scene backend.")
+        .def(
+            "_initialize_scene_renderer",
+            [](App& self, int width, int height, UpAxis upAxis,
+               Scene::BackendType sceneBackend, py::object factory) {
+                self.initialize(width, height, true, upAxis,
+                                Backend::BackendType::OpenGL, sceneBackend,
+                                true,
+                                makePythonRenderBackend(std::move(factory)));
+            },
+            py::arg("width"), py::arg("height"), py::arg("up_axis"),
+            py::arg("scene_backend_type"), py::arg("factory"))
         .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"),
              "Set the target render/update frequency in Hz.")
+        .def(
+            "_create_texture_image",
+            [](App& self, const py::array& pixels, bool srgb, bool flip) {
+                if (!self.isInitialized())
+                    throw std::runtime_error(
+                        "Initialize App before creating textures");
+                auto source = textureSourceFromArray(pixels, srgb, flip);
+                std::unique_ptr<Backend::Texture> texture;
+                if (self.getRenderer().rasterizer())
+                    texture = self.getRenderer().native().createTexture(source);
+                const auto handle =
+                    self.getSceneResourceManager().registerTexture(
+                        "Image", texture.get(), {}, std::move(source));
+                return py::make_tuple(std::move(texture), handle);
+            },
+            py::arg("pixels").noconvert(), py::arg("srgb"), py::arg("flip"))
         .def("set_vsync", &App::setVSync, py::arg("enabled"),
              "Enable or disable vertical synchronization.")
         .def("get_vsync", &App::getVSync)
@@ -898,15 +936,16 @@ void bind_viewer(py::module& m) {
         .def(
             "read_rgb_pixels",
             [](App& self, bool flipY) {
-                std::vector<uint8_t> pixels = self.readRgbPixels(flipY);
-                const auto* color = self.getPresentedTexture();
-                const int width = color->getWidth();
-                const int height = color->getHeight();
-                if (pixels.size() != static_cast<std::size_t>(width) *
-                                         static_cast<std::size_t>(height) * 3)
+                auto image = self.readImage(flipY);
+                const int width = image.width;
+                const int height = image.height;
+                if (image.pixels.size() !=
+                    static_cast<std::size_t>(width) *
+                        static_cast<std::size_t>(height) * 3)
                     throw std::runtime_error("Framebuffer RGB readback failed");
                 py::array_t<uint8_t> out({height, width, 3});
-                std::memcpy(out.mutable_data(), pixels.data(), pixels.size());
+                std::memcpy(out.mutable_data(), image.pixels.data(),
+                            image.pixels.size());
                 return out;
             },
             py::arg("flip_y") = true,
@@ -924,7 +963,7 @@ void bind_viewer(py::module& m) {
                 return out;
             },
             py::arg("width"), py::arg("height"), py::arg("flip_y") = true,
-            "Scale the current framebuffer on the GPU and return uint8 RGB.")
+            "Resize the completed frame and return uint8 RGB.")
         .def("write_pixels_png", &App::writePixelsPNG, py::arg("path"),
              py::arg("flip_y") = true,
              "Write the current framebuffer to a PNG file.")
@@ -1029,6 +1068,17 @@ void bind_viewer(py::module& m) {
             py::arg("transform_source") = TransformSource::SceneGraph,
             "Compatibility/low-level path: create a skinned renderable using "
             "a material and return its internal renderer handle.")
+        .def(
+            "_add_scene_renderable",
+            [](App& self, Material* material, Scene::Prim& prim,
+               TransformSource transformSource) {
+                auto component = self.getSceneRenderSystem().addRenderable(
+                    prim, material, transformSource);
+                self.getSceneResourceManager().invalidateUsageCache();
+                return component;
+            },
+            py::arg("material"), py::arg("prim"),
+            py::arg("transform_source") = TransformSource::SceneGraph)
         .def(
             "add_renderable",
             [](App* self, Material* material, Scene::Prim* prim,
@@ -1321,6 +1371,7 @@ void bind_viewer(py::module& m) {
         .def(
             "set_background_color",
             [](App& self, const glm::vec4& color) {
+                self.getRenderer().native();
                 self.getRenderer().settings().background.backgroundColor =
                     color;
             },
@@ -1331,6 +1382,7 @@ void bind_viewer(py::module& m) {
                const glm::vec4& gridColor, bool showGrid, bool usePbr,
                float metallic, float roughness, float gridScale,
                float lineWidth, float gridEmission) {
+                self.getRenderer().native();
                 auto& background = self.getRenderer().settings().background;
                 background.checkerColor1 = checkerA;
                 background.checkerColor2 = checkerB;
@@ -1355,12 +1407,14 @@ void bind_viewer(py::module& m) {
         .def(
             "set_gamma",
             [](App& self, float gamma) {
+                self.getRenderer().native();
                 self.getRenderer().settings().gamma = std::max(0.001f, gamma);
             },
             py::arg("gamma"), "Set display gamma used by post processing.")
         .def(
             "set_tone_map",
             [](App& self, ToneMapMode mode, float exposure) {
+                self.getRenderer().native();
                 RendererSettings& settings = self.getRenderer().settings();
                 settings.toneMapMode = mode;
                 settings.toneMapExposure = std::max(0.0f, exposure);
@@ -1371,6 +1425,7 @@ void bind_viewer(py::module& m) {
             "set_bloom",
             [](App& self, bool enabled, float threshold, float intensity,
                int iterations, int downsample) {
+                self.getRenderer().native();
                 BloomConfig& bloom = self.getRenderer().settings().bloom;
                 bloom.enabled = enabled;
                 bloom.threshold = std::max(0.0f, threshold);
@@ -1386,13 +1441,15 @@ void bind_viewer(py::module& m) {
         .def(
             "is_key_pressed",
             [](App& self, int key) {
-                return glfwGetKey(self.getWindow(), key) == GLFW_PRESS;
+                return self.getWindow() &&
+                       glfwGetKey(self.getWindow(), key) == GLFW_PRESS;
             },
             py::arg("key"), "Return true while a keyboard key is pressed.")
         .def(
             "_is_gamepad_connected",
-            [](App&, int index) {
-                if (index < 0 || index > GLFW_JOYSTICK_LAST)
+            [](App& self, int index) {
+                if (!self.getWindow() || index < 0 ||
+                    index > GLFW_JOYSTICK_LAST)
                     return false;
                 int mappedIndex = 0;
                 for (int joystick = GLFW_JOYSTICK_1;
@@ -1415,8 +1472,10 @@ void bind_viewer(py::module& m) {
             "Return whether a GLFW-mapped gamepad is connected.")
         .def(
             "_list_joysticks",
-            [](App&) {
+            [](App& self) {
                 py::list result;
+                if (!self.getWindow())
+                    return result;
                 for (int joystick = GLFW_JOYSTICK_1;
                      joystick <= GLFW_JOYSTICK_LAST; ++joystick) {
                     if (glfwJoystickPresent(joystick) != GLFW_TRUE)
@@ -1451,11 +1510,12 @@ void bind_viewer(py::module& m) {
             "List raw GLFW joysticks and whether each has a gamepad mapping.")
         .def(
             "_get_gamepad_state",
-            [](App&, int index) -> py::dict {
+            [](App& self, int index) -> py::dict {
                 py::dict result;
                 result["connected"] = false;
                 result["name"] = "";
-                if (index < 0 || index > GLFW_JOYSTICK_LAST)
+                if (!self.getWindow() || index < 0 ||
+                    index > GLFW_JOYSTICK_LAST)
                     return result;
                 int joystick = -1;
                 int mappedIndex = 0;

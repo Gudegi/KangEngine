@@ -5,6 +5,7 @@
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_render_bridge.hpp"
 
 #include <cctype>
 #include <stdexcept>
@@ -16,43 +17,6 @@ namespace KE {
 namespace Scene {
 namespace {
 constexpr const char* kResourceRootPath = "/.Resources";
-
-void collectMaterialTextures(const Material* material,
-                             std::vector<Backend::Texture*>& out) {
-    if (!material)
-        return;
-    if (const auto* phong = dynamic_cast<const PhongMaterial*>(material)) {
-        if (phong->diffuseMap)
-            out.push_back(phong->diffuseMap);
-        if (phong->specularMap)
-            out.push_back(phong->specularMap);
-        if (phong->alphaMap)
-            out.push_back(phong->alphaMap);
-        if (phong->normalMap)
-            out.push_back(phong->normalMap);
-        return;
-    }
-    if (const auto* pbr = dynamic_cast<const PBRMaterial*>(material)) {
-        if (pbr->baseColorTexture)
-            out.push_back(pbr->baseColorTexture);
-        if (pbr->normalTexture)
-            out.push_back(pbr->normalTexture);
-        if (pbr->metallicRoughnessTexture)
-            out.push_back(pbr->metallicRoughnessTexture);
-        if (pbr->metallicTexture)
-            out.push_back(pbr->metallicTexture);
-        if (pbr->roughnessTexture)
-            out.push_back(pbr->roughnessTexture);
-        if (pbr->aoTexture)
-            out.push_back(pbr->aoTexture);
-        if (pbr->ormTexture)
-            out.push_back(pbr->ormTexture);
-        if (pbr->emissiveTexture)
-            out.push_back(pbr->emissiveTexture);
-        if (pbr->opacityTexture)
-            out.push_back(pbr->opacityTexture);
-    }
-}
 } // namespace
 
 SceneResourceManager::SceneResourceManager(SceneBackend* scene)
@@ -94,21 +58,35 @@ ResourceHandle SceneResourceManager::materialHandle(const Material* material) co
     return found == _materialHandles.end() ? InvalidResourceHandle : found->second;
 }
 
-ResourceHandle SceneResourceManager::registerTexture(const std::string& name,
-                                                     Backend::Texture* texture,
-                                                     const std::string& uri) {
+ResourceHandle SceneResourceManager::registerTexture(
+    const std::string& name, Backend::Texture* texture, const std::string& uri,
+    std::optional<TextureSourceResource> source) {
+    if (source)
+        source->validate();
     Entry entry;
     entry.type = ResourceType::Texture;
     entry.name = name;
     entry.uri = uri;
     entry.texture = texture;
-    return registerEntry(std::move(entry));
+    if (source)
+        entry.textureSource =
+            std::make_shared<const TextureSourceResource>(std::move(*source));
+    const auto handle = registerEntry(std::move(entry));
+    if (texture)
+        _textureHandles[texture] = handle;
+    return handle;
+}
+
+ResourceHandle
+SceneResourceManager::textureHandle(const Backend::Texture* texture) const {
+    const auto found = _textureHandles.find(texture);
+    return found == _textureHandles.end() ? InvalidResourceHandle
+                                          : found->second;
 }
 
 ResourceHandle SceneResourceManager::registerTextureSource(
     const std::string& name, TextureSourceResource source) {
-    if (source.path.empty())
-        throw std::invalid_argument("Texture source requires an image path");
+    source.validate();
     Entry entry;
     entry.type = ResourceType::Texture;
     entry.name = name;
@@ -122,6 +100,20 @@ std::shared_ptr<const TextureSourceResource>
 SceneResourceManager::textureSource(ResourceHandle handle) const {
     const auto* resource = entry(handle);
     return resource ? resource->textureSource : nullptr;
+}
+
+void TextureSourceResource::validate() const {
+    if (!path.empty()) {
+        if (!pixels.empty() || width || height || channels)
+            throw std::invalid_argument(
+                "Texture source must use either a file or pixels");
+        return;
+    }
+    if (width <= 0 || height <= 0 || (channels != 3 && channels != 4) ||
+        uint64_t(width) * uint64_t(height) * uint64_t(channels) !=
+            pixels.size())
+        throw std::invalid_argument(
+            "Texture source requires a file or packed RGB8/RGBA8 pixels");
 }
 
 ResourceHandle SceneResourceManager::registerShaderSource(
@@ -341,9 +333,8 @@ void SceneResourceManager::rebuildUsageCache() const {
                 if (textureSource(handle))
                     usedByPrim.insert(handle);
             }
-            std::vector<Backend::Texture*> textures;
-            collectMaterialTextures(material, textures);
-            for (Backend::Texture* texture : textures)
+            for (const auto& [slot, texture] :
+                 SceneRenderBridge::materialTextures(*material))
                 addHandles(usedByPrim, textureHandles, texture);
         }
 
@@ -370,6 +361,7 @@ void SceneResourceManager::clear() {
     }
     _entries.clear();
     _materialHandles.clear();
+    _textureHandles.clear();
     _usageCache.clear();
     _usagePathCache.clear();
     _externalUsagePaths.clear();

@@ -307,6 +307,18 @@ ForwardPass::updatePbrMaterial(PBRMaterial& material, const MeshInstancer& inst,
     return resources.bindGroup.get();
 }
 
+void ForwardPass::releaseBatch(const MeshInstancer& inst) {
+    _unlitResources.erase(&inst);
+    _texturedColorResources.erase(&inst);
+    const Material* material = inst.material();
+    if (!material)
+        return;
+    if (material->shadingModel() == MaterialShadingModel::PBR)
+        _pbrResources.erase(static_cast<const PBRMaterial*>(material));
+    else if (material->shadingModel() == MaterialShadingModel::Phong)
+        _phongResources.erase(static_cast<const PhongMaterial*>(material));
+}
+
 Backend::BindGroup*
 ForwardPass::updateTexturedColorMaterial(const MeshInstancer& inst) {
     auto [it, inserted] = _texturedColorResources.try_emplace(&inst);

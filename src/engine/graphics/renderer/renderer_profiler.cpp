@@ -33,7 +33,8 @@ void RendererProfiler::bind(std::shared_ptr<Backend::ProfileContext> context,
     _enabled = false;
 }
 RendererProfiler::FrameScope
-RendererProfiler::frame(uint64_t index, Backend::BackendType backend) {
+RendererProfiler::frame(uint64_t index,
+                        std::optional<Backend::BackendType> backend) {
     if (!_context)
         throw std::logic_error("profiler has no device");
     if (_context->active())
@@ -275,9 +276,13 @@ void RendererProfiler::exportJson(const std::string& path,
             << ",\"revision\":" << f->revision
             << ",\"finalized\":" << (f->finalized ? "true" : "false")
             << ",\"backend\":";
-        quoted(out, f->backend == Backend::BackendType::OpenGL   ? "OpenGL"
-                    : f->backend == Backend::BackendType::WebGPU ? "WebGPU"
-                                                                 : "Vulkan");
+        if (!f->backend)
+            out << "null";
+        else
+            quoted(out, f->backend == Backend::BackendType::OpenGL ? "OpenGL"
+                        : f->backend == Backend::BackendType::WebGPU
+                            ? "WebGPU"
+                            : "Vulkan");
         out << ",\"gpu_latency_frames\":";
         if (f->gpuLatencyFrames)
             out << *f->gpuLatencyFrames;

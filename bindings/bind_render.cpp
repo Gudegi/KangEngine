@@ -4,6 +4,7 @@
 
 #include "../src/kangEngine.hpp"
 #include "py_array_view.hpp"
+#include "engine/scene/render_scene_data_collector.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
@@ -423,7 +424,8 @@ void bind_render(py::module& m) {
         .def_readonly("frame_index", &Backend::FrameProfile::frameIndex)
         .def_readonly("revision", &Backend::FrameProfile::revision)
         .def_readonly("finalized", &Backend::FrameProfile::finalized)
-        .def_readonly("backend", &Backend::FrameProfile::backend)
+        .def_readonly("backend", &Backend::FrameProfile::backend,
+                      "RHI backend, or None for an externally managed renderer.")
         .def_readonly("gpu_latency_frames",
                       &Backend::FrameProfile::gpuLatencyFrames)
         .def_readonly("dropped_samples", &Backend::FrameProfile::droppedSamples)
@@ -473,6 +475,48 @@ void bind_render(py::module& m) {
     py::class_<Renderer>(
         m, "Renderer",
         "Renderer facade for updating renderable resources and draw settings.")
+        .def_property_readonly(
+            "capabilities",
+            [](const Renderer& renderer) {
+                const auto caps = renderer.capabilities();
+                py::dict result;
+                result["screen_presentation"] = caps.screenPresentation;
+                result["selection_outline"] = caps.selectionOutline;
+                result["wireframe"] = caps.wireframe;
+                result["static_scene"] = caps.staticScene;
+                result["scene_batches"] = caps.sceneBatches;
+                result["memory_textures"] = caps.memoryTextures;
+                result["screen_picking"] = caps.screenPicking;
+                result["native_extensions"] = renderer.rasterizer() != nullptr;
+                return result;
+            },
+            "Return supported frame features and availability of Native extensions.")
+        .def(
+            "_sync_scene",
+            [](Renderer& renderer, py::dict frame) {
+                auto& snapshot =
+                    frame["_snapshot"].cast<Scene::RenderSceneFrame&>();
+                const auto objects = frame["objects"].cast<py::list>();
+                // Use the same resolved file paths as the Python adapters.
+                for (size_t i = 0; i < snapshot.objects.size(); ++i) {
+                    const auto textures =
+                        objects[i]["textures"].cast<py::dict>();
+                    for (auto& [slot, resource] :
+                         snapshot.objects[i].textures) {
+                        const auto path =
+                            textures[py::str(slot)]["path"].cast<std::string>();
+                        if (path == resource.second->path)
+                            continue;
+                        auto source =
+                            std::make_shared<Scene::TextureSourceResource>(
+                                *resource.second);
+                        source->path = path;
+                        resource.second = std::move(source);
+                    }
+                }
+                renderer.syncScene(snapshot);
+            },
+            py::arg("frame"))
         .def("set_profiler_enabled", &Renderer::setProfilerEnabled,
              py::arg("enabled"),
              "Enable CPU/GPU pass profiling at the next frame boundary. "

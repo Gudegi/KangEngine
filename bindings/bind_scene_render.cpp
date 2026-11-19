@@ -23,10 +23,10 @@ void bind_scene_render(py::module& m) {
             "Return the number of registered render components.")
         .def("is_registered", &KE::Scene::SceneRenderSystem::isRegistered,
              py::arg("component"),
-             "Return whether a render component owns renderer resources.")
+             "Return whether a render component is registered with this system.")
         .def("_handle", &KE::Scene::SceneRenderSystem::handle,
              py::arg("component"),
-             "Return the renderer batch handle for internal bridges; "
+             "Return the Native batch handle for internal bridges; "
              "unregistered components return InvalidHandle.")
         .def("shares_batch", &KE::Scene::SceneRenderSystem::sharesBatch,
              py::arg("first"), py::arg("second"),

@@ -81,7 +81,7 @@ void ProfileContext::endScope(uint64_t generation, size_t index,
 }
 
 void ProfileContext::beginFrame(uint64_t captureId, uint64_t frameIndex,
-                                BackendType backend) {
+                                std::optional<BackendType> backend) {
     if (_owner != std::this_thread::get_id())
         throw std::logic_error("profile capture must run on the owning thread");
     if (_frame)

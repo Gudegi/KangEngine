@@ -85,6 +85,8 @@ class ForwardPass : public RenderPassBase {
                         const Scene::RenderMaterialData& input);
     PreparedDraws prepare(const std::vector<MeshInstancer*>& drawables,
                           bool transparent);
+    // Drop cached bindings before a batch's material or textures are destroyed.
+    void releaseBatch(const MeshInstancer& inst);
     void record(Backend::RenderPassEncoder& pass, const PreparedDraws& prepared,
                 Backend::BindGroup* shadowBindGroup) const;
 

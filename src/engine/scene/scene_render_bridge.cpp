@@ -1,13 +1,15 @@
-// Collects static instance state and converts material values for renderers.
+// Collects instance state and converts material values for renderers.
 #include "scene_render_bridge.hpp"
 
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 
 #include <algorithm>
 #include <atomic>
+#include <stdexcept>
 
 namespace KE {
 namespace Scene {
@@ -65,6 +67,70 @@ RenderMaterialData SceneRenderBridge::materialData(const Material& material) {
             pbr.emissiveTexture || pbr.opacityTexture;
     }
     return input;
+}
+
+std::vector<std::pair<const char*, Backend::Texture*>>
+SceneRenderBridge::materialTextures(const Material& material) {
+    std::vector<std::pair<const char*, Backend::Texture*>> textures;
+    auto add = [&](const char* slot, Backend::Texture* texture) {
+        if (texture)
+            textures.emplace_back(slot, texture);
+    };
+    if (const auto* phong = dynamic_cast<const PhongMaterial*>(&material)) {
+        add("diffuse_map", phong->diffuseMap);
+        add("specular_map", phong->specularMap);
+        add("alpha_map", phong->alphaMap);
+        add("normal_map", phong->normalMap);
+    } else if (const auto* pbr = dynamic_cast<const PBRMaterial*>(&material)) {
+        add("base_color_texture", pbr->baseColorTexture);
+        add("normal_texture", pbr->normalTexture);
+        add("metallic_roughness_texture", pbr->metallicRoughnessTexture);
+        add("metallic_texture", pbr->metallicTexture);
+        add("roughness_texture", pbr->roughnessTexture);
+        add("ao_texture", pbr->aoTexture);
+        add("orm_texture", pbr->ormTexture);
+        add("emissive_texture", pbr->emissiveTexture);
+        add("opacity_texture", pbr->opacityTexture);
+    }
+    return textures;
+}
+
+RenderMaterialSource
+SceneRenderBridge::materialSource(const Material& material,
+                                  const SceneResourceManager* resources) {
+    RenderMaterialSource result;
+    result.values = materialData(material);
+    if (!resources) {
+        result.values.hasNativeTextures |= !material.textureResources.empty();
+        return result;
+    }
+    result.resource = resources->materialHandle(&material);
+    for (const auto& [slot, handle] : material.textureResources) {
+        auto source = resources->textureSource(handle);
+        if (!source)
+            throw std::invalid_argument(
+                "Material texture handle has no source: " + slot);
+        result.textures.emplace(slot,
+                                std::make_pair(handle, std::move(source)));
+    }
+
+    // Resolve GPU bindings to catalog sources without readback.
+    result.values.hasNativeTextures = !material.texturePaths.empty();
+    for (const auto& [slot, texture] : materialTextures(material)) {
+        const auto handle = resources->textureHandle(texture);
+        auto source = resources->textureSource(handle);
+        if (!source) {
+            result.values.hasNativeTextures = true;
+            continue;
+        }
+        auto [it, inserted] = result.textures.emplace(
+            slot, std::make_pair(handle, std::move(source)));
+        if (!inserted && it->second.first != handle)
+            throw std::invalid_argument(
+                std::string("Native and source texture bindings disagree: ") +
+                slot);
+    }
+    return result;
 }
 
 void SceneRenderBridge::remove(const Prim& prim) {

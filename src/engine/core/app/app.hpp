@@ -101,34 +101,18 @@ class App {
   private:
     const std::thread::id _ownerThread = std::this_thread::get_id();
     bool _closed = false;
+    bool _closeRequested = false;
     bool _setupStarted = false;
     bool _inFrame = false;
+    bool _pickIsClick = false;
+    bool _pickForceDrag = false;
+    glm::vec3 _pickLookDir{0.0f};
     std::atomic<bool> _automationRequested{false};
     void requireOwnerThread() const;
+    double currentTimeSeconds() const;
+    std::shared_ptr<Backend::ProfileContext> _profileContext;
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
-    // Main Scene Pipeline: RHI-owned 4x MSAA attachments resolve into the
-    // legacy framebuffer's single-sample color texture during migration.
-    std::unique_ptr<Backend::Framebuffer> _framebuffer;
-    std::unique_ptr<Backend::Texture> _sceneMsaaColor;
-    std::unique_ptr<Backend::Texture> _sceneMsaaDepthStencil;
-    std::unique_ptr<Backend::TextureView> _sceneMsaaColorView;
-    std::unique_ptr<Backend::TextureView> _sceneResolveColorView;
-    std::unique_ptr<Backend::TextureView> _sceneMsaaDepthStencilView;
-    std::unique_ptr<Backend::RenderTarget> _sceneClearTarget;
-    // RHI passes append into the MSAA attachments without resolving. A final
-    // empty pass performs the frame's single resolve.
-    std::unique_ptr<Backend::RenderTarget> _sceneDrawTarget;
-    std::unique_ptr<Backend::RenderTarget> _sceneRenderTarget;
-    std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
-    std::unique_ptr<Backend::Framebuffer> _sceneCameraPreviewFramebuffer;
-    std::unique_ptr<PostProcessor> _sceneCameraPreviewPostProcessor;
-    int _sceneCameraPreviewPostWidth = 0;
-    int _sceneCameraPreviewPostHeight = 0;
-    Backend::Framebuffer* _lastPresentedFramebuffer = nullptr;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
-    std::unique_ptr<Rasterizer> _rasterizer;
-    std::unique_ptr<PostProcessor> _postProcessor;
-    std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
     Renderer _renderer;
     Scene::SceneRenderSystem _sceneRenderSystem;
     Scene::SceneResourceManager _sceneResourceManager;
@@ -163,11 +147,13 @@ class App {
     void registerBuiltinRenderResources();
 
   public:
+    // Custom frame backends currently require headless=true and hideUi=true.
     void initialize(
         int width, int height, bool hideUi, UpAxis upAxis = UpAxis::Y,
         Backend::BackendType graphicsBackendType = Backend::BackendType::OpenGL,
         Scene::BackendType sceneBackendType = Scene::BackendType::Native,
-        bool headless = false);
+        bool headless = false,
+        std::unique_ptr<RenderBackend> renderBackend = nullptr);
     void processInput();
     void checkError();
     void coreRender();
@@ -257,14 +243,17 @@ class App {
     }
     bool getPrimTransformSource(const Scene::Prim* prim,
                                 TransformSource& outSource) const {
-        return _rasterizer &&
-               _rasterizer->getPrimTransformSource(prim, outSource);
+        return getRasterizer() &&
+               getRasterizer()->getPrimTransformSource(prim, outSource);
     }
     bool hasSelection() const { return _interaction.hasSelection(); }
     const RayPickResult& getSelection() const {
         return _interaction.selection();
     }
-    void clearSelection() { _interaction.clearSelection(); }
+    void clearSelection() {
+        _renderer.cancelPick();
+        _interaction.clearSelection();
+    }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
     Backend::Texture*
@@ -553,6 +542,7 @@ class App {
     void setLightAmbient(const glm::vec3& ambient);
 
     // Record
+    RenderImage readImage(bool flipY = true);
     std::vector<uint8_t> readRgbPixels(bool flipY = true);
     std::vector<uint8_t> readRgbPixelsResized(int width, int height,
                                               bool flipY = true);
