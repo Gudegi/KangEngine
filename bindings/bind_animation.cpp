@@ -897,7 +897,7 @@ void bind_animation(py::module& m) {
            const FloatArray& offsets,
            py::array_t<int, py::array::c_style | py::array::forcecast>
                controlJoints,
-           const FloatArray& controlAxes, int maxIterations) {
+           const FloatArray& controlAxes, int maxIterations, double poseDamping) {
             const auto targetInfo = targets.request();
             const auto effectorInfo = effectors.request();
             const auto offsetInfo = offsets.request();
@@ -953,6 +953,7 @@ void bind_animation(py::module& m) {
 
             FullBodyIKConfig config;
             config.maxIterations = maxIterations;
+            config.poseDamping = poseDamping;
 
             FullBodyIKBatchResult solved;
             {
@@ -980,6 +981,7 @@ void bind_animation(py::module& m) {
         py::arg("motion"), py::arg("targets"), py::arg("effector_joints"),
         py::arg("effector_offsets"), py::arg("control_joints"),
         py::arg("control_axes"), py::arg("max_iterations") = 0,
+        py::arg("pose_damping") = 0.01,
         "Solve full-body IK for all frames in a motion batch.");
 
     anim.def(

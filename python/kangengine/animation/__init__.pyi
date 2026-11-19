@@ -531,6 +531,7 @@ def solve_full_body_ik_batch(
     control_joints: npt.ArrayLike | torch.Tensor,
     control_axes: npt.ArrayLike | torch.Tensor,
     max_iterations: int = 0,
+    pose_damping: float = 0.01,
 ) -> tuple[SkeletonMotion, _Float32Array, _Float32Array, npt.NDArray[np.int32]]: ...
 def cpu_skin(
     bind_positions: npt.ArrayLike | torch.Tensor,
