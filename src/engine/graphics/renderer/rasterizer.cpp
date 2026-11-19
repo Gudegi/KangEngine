@@ -1261,12 +1261,11 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
     glm::mat4 lightView = glm::lookAt(lightPos, frustumCenter, up);
     float minZ = std::numeric_limits<float>::max();
     float maxZ = std::numeric_limits<float>::lowest();
-    std::vector<glm::vec3> lightSpaceCorners;
-    lightSpaceCorners.reserve(8);
-    for (const auto& corner : corners) {
+    std::array<glm::vec3, 8> lightSpaceCorners;
+    for (size_t i = 0; i < lightSpaceCorners.size(); ++i) {
         glm::vec3 lightSpaceCorner =
-            glm::vec3(lightView * glm::vec4(corner, 1.0f));
-        lightSpaceCorners.push_back(lightSpaceCorner);
+            glm::vec3(lightView * glm::vec4(corners[i], 1.0f));
+        lightSpaceCorners[i] = lightSpaceCorner;
         minZ = std::min(minZ, lightSpaceCorner.z);
         maxZ = std::max(maxZ, lightSpaceCorner.z);
     }

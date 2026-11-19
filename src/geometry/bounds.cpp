@@ -32,33 +32,9 @@ float maxScaleComponent(const glm::mat4& transform) {
 
 } // namespace
 
-float Plane::signedDistance(const glm::vec3& point) const {
-    return glm::dot(normal, point) + distance;
-}
-
 AABB AABB::empty() {
     const float inf = std::numeric_limits<float>::infinity();
     return {glm::vec3(inf), glm::vec3(-inf)};
-}
-
-bool AABB::isValid() const {
-    return min.x <= max.x && min.y <= max.y && min.z <= max.z;
-}
-
-glm::vec3 AABB::center() const { return (min + max) * 0.5f; }
-
-glm::vec3 AABB::extents() const { return (max - min) * 0.5f; }
-
-void AABB::expand(const glm::vec3& point) {
-    min = glm::min(min, point);
-    max = glm::max(max, point);
-}
-
-void AABB::expand(const AABB& other) {
-    if (!other.isValid())
-        return;
-    expand(other.min);
-    expand(other.max);
 }
 
 Frustum Frustum::fromViewProjection(const glm::mat4& viewProjection) {
