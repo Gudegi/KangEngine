@@ -1616,9 +1616,13 @@ void bind_viewer(py::module& m) {
         .def("get_projection_matrix", &App::getProjectionMatrix,
              "Return the current camera projection matrix.")
         .def("get_width", &App::getWidth,
-             "Return the framebuffer width in pixels.")
+             "Return the window framebuffer width in pixels.")
         .def("get_height", &App::getHeight,
-             "Return the framebuffer height in pixels.")
+             "Return the window framebuffer height in pixels.")
+        .def("get_render_width", &App::getRenderWidth,
+             "Return the scene render width in pixels, excluding UI.")
+        .def("get_render_height", &App::getRenderHeight,
+             "Return the scene render height in pixels, excluding UI.")
         .def("get_scene", &App::getScene, py::return_value_policy::reference,
              "Return the active scene backend.");
 

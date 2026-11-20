@@ -349,6 +349,8 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     } else {
         _renderer.profiler().bind(_profileContext);
     }
+    _renderWidth = _width;
+    _renderHeight = _height;
     _renderer.bindSceneResources(_sceneResourceManager);
     _sceneRenderSystem.bind(&_renderer);
     registerBuiltinRenderResources();
@@ -792,6 +794,13 @@ void App::executeFrame(bool update) {
         profile.setMetadata("fixed_update_count",
                             std::to_string(fixedUpdateCount));
 
+    if (_imagePresenter)
+        updateExternalRenderSize();
+    if (profile.active()) {
+        profile.setMetadata("render_width", std::to_string(_renderWidth));
+        profile.setMetadata("render_height", std::to_string(_renderHeight));
+    }
+
     const bool useSceneCameraForMainView =
         (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor) &&
         syncActiveSceneCameraView();
@@ -1216,6 +1225,30 @@ float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 Backend::Texture* App::getPresentedTexture() {
     return _imagePresenter ? _imagePresenter->texture()
                            : _renderer.presentedTexture();
+}
+
+void App::updateExternalRenderSize() {
+    int width = _width, height = _height;
+    if (!_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor) {
+        if (!_editorViewportPanel || !_editorViewportPanel->isOpen())
+            return;
+        // Use the previous UI layout; resize only before rendering the next frame.
+        const ImVec2 size = _editorViewportPanel->contentSize();
+        if (size.x <= 1.0f || size.y <= 1.0f ||
+            _logicalWidth <= 0 || _logicalHeight <= 0)
+            return;
+        width = std::max(1, static_cast<int>(std::lround(
+                                size.x * _width / _logicalWidth)));
+        height = std::max(1, static_cast<int>(std::lround(
+                                 size.y * _height / _logicalHeight)));
+    }
+    if (width == _renderWidth && height == _renderHeight)
+        return;
+    _renderer.resizeFrame(width, height);
+    _renderWidth = width;
+    _renderHeight = height;
+    _camera.updateProjMatrix(width, height);
+    _sceneCamera.updateProjMatrix(width, height);
 }
 
 void App::setCameraMoveSpeed(float speed) {
@@ -1800,9 +1833,13 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glfwGetWindowSize(window, &_logicalWidth, &_logicalHeight);
     _uiScale.update(window);
     _graphicsDevice->setViewport(0, 0, _width, _height);
-    _camera.updateProjMatrix(_width, _height);
-    _sceneCamera.updateProjMatrix(_width, _height);
-    _renderer.resizeFrame(_width, _height);
+    if (!_imagePresenter) {
+        _camera.updateProjMatrix(_width, _height);
+        _sceneCamera.updateProjMatrix(_width, _height);
+        _renderer.resizeFrame(_width, _height);
+        _renderWidth = _width;
+        _renderHeight = _height;
+    }
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {

@@ -27,10 +27,10 @@ class _App:
     def _request_automation_frame(self):
         self.automation_requested = True
 
-    def get_width(self):
+    def get_render_width(self):
         return 5
 
-    def get_height(self):
+    def get_render_height(self):
         return 3
 
     def read_rgb_pixels(self, *, flip_y):

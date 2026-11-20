@@ -2,10 +2,14 @@
 
 from contextlib import contextmanager
 import math
+import os
 import sys
 
 if sys.platform == "darwin":
     raise RuntimeError("ovrtx is not supported on macOS; use the native render backend.")
+
+# Local scene assets do not require the Omniverse Hub cache service.
+os.environ.setdefault("OMNICLIENT_HUB_MODE", "disabled")
 
 import numpy as np
 import ovrtx
@@ -73,7 +77,6 @@ def Scope "Render" {{
         rel camera = </World/Camera>
         int2 resolution = ({width}, {height})
         token omni:rtx:rendermode = "PathTracing"
-        token[] omni:rtx:waitForEvents = ["AllLoadingFinished"]
         rel orderedVars = </Render/Camera/LdrColor>
         def RenderVar "LdrColor" {{
             string sourceName = "LdrColor"
@@ -284,8 +287,12 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
         return pixels
 
     def resize(self, width, height):
+        if self._resolution == (width, height):
+            return
         self._release_output()
         self._resolution = (width, height)
+        # Resume progressively instead of rerunning first-frame quality passes.
+        self._renderer.clear_history(render_products={"/Render/Camera"})
 
     def _release_output(self):
         if self._mapped is not None:

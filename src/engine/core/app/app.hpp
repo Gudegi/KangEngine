@@ -117,6 +117,8 @@ class App {
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
     // Displays external CUDA images (currently ovrtx); unused by Native.
     std::unique_ptr<Backend::OpenGLImagePresenter> _imagePresenter;
+    // Scene output pixels; external Editor output follows the viewport.
+    int _renderWidth = 0, _renderHeight = 0;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     Renderer _renderer;
     Scene::SceneRenderSystem _sceneRenderSystem;
@@ -131,6 +133,7 @@ class App {
     Scene::Prim* defaultDirectionalLightPrim();
     Scene::Prim* activeSceneCameraPrim() const;
     bool syncActiveSceneCameraView();
+    void updateExternalRenderSize();
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderRecordingIndicator();
@@ -170,6 +173,8 @@ class App {
 
     int getWidth() { return _width; }
     int getHeight() { return _height; }
+    int getRenderWidth() const { return _renderWidth; }
+    int getRenderHeight() const { return _renderHeight; }
     int getLogicalWidth() { return _logicalWidth; }
     int getLogicalHeight() { return _logicalHeight; }
     const UIScale& getUiScale() const { return _uiScale; }

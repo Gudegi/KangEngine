@@ -2248,6 +2248,7 @@ void ViewportPanel::buildPanel() {
     _focused = false;
     _viewGuizmoCapturesMouse = false;
     if (!ImGui::Begin(name().c_str(), openPtr())) {
+        _contentSize = {0.0f, 0.0f};
         ImGui::End();
         return;
     }

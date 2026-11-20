@@ -1876,8 +1876,8 @@ class App(_NativeApp):
         ovrtx supports opaque lit PBR meshes, one directional light with zero
         ambient, and perspective cameras. Its window uses CUDA–OpenGL image
         copies on the same GPU and requires a CUDA interop build. Viewport
-        picking is not supported. ``headless=True, hide_ui=True`` keeps CPU
-        offscreen output; explicit screenshots also download to CPU.
+        picking is not supported. Use ``headless=True, hide_ui=True`` to render
+        without a window.
         Unsupported scene features raise when submitted.
         """
         if render_backend not in ("native", "ovrtx"):

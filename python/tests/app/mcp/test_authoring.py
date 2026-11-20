@@ -210,8 +210,10 @@ def test_automatic_focus_fits_transformed_primitive_in_viewport(fixture, size):
         get_near_plane=lambda: 0.1,
         get_far_plane=lambda: 1000,
     )
-    app.get_width = lambda: size[0]
-    app.get_height = lambda: size[1]
+    app.get_width = lambda: 1920
+    app.get_height = lambda: 1080
+    app.get_render_width = lambda: size[0]
+    app.get_render_height = lambda: size[1]
     app.active_scene_camera_path = lambda: None
     app.has_active_scene_camera = lambda: False
     app.set_camera_view = lambda **values: pose.update(values)

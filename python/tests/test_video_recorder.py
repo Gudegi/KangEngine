@@ -227,14 +227,17 @@ class VideoCaptureControllerTest(unittest.TestCase):
         app = _FakeApp()
         app.get_width = mock.Mock(return_value=3840)
         app.get_height = mock.Mock(return_value=2160)
+        app.get_render_width = mock.Mock(return_value=3840)
+        app.get_render_height = mock.Mock(return_value=2160)
         controller = VideoCaptureController()
         controller.configure(run_mode="offscreen_fast")
         controller.start(app, "offscreen.mp4")
         self.assertEqual(controller._capture_resolution, (1920, 1080))
         controller.stop(app)
 
-        app.get_width.return_value = 1280
-        app.get_height.return_value = 720
+        # A smaller viewport must not be upscaled to the unchanged window size.
+        app.get_render_width.return_value = 1280
+        app.get_render_height.return_value = 720
         controller.start(app, "offscreen.mp4")
         self.assertEqual(controller._capture_resolution, (1280, 720))
         controller.stop(app)

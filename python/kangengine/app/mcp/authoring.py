@@ -341,7 +341,7 @@ class SceneAuthoring:
             bounds = np.stack((world.min(axis=0), world.max(axis=0)))
             target = bounds.mean(axis=0)
             radius = np.linalg.norm(bounds[1] - bounds[0]) / 2
-            width, height = app.get_width(), app.get_height()
+            width, height = app.get_render_width(), app.get_render_height()
             if width <= 0 or height <= 0 or not np.isfinite(bounds).all():
                 raise AutomationError(
                     "NOT_READY", "Valid viewport and geometry bounds are required"

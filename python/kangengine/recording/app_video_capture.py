@@ -241,8 +241,8 @@ class VideoCaptureController:
     def _resolve_capture_resolution(self, app) -> tuple[int, int] | None:
         if self.max_resolution is None:
             return None
-        get_width = getattr(app, "get_width", None)
-        get_height = getattr(app, "get_height", None)
+        get_width = getattr(app, "get_render_width", None)
+        get_height = getattr(app, "get_render_height", None)
         if get_width is None or get_height is None:
             return None
         source_width = int(get_width())

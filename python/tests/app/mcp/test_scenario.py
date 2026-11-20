@@ -133,8 +133,8 @@ def test_service_schedules_capture_and_returns_retained_image(tmp_path):
         frame_index=0,
         run_config=None,
         _mcp_scenario_targets={"fixture": target},
-        get_width=lambda: 5,
-        get_height=lambda: 3,
+        get_render_width=lambda: 5,
+        get_render_height=lambda: 3,
         read_rgb_pixels=lambda **kwargs: np.zeros((3, 5, 3), dtype=np.uint8),
         _request_automation_frame=lambda: None,
     )

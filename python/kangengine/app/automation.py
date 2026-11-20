@@ -368,7 +368,7 @@ class AutomationService:
                 self._fail(request, "BUSY", "PNG encoder queue is full")
             return
         try:
-            if app.get_width() * app.get_height() > MAX_CAPTURE_PIXELS:
+            if app.get_render_width() * app.get_render_height() > MAX_CAPTURE_PIXELS:
                 raise AutomationError(
                     "OUTPUT_TOO_LARGE", f"Capture exceeds {MAX_CAPTURE_PIXELS} pixels"
                 )
