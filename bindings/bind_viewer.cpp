@@ -28,6 +28,7 @@
 #include <imgui_internal.h>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <iomanip>
 #include <optional>
@@ -229,6 +230,17 @@ void bind_imgui(py::module& m) {
     imgui.def("text_disabled", [](const std::string& text) {
         ImGui::TextDisabled("%s", text.c_str());
     });
+    imgui.def("text_heading", [](const std::string& text, float scale) {
+        if (!(scale > 0.0f) || !std::isfinite(scale))
+            throw py::value_error("Heading scale must be positive and finite");
+        const float previous = ImGui::GetCurrentWindow()->FontWindowScale;
+        ImGui::SetWindowFontScale(previous * scale);
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextUnformatted(text.c_str());
+        ImGui::PopTextWrapPos();
+        ImGui::SetWindowFontScale(previous);
+    }, py::arg("text"), py::arg("scale") = 1.2f,
+       "Draw a wrapped heading at a relative font size; restore the window font scale afterward.");
     imgui.def("separator", []() { ImGui::Separator(); });
     imgui.def("same_line", []() { ImGui::SameLine(); });
     imgui.def("cursor_screen_pos", []() {
