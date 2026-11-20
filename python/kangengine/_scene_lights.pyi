@@ -61,6 +61,6 @@ class RectLight(LightEmission):
     texture_path: str
 
 class DomeLight(LightEmission):
-    """Uniform infinite environment, currently evaluated as diffuse illumination."""
+    """Infinite environment light."""
     texture_path: str
     texture_format: str

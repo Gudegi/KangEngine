@@ -1874,8 +1874,8 @@ class App(_NativeApp):
         """Initialize Native rendering or the optional ovrtx backend.
 
         ovrtx supports opaque lit PBR meshes, one directional light with zero
-        ambient, and perspective cameras. Its window uses CUDA–OpenGL image
-        copies on the same GPU and requires a CUDA interop build. Viewport
+        ambient, dome lights, and perspective cameras. Its window uses CUDA–OpenGL
+        image copies on the same GPU and requires a CUDA interop build. Viewport
         picking is not supported. Use ``headless=True, hide_ui=True`` to render
         without a window.
         Unsupported scene features raise when submitted.

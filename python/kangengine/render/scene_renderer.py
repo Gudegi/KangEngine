@@ -36,8 +36,9 @@ class SceneRenderer:
     """Render a scene to RGB images without changing its authoring code.
 
     Supports opaque, lit PBR triangle meshes, base-color file textures, one
-    directional light and a perspective camera. Sources stay immutable after
-    registration; register a new resource to replace geometry or an image.
+    directional light, dome lights and a perspective camera. Sources stay
+    immutable after registration; register a new resource to replace geometry
+    or an image.
     Native also accepts memory images; ovrtx currently requires file sources.
     The session retains its scene and resource manager. Use on its creating
     thread and close to release backend resources.

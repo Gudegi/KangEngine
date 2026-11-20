@@ -89,6 +89,15 @@ py::dict sceneFrameToDict(const RenderSceneFrame& frame) {
         lights.append(item);
     }
     result["lights"] = lights;
+    py::list domes;
+    for (const auto& dome : frame.domes) {
+        py::dict item;
+        item["path"] = dome.path;
+        item["light"] = py::cast(dome.light, py::return_value_policy::copy);
+        item["world"] = floatArrayFromMat4(dome.world);
+        domes.append(item);
+    }
+    result["domes"] = domes;
     return result;
 }
 

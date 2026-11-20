@@ -2,6 +2,7 @@
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/selection_outline_processor.hpp"
 #include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
+#include "engine/scene/types/light_color.hpp"
 
 #include <stdexcept>
 #include <set>
@@ -393,6 +394,10 @@ void NativeRenderSystem::syncScene(const Scene::RenderSceneFrame& scene) {
     if (!scene.lights.empty())
         light = scene.lights.front();
     _rasterizer->setLight(light);
+    glm::vec3 domeRadiance(0.0f);
+    for (const auto& dome : scene.domes)
+        domeRadiance += Scene::emittedRadiance(dome.light) * dome.light.diffuse;
+    _rasterizer->setDomeRadiance(domeRadiance);
 }
 
 void NativeRenderSystem::beginFrame() {

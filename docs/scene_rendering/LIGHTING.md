@@ -9,6 +9,8 @@ one meter. The USD example keeps the imported stage's axes and units.
 
 ## Choose a light
 
+The following limits describe Native rendering.
+
 | Type | Typical use | Direction | Visible light limit | Shadows | Materials |
 | --- | --- | --- | --- | --- | --- |
 | Directional | Sun | `direction` follows emitted rays | 1 | Yes | common, Phong, PBR and ground |
@@ -19,7 +21,7 @@ one meter. The USD example keeps the imported stage's axes and units.
 
 Point, Spot and Rect do not illuminate `common` or Phong materials. For them,
 use a [PBR material](MATERIALS_TEXTURES.md#create-a-pbr-material).
-Dome currently supplies uniform ambient illumination, not an HDRI background
+Dome in Native supplies uniform ambient illumination, not an HDRI background
 or environment reflections.
 
 Directional, Point and Spot use the first eligible lights encountered under
@@ -237,12 +239,18 @@ light.intensity = 0.2
 sky.set_dome_light(light=light)
 ```
 
-Color, intensity, exposure and color temperature work as described above.
+In Native, color, intensity, exposure and color temperature work as described above.
 `diffuse` scales the illumination; `specular` and `normalize` have no effect.
 All Dome contributions add to the directional light's `ambient`. Set `ambient`
 to zero if only the Domes should provide fill.
 Objects do not block dome illumination. Environment reflections and textured
 domes are not supported.
+
+With ovrtx, domes illuminate surfaces and reflections and provide the background.
+For a latitude-longitude HDRI, set `light.texture_path` to the image file and
+`light.texture_format = "latlong"` before calling `set_dome_light()`.
+Rotate the owning prim to rotate the environment. Visibility and active state
+control whether the dome contributes.
 
 ## USD scenes and camera exposure
 

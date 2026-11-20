@@ -13,12 +13,20 @@ class NativeSceneAdapter:
             self._camera = self._app.scene.define_prim("/camera", scene.PrimType.CAMERA)
             self._camera.add_camera_component()
             self._app.set_active_scene_camera(self._camera)
+            self._domes = set()
         except BaseException:
             self._app.close()
             raise
 
     def render(self, frame):
         self._app.get_renderer()._sync_scene(frame)
+        domes = {item["path"] for item in frame["domes"]}
+        for path in self._domes - domes:
+            self._app.scene.remove_prim("/lights/domes" + path)
+        for item in frame["domes"]:
+            prim = self._app.scene.define_prim("/lights/domes" + item["path"], scene.PrimType.LIGHT)
+            prim.set_dome_light(item["light"])
+        self._domes = domes
         camera = frame["camera"]
         self._camera.set_world_matrix(camera["world"].T.copy())
         self._camera.get_camera_component().set_perspective(

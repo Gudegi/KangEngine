@@ -38,11 +38,18 @@ struct RenderCameraSource {
     float farPlane = 100.0f;
 };
 
+struct RenderDomeLightSource {
+    std::string path;
+    DomeLight light;
+    glm::mat4 world{1.0f};
+};
+
 // Complete static scene state consumed by either render adapter.
 struct RenderSceneFrame {
     std::vector<RenderObjectSource> objects;
     RenderCameraSource camera;
     std::vector<DirectionalLight> lights;
+    std::vector<RenderDomeLightSource> domes;
 };
 
 // Evaluates scenes for Native/ovrtx without retaining Prims or GPU state.

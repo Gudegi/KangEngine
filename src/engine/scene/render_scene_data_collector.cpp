@@ -88,13 +88,18 @@ RenderSceneDataCollector::collectScene(SceneBackend& scene,
         if (auto light = prim->getLightComponent()) {
             if (!prim->isActiveInHierarchy() || !prim->isVisibleInHierarchy())
                 continue;
-            if (light->type() != LightType::Directional)
+            if (light->type() == LightType::Dome) {
+                frame.domes.push_back({prim->getPath(), light->domeLight(),
+                                       prim->computeWorldMatrix()});
+            } else if (light->type() == LightType::Directional) {
+                auto value = light->directionalLight();
+                value.direction = glm::normalize(
+                    glm::mat3(prim->computeModelMatrix()) * value.direction);
+                frame.lights.push_back(value);
+            } else {
                 throw std::invalid_argument(
-                    "SceneRenderer currently supports directional lights only");
-            auto value = light->directionalLight();
-            value.direction = glm::normalize(
-                glm::mat3(prim->computeModelMatrix()) * value.direction);
-            frame.lights.push_back(value);
+                    "SceneRenderer currently supports directional and dome lights only");
+            }
         }
 
         auto component = prim->getRenderComponent();

@@ -95,7 +95,7 @@ void bind_scene(py::module& m) {
         .def_readwrite("height", &KE::Scene::RectLight::height)
         .def_readwrite("texture_path", &KE::Scene::RectLight::texturePath);
     py::class_<KE::Scene::DomeLight, KE::Scene::LightEmission>(scene, "DomeLight",
-        "Uniform environment light. The rasterizer currently evaluates diffuse illumination only.")
+        "Infinite environment light.")
         .def(py::init<>())
         .def_readwrite("texture_path", &KE::Scene::DomeLight::texturePath)
         .def_readwrite("texture_format", &KE::Scene::DomeLight::textureFormat);
