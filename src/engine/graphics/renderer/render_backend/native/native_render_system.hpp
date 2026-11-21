@@ -6,7 +6,7 @@
 #include "engine/graphics/renderer/renderer.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "utils/types.hpp"
-#include "engine/scene/render_scene_data_collector.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 
 #include <map>
 #include <tuple>

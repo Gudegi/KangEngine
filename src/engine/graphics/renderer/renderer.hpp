@@ -7,8 +7,8 @@
 #include "engine/graphics/renderer/renderer_profiler.hpp"
 #include "engine/graphics/renderer/render_backend/render_image.hpp"
 #include "engine/graphics/renderer/render_backend/render_backend.hpp"
-#include "engine/scene/scene_render_bridge.hpp"
-#include "engine/scene/render_light_data.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
+#include "engine/scene/render/render_scene_data_collector.hpp"
 #include "utils/types.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>

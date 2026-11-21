@@ -4,7 +4,7 @@
 #include "engine/graphics/renderer/mesh_instancer.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/shader_library.hpp"
-#include "engine/scene/scene_render_bridge.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
 #include "utils/asset_path.hpp"
 
 #include <array>

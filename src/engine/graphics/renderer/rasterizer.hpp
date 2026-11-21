@@ -15,7 +15,7 @@
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
-#include "engine/scene/scene_render_bridge.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/types/camera.hpp"
 #include "geometry/bounds.hpp"

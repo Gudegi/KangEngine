@@ -8,7 +8,7 @@
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/native_scene.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
-#include "engine/scene/render_scene_data_collector.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 #include "utils/asset_path.hpp"
 
 #include <algorithm>

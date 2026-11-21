@@ -4,7 +4,7 @@
 
 #include "../src/kangEngine.hpp"
 #include "py_array_view.hpp"
-#include "engine/scene/render_scene_data_collector.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>

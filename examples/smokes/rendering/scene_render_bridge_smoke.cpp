@@ -1,5 +1,5 @@
 // Checks static scene registration, material values, and instance lifetime.
-#include "engine/scene/scene_render_bridge.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
 #include "engine/scene/native/native_scene.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/component/mesh_component.hpp"

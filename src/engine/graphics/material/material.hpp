@@ -5,7 +5,7 @@
 #include "engine/graphics/material/pbrMaterials.hpp"
 #include "engine/graphics/material/phongMaterials.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
-#include "engine/scene/render_material_data.hpp"
+#include "engine/scene/render/render_material_data.hpp"
 #include "engine/scene/component/resource_component.hpp"
 
 #include <glm/glm.hpp>

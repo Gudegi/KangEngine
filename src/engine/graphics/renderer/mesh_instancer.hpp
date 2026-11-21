@@ -8,7 +8,7 @@
 #include "engine/scene/native/prim.hpp"
 #include "geometry/bounds.hpp"
 #include "geometry/mesh_bvh.hpp"
-#include "engine/scene/render_scene_data.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>

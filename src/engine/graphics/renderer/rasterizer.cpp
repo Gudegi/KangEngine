@@ -5,7 +5,7 @@
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/types/light_color.hpp"
-#include "engine/scene/render_light_data.hpp"
+#include "engine/scene/render/render_light_data.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"

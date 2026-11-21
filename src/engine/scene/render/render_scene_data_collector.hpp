@@ -1,52 +1,35 @@
 #pragma once
 
-// Collects scene and resource data for Native/ovrtx image rendering.
+// Collects scene inputs and tracks accepted updates for render backends.
 
-#include "engine/scene/render_scene_data.hpp"
-#include "engine/scene/render_material_data.hpp"
-#include "engine/scene/scene_resource_manager.hpp"
-#include "engine/scene/render_light_data.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 
+#include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace KE {
 namespace Scene {
 
+class Prim;
 class RenderComponent;
+class SceneBackend;
+class SceneResourceManager;
 class SceneRenderSystem;
+class TransformComponent;
 
-// One object's source resources and evaluated world state.
-struct RenderObjectSource {
-    RenderInstanceId id = InvalidRenderInstance;
-    std::string path;
-    RenderMeshData mesh;
-    RenderMaterialData material;
-    ResourceHandle materialResource = InvalidResourceHandle;
-    RenderTextureSources textures;
-    glm::mat4 world{1.0f};
-    glm::vec4 color{1.0f};
-    bool visible = true;
-    bool pickable = true;
-    bool doubleSided = false;
-};
+// Caches membership; visibility and world poses are evaluated on each
+// collection.
+class RenderLightCollector {
+  public:
+    RenderLightData collect(Prim* root);
 
-struct RenderCameraSource {
-    glm::mat4 world{1.0f};
-    float verticalFov = 45.0f;
-    float nearPlane = 0.1f;
-    float farPlane = 100.0f;
-};
-
-// Full scene state or an incremental update consumed by either render adapter.
-struct RenderSceneFrame {
-    std::vector<RenderObjectSource> objects;
-    RenderCameraSource camera;
-    RenderLightData lighting;
-    // Incremental frames upsert objects and remove only the listed identities.
-    bool incremental = false;
-    std::vector<RenderInstanceId> removedObjects;
-    bool lightingChanged = true;
+  private:
+    std::weak_ptr<TransformComponent> _root;
+    uint64_t _structureVersion = 0;
+    std::vector<Prim*> _prims;
 };
 
 // Advances its baseline only after a backend accepts the submitted update.

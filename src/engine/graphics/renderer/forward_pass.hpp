@@ -2,7 +2,7 @@
 
 #include "engine/graphics/renderer/raster_pipeline_library.hpp"
 #include "engine/graphics/renderer/render_pass_base.hpp"
-#include "engine/scene/render_material_data.hpp"
+#include "engine/scene/render/render_material_data.hpp"
 
 #include <array>
 #include <glm/vec4.hpp>

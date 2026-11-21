@@ -1,5 +1,6 @@
 // Connects scene updates and Python render adapters to the C++ renderer.
-#include "engine/scene/render_scene_data_collector.hpp"
+#include "engine/scene/render/render_scene_data_collector.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 #include "py_array_view.hpp"
 #include "py_render_backend.hpp"
 #include "engine/scene/types/camera.hpp"

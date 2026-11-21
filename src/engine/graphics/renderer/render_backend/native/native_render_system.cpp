@@ -2,6 +2,7 @@
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/selection_outline_processor.hpp"
 #include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 
 #include <stdexcept>
 #include <set>

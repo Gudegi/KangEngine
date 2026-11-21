@@ -5,7 +5,7 @@
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/native/prim.hpp"
-#include "engine/scene/scene_render_bridge.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
 
 #include <cctype>
 #include <stdexcept>

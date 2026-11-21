@@ -2,8 +2,8 @@
 
 // Connects scene Prim state and identity to renderer-owned batches.
 
-#include "engine/scene/render_scene_data.hpp"
-#include "engine/scene/render_material_data.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
+#include "engine/scene/render/render_material_data.hpp"
 
 #include <vector>
 #include <utility>

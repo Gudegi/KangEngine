@@ -7,7 +7,8 @@
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
-#include "engine/scene/scene_render_bridge.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 
 #include <set>
 #include <stdexcept>

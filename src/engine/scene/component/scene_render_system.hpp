@@ -3,7 +3,7 @@
 
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/scene/scene_backend.hpp"
-#include "engine/scene/render_scene_data_collector.hpp"
+#include "engine/scene/render/render_scene_data_collector.hpp"
 
 #include <cstddef>
 #include <glm/mat4x4.hpp>

@@ -3,7 +3,7 @@
 #include "engine/core/app/app.hpp"
 #include "bridge/skin_visual_bridge.hpp"
 #include "engine/graphics/renderer/render_backend/render_backend.hpp"
-#include "engine/scene/render_scene_data_collector.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/graphics/material/material.hpp"
