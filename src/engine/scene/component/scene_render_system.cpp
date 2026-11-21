@@ -117,18 +117,25 @@ SceneRenderSystem::addRenderable(Prim& prim, Material* material,
 
 void SceneRenderSystem::finishRegistration(
     const std::shared_ptr<RenderComponent>& component,
-    RenderableHandle renderable, const SkinnedMeshData* skinnedMesh) {
+    RenderableHandle renderable, Material* material,
+    const SkinnedMeshData* skinnedMesh) {
     Registration registration;
     registration.component = component;
     registration.prim = component->owner();
     registration.handle = renderable;
+    registration.mesh = component->resolveMeshData().get();
+    registration.material = material;
     if (skinnedMesh)
         registration.skinnedMesh = *skinnedMesh;
     _registrations.emplace(component.get(), registration);
     component->setRegistrationCallbacks(
         [this](RenderComponent& detached) { unregister(detached); },
         [this](RenderComponent& changed) { syncState(changed); });
-    syncState(*component);
+    if (renderable != InvalidHandle)
+        _renderer->setSceneBatchState(
+            renderable,
+            {component->isDoubleSided(), component->castsShadow(),
+             component->alphaMode(), component->alphaCutoff()});
 }
 
 bool SceneRenderSystem::registerRenderable(
@@ -149,7 +156,7 @@ bool SceneRenderSystem::registerRenderable(
             throw std::invalid_argument(
                 "Scene registration requires a material");
     }
-    finishRegistration(component, handle);
+    finishRegistration(component, handle, material);
     return true;
 }
 
@@ -162,7 +169,7 @@ bool SceneRenderSystem::registerSkinnedRenderable(
         component->transformSource());
     if (handle == InvalidHandle)
         return false;
-    finishRegistration(component, handle, &skinnedMesh);
+    finishRegistration(component, handle, material, &skinnedMesh);
     return true;
 }
 
@@ -183,9 +190,52 @@ SceneRenderSystem::requireBatch(const RenderComponent& component) const {
 }
 
 void SceneRenderSystem::syncState(RenderComponent& component) {
-    const auto& registration = requireRegistration(component);
+    auto& registration = _registrations.at(&component);
     if (registration.handle == InvalidHandle)
         return;
+
+    const auto mesh = component.resolveMeshData();
+    auto* material = registration.prim->getMaterial();
+    if (mesh.get() != registration.mesh || material != registration.material) {
+        if (component.transformSource() == TransformSource::ExternalBuffer)
+            throw std::runtime_error(
+                "cannot replace mesh or material of a registered "
+                "ExternalBuffer renderable");
+        if (registration.skinnedMesh && mesh.get() != registration.mesh)
+            throw std::runtime_error(
+                "cannot replace mesh of a registered skinned renderable; "
+                "unregister it first");
+        if (!material)
+            throw std::runtime_error("registered renderable requires a material");
+
+        // Keep the old batch attached until the replacement is ready.
+        const auto replacement =
+            registration.skinnedMesh
+                ? _renderer->addSkinnedRenderable(material, registration.prim,
+                                                  *registration.skinnedMesh,
+                                                  component.transformSource())
+                : _renderer->addRenderable(material, registration.prim,
+                                           component.transformSource());
+        if (replacement == InvalidHandle)
+            throw std::runtime_error(
+                "failed to register replacement scene mesh or material");
+        try {
+            _renderer->setSceneBatchState(
+                replacement,
+                {component.isDoubleSided(), component.castsShadow(),
+                 component.alphaMode(), component.alphaCutoff()});
+            for (const auto& [texture, slot] : registration.textureBindings)
+                _renderer->setRenderableTexture(replacement, texture, slot);
+        } catch (...) {
+            _renderer->removePrim(replacement, registration.prim);
+            throw;
+        }
+        _renderer->removePrim(registration.handle, registration.prim);
+        registration.handle = replacement;
+        registration.mesh = mesh.get();
+        registration.material = material;
+        return;
+    }
     _renderer->setSceneBatchState(
         registration.handle,
         {component.isDoubleSided(), component.castsShadow(),
@@ -238,9 +288,7 @@ void SceneRenderSystem::setAlphaMode(RenderComponent& component, AlphaMode mode,
 
 bool SceneRenderSystem::setMaterial(RenderComponent& component,
                                     Material* material) {
-    const auto currentIt = _registrations.find(&component);
-    if (currentIt == _registrations.end())
-        throw std::runtime_error("RenderComponent is not registered");
+    const auto& registration = requireRegistration(component);
     if (!material)
         throw std::runtime_error("replacement material must not be null");
     if (component.transformSource() == TransformSource::ExternalBuffer) {
@@ -249,48 +297,8 @@ bool SceneRenderSystem::setMaterial(RenderComponent& component,
             "not implemented yet");
     }
 
-    Registration oldRegistration = currentIt->second;
-    auto componentRef = oldRegistration.component.lock();
-    Prim* prim = oldRegistration.prim;
-    if (!componentRef || !prim)
-        throw std::runtime_error("registered RenderComponent is expired");
-
-    if (oldRegistration.handle == InvalidHandle) {
-        prim->setMaterial(material);
-        return true;
-    }
-
-    Material* oldMaterial = prim->getMaterial();
-    if (oldMaterial == material) {
-        prim->setMaterial(material);
-        return true;
-    }
-
-    unregister(component);
-    prim->setMaterial(material);
-
-    const bool wasSkinned = oldRegistration.skinnedMesh.has_value();
-    const bool replacement =
-        wasSkinned ? registerSkinnedRenderable(componentRef, material,
-                                               *oldRegistration.skinnedMesh)
-                   : registerRenderable(componentRef, material);
-    if (replacement) {
-        for (const auto& [texture, slot] : oldRegistration.textureBindings)
-            setTexture(*componentRef, texture, slot);
-        return true;
-    }
-
-    prim->setMaterial(oldMaterial);
-    const bool restored =
-        wasSkinned ? registerSkinnedRenderable(componentRef, oldMaterial,
-                                               *oldRegistration.skinnedMesh)
-                   : registerRenderable(componentRef, oldMaterial);
-    if (!restored)
-        throw std::runtime_error(
-            "failed to restore previous material after replacement failure");
-    for (const auto& [texture, slot] : oldRegistration.textureBindings)
-        setTexture(*componentRef, texture, slot);
-    return false;
+    registration.prim->setMaterial(material);
+    return true;
 }
 
 void SceneRenderSystem::setTexture(RenderComponent& component,

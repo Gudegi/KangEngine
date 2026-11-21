@@ -31,8 +31,15 @@ void MeshComponent::setMeshData(std::shared_ptr<MeshData> data) {
     requireAttached();
     if (_meshData == data)
         return;
+    auto previous = std::move(_meshData);
     _meshData = std::move(data);
-    markGeometryChanged();
+    try {
+        markGeometryChanged();
+    } catch (...) {
+        _meshData = std::move(previous);
+        _resolvedMeshDataCache.reset();
+        throw;
+    }
 }
 
 std::shared_ptr<MeshData> MeshComponent::meshData() const {
@@ -44,8 +51,15 @@ void MeshComponent::setMeshSourcePath(std::string path) {
     requireAttached();
     if (_meshSourcePath == path)
         return;
+    auto previous = std::move(_meshSourcePath);
     _meshSourcePath = std::move(path);
-    markGeometryChanged();
+    try {
+        markGeometryChanged();
+    } catch (...) {
+        _meshSourcePath = std::move(previous);
+        _resolvedMeshDataCache.reset();
+        throw;
+    }
 }
 
 const std::string& MeshComponent::meshSourcePath() const {

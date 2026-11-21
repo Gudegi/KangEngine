@@ -91,6 +91,8 @@ class SceneRenderSystem {
         Prim* prim = nullptr;
         // Source-only registrations have no Native batch handle.
         RenderableHandle handle = InvalidHandle;
+        const MeshData* mesh = nullptr;
+        Material* material = nullptr;
         std::optional<SkinnedMeshData> skinnedMesh;
         std::vector<std::pair<Backend::Texture*, int>> textureBindings;
     };
@@ -108,7 +110,7 @@ class SceneRenderSystem {
     const Registration& requireBatch(const RenderComponent& component) const;
     void syncState(RenderComponent& component);
     void finishRegistration(const std::shared_ptr<RenderComponent>& component,
-                            RenderableHandle handle,
+                            RenderableHandle handle, Material* material,
                             const SkinnedMeshData* skinnedMesh = nullptr);
     void clear();
 

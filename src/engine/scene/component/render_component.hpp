@@ -41,6 +41,7 @@ class RenderComponent : public ComponentBase {
   private:
     friend class Prim;
     friend class MeshComponent;
+    friend class MaterialBindingComponent;
     friend class SceneRenderSystem;
 
     explicit RenderComponent(Prim* owner);
