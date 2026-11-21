@@ -27,6 +27,7 @@ class NativeRenderSystem final : public RenderBackend {
     void initialize(int width, int height) override;
     void resize(int width, int height) override;
     void syncScene(const Scene::RenderSceneFrame& scene) override;
+    void syncLights(const Scene::RenderLightData& lights) override;
     RenderableHandle registerSceneBatch(
         const Scene::RenderMeshData& mesh,
         const Scene::RenderMaterialSource& material,
@@ -100,6 +101,9 @@ class NativeRenderSystem final : public RenderBackend {
         std::tuple<Scene::ResourceHandle, Scene::ResourceHandle, bool>;
     // Rasterizer borrows these arrays/materials and is destroyed first.
     std::map<SceneBatchKey, std::unique_ptr<SceneBatch>> _sceneBatches;
+    std::map<Scene::RenderInstanceId, Scene::RenderObjectSource> _sceneObjects;
+    Scene::RenderLightData _sceneLighting;
+    void syncSceneSnapshot(const Scene::RenderSceneFrame& scene);
     std::map<const Scene::RenderMaterialSource*, Material*> _legacyMaterials;
     std::map<const Scene::RenderMaterialSource*, std::unique_ptr<Material>>
         _sourceMaterials;

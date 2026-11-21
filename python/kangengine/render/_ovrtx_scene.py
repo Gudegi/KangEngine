@@ -5,6 +5,7 @@ import math
 import os
 from pathlib import Path
 import sys
+import warnings
 
 if sys.platform == "darwin":
     raise RuntimeError(
@@ -48,7 +49,10 @@ class OvrtxSceneAdapter:
         self._stage = None
         self._attached = False
         self._references = {}
-        self._domes = {}
+        self._objects = {}
+        self._light_values = []
+        self._lights = {}
+        self._warned_ranges = set()
         self._geometry = {}
         self._values = {}
         self._ordinal = 1
@@ -79,12 +83,7 @@ def Xform "World" {{
         float exposure:responsivity = 1
         float exposure:time = 1
     }}
-    def DistantLight "Light" {{
-        matrix4d xformOp:transform = ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1))
-        uniform token[] xformOpOrder = ["xformOp:transform"]
-        float inputs:intensity = 1
-        color3f inputs:color = (1,1,1)
-    }}
+
 }}
 def Scope "Render" {{
     def RenderProduct "Camera" {{
@@ -208,35 +207,34 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
 }}
 """
 
-    def _sync_domes(self, domes):
-        sources = {item["path"]: item for item in domes}
-        signatures = {
-            path: (item["light"].texture_path, item["light"].texture_format)
-            for path, item in sources.items()
-        }
-        # Validate replacements before removing the last accepted environment.
-        layers = {}
-        for path, signature in signatures.items():
-            if path in self._domes and self._domes[path][1] == signature:
-                continue
-            texture, texture_format = signature
-            if texture_format not in (
-                "automatic",
-                "latlong",
-                "mirroredBall",
-                "angular",
-                "cubeMapVerticalCross",
+    def _light_layer(self, item):
+        kind, light = item["type"], item["light"]
+        texture = light.texture_path if kind in ("rect", "dome") else ""
+        if texture:
+            texture = str(Path(texture).resolve(strict=True))
+            if "@" in texture or "\n" in texture:
+                raise ValueError("Light texture paths cannot contain @ or a newline")
+        attributes = ""
+        schema = {"directional": "DistantLight", "point": "SphereLight",
+                  "spot": "SphereLight", "rect": "RectLight", "dome": "DomeLight"}[kind]
+        shaping = ' (prepend apiSchemas = ["ShapingAPI"])' if kind == "spot" else ""
+        if kind in ("point", "spot"):
+            attributes += "    bool treatAsPoint = true\n    float inputs:radius = 0.5\n"
+        if kind == "spot":
+            attributes += "    float inputs:shaping:cone:angle = 30\n    float inputs:shaping:cone:softness = 0\n"
+        if kind in ("rect", "dome"):
+            attributes += f"    asset inputs:texture:file = @{texture}@\n"
+        if kind == "rect":
+            attributes += "    float inputs:width = 1\n    float inputs:height = 1\n"
+        if kind == "dome":
+            if light.texture_format not in (
+                "automatic", "latlong", "mirroredBall", "angular", "cubeMapVerticalCross",
             ):
-                raise ValueError(f"Unsupported dome texture format: {texture_format}")
-            if texture:
-                texture = str(Path(texture).resolve(strict=True))
-                if "@" in texture or "\n" in texture:
-                    raise ValueError(
-                        "ovrtx texture asset paths cannot contain @ or a newline"
-                    )
-            layers[path] = f"""#usda 1.0
-(defaultPrim = "Environment")
-def DomeLight "Environment" {{
+                raise ValueError(f"Unsupported dome texture format: {light.texture_format}")
+            attributes += f'    token inputs:texture:format = "{light.texture_format}"\n'
+        return f'''#usda 1.0
+(defaultPrim = "Light")
+def {schema} "Light"{shaping} {{
     matrix4d xformOp:transform = ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1))
     uniform token[] xformOpOrder = ["xformOp:transform"]
     color3f inputs:color = (1,1,1)
@@ -247,28 +245,86 @@ def DomeLight "Environment" {{
     float inputs:colorTemperature = 6500
     float inputs:diffuse = 1
     float inputs:specular = 1
-    asset inputs:texture:file = @{texture}@
-    token inputs:texture:format = "{texture_format}"
+{attributes}
 }}
-"""
-        removed = self._domes.keys() - sources.keys()
+'''
+
+    def _sync_lights(self, lights):
+        sources = {item["path"]: item for item in lights}
+        signatures = {
+            path: (item["type"],
+                   item["light"].texture_path if item["type"] in ("rect", "dome") else "",
+                   item["light"].texture_format if item["type"] == "dome" else "")
+            for path, item in sources.items()
+        }
+        # Validate all replacements before removing accepted light resources.
+        layers = {}
+        for path, item in sources.items():
+            kind, light = item["type"], item["light"]
+            if kind == "directional" and any((light.ambient.x, light.ambient.y, light.ambient.z)):
+                raise ValueError("ovrtx requires directional ambient=[0, 0, 0]; use a DomeLight")
+            if kind in ("point", "spot") and kind not in self._warned_ranges:
+                warnings.warn(
+                    f"ovrtx {kind} lights use inverse-square falloff; Native range cutoff is not supported",
+                    stacklevel=3,
+                )
+                self._warned_ranges.add(kind)
+            if path not in self._lights or self._lights[path][1] != signatures[path]:
+                layers[path] = self._light_layer(item)
+        removed = self._lights.keys() - sources.keys()
         changed = bool(removed or layers)
         for path in removed | layers.keys():
-            if path in self._domes:
-                handle, _ = self._domes.pop(path)
+            if path in self._lights:
+                handle, _ = self._lights.pop(path)
                 ovstage.population.remove_usd(self._stage, handle)
-            prefix = "/DomeLights" + path
-            self._values = {
-                key: value for key, value in self._values.items() if key[0] != prefix
-            }
         for path, layer in layers.items():
             handle = ovstage.population.add_usd_reference_from_string(
-                self._stage,
-                layer,
-                "/DomeLights" + path,
+                self._stage, layer, "/Lights" + path,
             )
-            self._domes[path] = handle, signatures[path]
+            self._lights[path] = handle, signatures[path]
         return changed
+
+    def _write_light(self, item):
+        path = "/Lights" + item["path"]
+        kind, light = item["type"], item["light"]
+        world = item["world"]
+        if kind in ("directional", "spot"):
+            direction = light.direction
+            z = -(world[:3, :3] @ np.array([direction.x, direction.y, direction.z]))
+            length = np.linalg.norm(z)
+            z = z / length if length > 1e-4 else np.array([0.0, 0.0, 1.0])
+            up = np.array([0, 1, 0]) if abs(z[1]) < 0.99 else np.array([1, 0, 0])
+            x = np.cross(up, z)
+            x /= np.linalg.norm(x)
+            oriented = np.eye(4)
+            oriented[:3, :3] = np.column_stack((x, np.cross(z, x), z))
+            oriented[:3, 3] = world[:3, 3]
+            world = oriented
+        self._matrix(path, world)
+        color = light.color
+        self._write(path, "inputs:color", [color.x, color.y, color.z],
+                    semantic=ovstage.AttributeSemantic.VECTOR)
+        self._write(path, "inputs:intensity", light.intensity)
+        if kind in ("point", "spot"):
+            self._write(path, "inputs:normalize", True, dtype=np.bool_)
+        if kind in ("rect", "dome"):
+            for attribute, value in (
+                ("exposure", light.exposure), ("colorTemperature", light.color_temperature),
+                ("diffuse", light.diffuse), ("specular", light.specular),
+            ):
+                self._write(path, "inputs:" + attribute, value)
+            self._write(path, "inputs:normalize", light.normalize, dtype=np.bool_)
+            self._write(path, "inputs:enableColorTemperature",
+                        light.enable_color_temperature, dtype=np.bool_)
+        if kind == "rect":
+            self._write(path, "inputs:width", light.width)
+            self._write(path, "inputs:height", light.height)
+        if kind == "spot":
+            # UsdLux stores half-angles in degrees and the edge width as a fraction.
+            outer = light.outer_cone_angle
+            softness = 1 - light.inner_cone_angle / outer if outer > 0 else 0
+            self._write(path, "inputs:shaping:cone:angle", math.degrees(outer))
+            self._write(path, "inputs:shaping:cone:softness", softness)
 
     def _render_output(self, frame):
         self._release_output()
@@ -295,72 +351,48 @@ def DomeLight "Environment" {{
                     )
 
         self._ordinal += 1
-        domes_changed = self._sync_domes(frame["domes"])
-        objects = {item["id"]: item for item in frame["objects"]}
-        signatures = {
-            key: (
-                item["mesh_id"],
-                item["double_sided"],
-                tuple(
-                    (slot, _texture_key(source))
-                    for slot, source in item["textures"].items()
-                ),
+        lights = frame["lights"] if frame["lights"] is not None else self._light_values
+        lights_changed = self._sync_lights(lights) if frame["lights"] is not None else False
+        updates = {item["id"]: item for item in frame["objects"]}
+        if frame["incremental"]:
+            objects = self._objects.copy() if updates or frame["removed_objects"] else self._objects
+            removed = self._references.keys() & set(frame["removed_objects"])
+        else:
+            objects = {}
+            removed = self._references.keys() - updates.keys()
+        for key in frame["removed_objects"]:
+            objects.pop(key, None)
+        objects.update(updates)
+        replacements = {}
+        for key, item in updates.items():
+            signature = (
+                item["mesh_id"], item["double_sided"],
+                tuple((slot, _texture_key(source)) for slot, source in item["textures"].items()),
             )
-            for key, item in objects.items()
-        }
-        surviving = {
-            key
-            for key, (_, signature) in self._references.items()
-            if key in signatures and signature == signatures[key]
-        }
-        changed = set(self._references) != surviving or set(objects) != surviving
-        for key in self._references.keys() - surviving:
-            handle, _ = self._references.pop(key)
-            ovstage.population.remove_usd(self._stage, handle)
-            prefix = f"/World/i{key}"
-            self._values = {
-                k: v
-                for k, v in self._values.items()
-                if k[0] != prefix and not k[0].startswith(prefix + "/")
-            }
-        for key in objects.keys() - surviving:
+            if key not in self._references or self._references[key][1] != signature:
+                replacements[key] = signature
+        surviving_count = len(self._references) - len(removed | (replacements.keys() & self._references.keys()))
+        changed = bool(removed or replacements)
+        for key in removed | replacements.keys():
+            if key in self._references:
+                handle, _ = self._references.pop(key)
+                ovstage.population.remove_usd(self._stage, handle)
+        for key, signature in replacements.items():
             handle = ovstage.population.add_usd_reference_from_string(
-                self._stage, self._mesh_layer(objects[key]), f"/World/i{key}"
+                self._stage, self._mesh_layer(objects[key]), f"/World/i{key}",
             )
-            self._references[key] = handle, signatures[key]
-        if changed or domes_changed:
+            self._references[key] = handle, signature
+        if changed or lights_changed:
             ovstage.population.apply_usd_changes(self._stage, ordinal=self._ordinal)
             # Population can restore USD defaults on surviving objects too.
             self._values.clear()
 
         self._ordinal += 1
-        for item in frame["domes"]:
-            path = "/DomeLights" + item["path"]
-            light = item["light"]
-            self._matrix(path, item["world"])
-            color = light.color
-            self._write(
-                path,
-                "inputs:color",
-                [color.x, color.y, color.z],
-                semantic=ovstage.AttributeSemantic.VECTOR,
-            )
-            for attribute, value in (
-                ("intensity", light.intensity),
-                ("exposure", light.exposure),
-                ("colorTemperature", light.color_temperature),
-                ("diffuse", light.diffuse),
-                ("specular", light.specular),
-            ):
-                self._write(path, "inputs:" + attribute, value)
-            self._write(path, "inputs:normalize", light.normalize, dtype=np.bool_)
-            self._write(
-                path,
-                "inputs:enableColorTemperature",
-                light.enable_color_temperature,
-                dtype=np.bool_,
-            )
-        for key, item in objects.items():
+        structural_change = changed or lights_changed
+        if structural_change or frame["lights"] is not None:
+            for item in lights:
+                self._write_light(item)
+        for key, item in (objects if structural_change else updates).items():
             path = f"/World/i{key}"
             self._matrix(path, item["world"])
             with ovstage.PathDictionary(self._stage) as paths:
@@ -415,30 +447,11 @@ def DomeLight "Environment" {{
             12 / math.tan(math.radians(camera["vertical_fov"]) / 2),
         )
         self._write("/World/Camera", "clippingRange", [camera["near"], camera["far"]])
-        light = frame["lights"][0] if frame["lights"] else None
-        self._write(
-            "/World/Light", "inputs:intensity", light["intensity"] if light else 0
-        )
-        if light:
-            # Rendering population stores light color as VECTOR, not COLOR.
-            self._write(
-                "/World/Light",
-                "inputs:color",
-                light["color"],
-                semantic=ovstage.AttributeSemantic.VECTOR,
-            )
-            z = -np.asarray(light["direction"])
-            up = np.array([0, 1, 0]) if abs(z[1]) < 0.99 else np.array([1, 0, 0])
-            x = np.cross(up, z)
-            x /= np.linalg.norm(x)
-            world = np.eye(4)
-            world[:3, :3] = np.column_stack((x, np.cross(z, x), z))
-            self._matrix("/World/Light", world)
         self._stage.compute_hierarchy(self._ordinal, self._ordinal)
         self._stage.advance_write_floor(self._ordinal, ovstage.Scope.ALL).wait()
 
         # The pinned SDK needs a rebuild when no previous mesh survives.
-        if self._ordinal > 3 and objects and not surviving:
+        if self._ordinal > 3 and objects and not surviving_count:
             self._attached = False
             self._renderer.detach_ovstage()
             self._renderer.attach_ovstage(self._stage)
@@ -449,6 +462,11 @@ def DomeLight "Environment" {{
         )
         frame = self._products["/Render/Camera"].frames[-1]
         self._output = frame.render_vars["/Render/Camera/LdrColor"]
+        self._objects = objects
+        self._light_values = lights
+        if changed:
+            live_meshes = {item["mesh_id"] for item in objects.values()}
+            self._geometry = {key: value for key, value in self._geometry.items() if key in live_meshes}
 
     def render(self, frame):
         self._render_output(frame)
@@ -496,7 +514,7 @@ def DomeLight "Environment" {{
 
 
 class OvrtxAppAdapter(OvrtxSceneAdapter):
-    """Validate App snapshots before passing them to ovrtx."""
+    """Validate App scene updates before rendering with ovrtx."""
 
     def __init__(self, width, height):
         super().__init__(width, height)

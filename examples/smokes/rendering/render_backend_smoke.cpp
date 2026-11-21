@@ -63,6 +63,10 @@ class RecordingBackend final : public RenderBackend {
         snapshot = scene;
     }
     Scene::RenderSceneFrame snapshot;
+    void syncLights(const Scene::RenderLightData& lights) override {
+        lighting = lights;
+    }
+    Scene::RenderLightData lighting;
     struct Batch {
         Scene::RenderMeshData mesh;
         const Scene::RenderMaterialSource* material;
@@ -756,9 +760,47 @@ void checkAppScene(bool native) {
                 "subtree removal was not submitted");
     app.close();
 }
+void checkSceneLights() {
+    std::vector<std::string> calls;
+    auto backend =
+        std::make_unique<RecordingBackend>(calls, false, false, true);
+    auto* recording = backend.get();
+    Renderer renderer;
+    renderer.initialize(std::move(backend), 8, 4);
+    Scene::NativeScene scene;
+    auto* rig = scene.definePrim("/rig", Scene::PrimType::Xform);
+    rig->setLocalTranslation({2, 0, 0});
+    auto* prim = scene.definePrim("/rig/light", Scene::PrimType::Light);
+    Scene::PointLight light;
+    light.position = {1, 0, 0};
+    prim->setPointLight(light);
+    auto sync = [&] { renderer.syncFrame(&scene, glm::mat4(1), glm::mat4(1)); };
+    sync();
+    require(recording->lighting.lights.size() == 1,
+            "batch backend did not receive a light outside /lights");
+    const auto& source = recording->lighting.lights.front();
+    require(std::get<Scene::PointLight>(source.light).position.x == 1 &&
+                source.world[3].x == 3,
+            "light input lost local values or evaluated world transform");
+    rig->setVisible(false);
+    sync();
+    require(recording->lighting.authored && recording->lighting.lights.empty(),
+            "hidden scene lights lost ownership or remained visible");
+    scene.removePrim("/rig");
+    sync();
+    require(!recording->lighting.authored && recording->lighting.lights.empty(),
+            "last light removal retained stale lighting");
+    scene.definePrim("/rig/light", Scene::PrimType::Light)->setRectLight({});
+    sync();
+    require(recording->lighting.lights.size() == 1 &&
+                std::holds_alternative<Scene::RectLight>(
+                    recording->lighting.lights.front().light),
+            "recreated light reused stale membership");
+}
 } // namespace
 
 int main(int argc, char** argv) {
+    checkSceneLights();
     checkRenderer();
     checkSceneData();
     checkBatchRegistration();

@@ -36,6 +36,8 @@
 
 namespace KE {
 
+namespace Scene { struct RenderLightData; }
+
 // ---------------------------------------------------------------------------
 // Two-source transform ownership
 //
@@ -273,6 +275,7 @@ class Rasterizer : public RenderPipeline {
     }
     const std::vector<SpotLight>& getSpotLights() const { return _spotLights; }
     void setRectLights(std::vector<RectLightInstance> lights);
+    void setSceneLights(const Scene::RenderLightData& lights);
     void setDomeRadiance(glm::vec3 radiance) { _domeRadiance = radiance; }
 
     // =====================================================================

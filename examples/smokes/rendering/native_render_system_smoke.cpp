@@ -35,6 +35,12 @@ void checkLegacyBinding(Backend::GraphicsDevice& device) {
     renderer.bind(&device, &rasterizer, nullptr, nullptr);
     renderer.setViewportSize(96, 64);
     renderer.addRenderable(&material, prim);
+    Scene::DirectionalLight light;
+    light.intensity = 4;
+    scene.definePrim("/light", Scene::PrimType::Light)->setDirectionalLight(light);
+    renderer.syncSceneLights(&scene);
+    require(rasterizer.getLight().intensity == 4,
+            "legacy binding lost scene lighting");
     Camera camera;
     camera.init({0, 0, 4}, {0, 0, 0}, UpAxis::Y);
     camera.updateProjMatrix(96, 64);
@@ -236,7 +242,8 @@ void checkSceneData(Backend::GraphicsDevice& device) {
     light.direction = {0, 0, -1};
     light.intensity = 3;
     light.ambient = glm::vec3(0);
-    scene.lights.push_back(light);
+    scene.lighting.authored = true;
+    scene.lighting.lights.push_back({"/light", light, glm::mat4(1.0f)});
 
     auto submit = [&] {
         auto profile = device.profileContext();
@@ -267,6 +274,23 @@ void checkSceneData(Backend::GraphicsDevice& device) {
                 unchanged.textureUploadBytes == 0,
             "unchanged registration recreated or reuploaded resources");
     require(draw().pixels == initial.pixels, "unchanged scene changed output");
+
+    Scene::RenderSceneFrame idle;
+    idle.incremental = true;
+    idle.lightingChanged = false;
+    renderer.syncScene(idle);
+    require(draw().pixels == initial.pixels,
+            "empty incremental update removed accepted scene state");
+    auto duplicate = scene;
+    duplicate.objects.push_back(cube);
+    bool duplicateRejected = false;
+    try {
+        renderer.syncScene(duplicate);
+    } catch (const std::invalid_argument&) {
+        duplicateRejected = true;
+    }
+    require(duplicateRejected && draw().pixels == initial.pixels,
+            "duplicate instance ID was accepted or changed the scene");
 
     auto second = cube;
     second.id = 2;

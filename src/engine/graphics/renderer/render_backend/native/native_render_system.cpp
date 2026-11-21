@@ -2,7 +2,6 @@
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/selection_outline_processor.hpp"
 #include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
-#include "engine/scene/types/light_color.hpp"
 
 #include <stdexcept>
 #include <set>
@@ -258,21 +257,54 @@ void NativeRenderSystem::updateRenderableSkinningMatrices(
 }
 
 void NativeRenderSystem::syncScene(const Scene::RenderSceneFrame& scene) {
-    // Reject unsupported inputs before changing the last accepted scene.
-    if (scene.lights.size() > 1)
-        throw std::invalid_argument(
-            "Static scene data supports one directional light");
+    if (scene.incremental && scene.objects.empty() &&
+        scene.removedObjects.empty()) {
+        if (scene.lightingChanged) {
+            syncLights(scene.lighting);
+            _sceneLighting = scene.lighting;
+        }
+        return;
+    }
     std::set<Scene::RenderInstanceId> ids;
+    for (const auto& object : scene.objects) {
+        if (!object.id || !ids.insert(object.id).second)
+            throw std::invalid_argument(
+                "Scene update requires unique nonzero instance IDs");
+    }
+    auto objects =
+        scene.incremental ? _sceneObjects : decltype(_sceneObjects){};
+    for (auto id : scene.removedObjects)
+        objects.erase(id);
+    for (const auto& object : scene.objects)
+        objects[object.id] = object;
+    Scene::RenderSceneFrame snapshot;
+    snapshot.lighting = scene.lightingChanged ? scene.lighting : _sceneLighting;
+    snapshot.objects.reserve(objects.size());
+    for (const auto& [id, object] : objects)
+        snapshot.objects.push_back(object);
+    syncSceneSnapshot(snapshot);
+    _sceneObjects = std::move(objects);
+    _sceneLighting = std::move(snapshot.lighting);
+}
+
+void NativeRenderSystem::syncSceneSnapshot(
+    const Scene::RenderSceneFrame& scene) {
+    // Reject unsupported inputs before changing the last accepted scene.
+    size_t rectangleCount = 0;
+    for (const auto& source : scene.lighting.lights)
+        rectangleCount +=
+            std::holds_alternative<Scene::RectLight>(source.light);
+    if (rectangleCount > MaxRectLights)
+        throw std::invalid_argument(
+            "Native supports at most 16 visible RectLights");
     std::set<Scene::ResourceHandle> textureIds;
     for (const auto& object : scene.objects) {
-        if (!object.id || !ids.insert(object.id).second ||
-            object.mesh.resource == Scene::InvalidResourceHandle ||
+        if (object.mesh.resource == Scene::InvalidResourceHandle ||
             object.materialResource == Scene::InvalidResourceHandle ||
             !object.mesh.mesh || object.mesh.mesh->vertices.empty() ||
             object.mesh.mesh->indices.empty())
             throw std::invalid_argument(
-                "Static scene requires unique instances and registered "
-                "triangle meshes");
+                "Static scene requires registered triangle meshes");
         const auto& material = object.material;
         if (material.shadingModel != MaterialShadingModel::PBR ||
             material.unlit || material.hasNativeTextures ||
@@ -388,16 +420,11 @@ void NativeRenderSystem::syncScene(const Scene::RenderSceneFrame& scene) {
         else
             it = _sceneTextures.erase(it);
     }
-    DirectionalLight light;
-    light.intensity = 0;
-    light.ambient = glm::vec3(0);
-    if (!scene.lights.empty())
-        light = scene.lights.front();
-    _rasterizer->setLight(light);
-    glm::vec3 domeRadiance(0.0f);
-    for (const auto& dome : scene.domes)
-        domeRadiance += Scene::emittedRadiance(dome.light) * dome.light.diffuse;
-    _rasterizer->setDomeRadiance(domeRadiance);
+    syncLights(scene.lighting);
+}
+
+void NativeRenderSystem::syncLights(const Scene::RenderLightData& lighting) {
+    _rasterizer->setSceneLights(lighting);
 }
 
 void NativeRenderSystem::beginFrame() {

@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <optional>
+#include <cstdint>
 #include "../scene_backend.hpp"
 #include "engine/scene/types/light.hpp"
 #include "token.hpp"
@@ -68,6 +69,7 @@ class Prim {
     std::string _path; // "/World/Cube"
     PrimType _type;
     Prim* _parent; // 부모 (소유하지 않음)
+    uint64_t _structureVersion = 1;
     std::vector<std::unique_ptr<Prim>> _children; // 자식들
     std::map<std::string, Prim*> _childrenMap;    // 빠른 탐색용
 
@@ -91,6 +93,7 @@ class Prim {
     ManipulationPolicy _manipulationPolicy = ManipulationPolicy::Inherit;
 
     void onAttributeChanged(const Token& name);
+    void markStructureChanged();
     void markLocalTransformDirty();
     void markWorldTransformDirtyRecursive();
     TransformComponent& getTransformComponentOrThrow();
@@ -118,6 +121,9 @@ class Prim {
     const std::string& getPath() const { return _path; }
     PrimType getType() const { return _type; }
     Prim* getParent() const { return _parent; }
+    // Changes when descendants are added or removed; poses do not invalidate
+    // membership.
+    uint64_t structureVersion() const { return _structureVersion; }
 
     // Mesh 데이터 (type == Mesh일 때만)
     void setMeshData(std::shared_ptr<MeshData> data);

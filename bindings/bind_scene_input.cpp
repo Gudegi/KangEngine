@@ -1,4 +1,4 @@
-// Exposes evaluated scene data to the Python render adapters.
+// Connects scene updates and Python render adapters to the C++ renderer.
 #include "engine/scene/render_scene_data_collector.hpp"
 #include "py_array_view.hpp"
 #include "py_render_backend.hpp"
@@ -73,6 +73,8 @@ py::dict sceneFrameToDict(const RenderSceneFrame& frame) {
         objects.append(item);
     }
     result["objects"] = objects;
+    result["incremental"] = frame.incremental;
+    result["removed_objects"] = frame.removedObjects;
     py::dict camera;
     camera["world"] = floatArrayFromMat4(frame.camera.world);
     camera["vertical_fov"] = frame.camera.verticalFov;
@@ -80,26 +82,42 @@ py::dict sceneFrameToDict(const RenderSceneFrame& frame) {
     camera["far"] = frame.camera.farPlane;
     result["camera"] = camera;
     py::list lights;
-    for (const auto& light : frame.lights) {
+    const char* types[] = {"directional", "point", "spot", "rect", "dome"};
+    for (const auto& source : frame.lighting.lights) {
         py::dict item;
-        item["direction"] = vec3Values(light.direction);
-        item["color"] = vec3Values(light.color);
-        item["intensity"] = light.intensity;
-        item["ambient"] = vec3Values(light.ambient);
+        item["path"] = source.path;
+        item["type"] = types[source.light.index()];
+        item["light"] = std::visit(
+            [](const auto& light) {
+                return py::cast(light, py::return_value_policy::copy);
+            },
+            source.light);
+        item["world"] = floatArrayFromMat4(source.world);
         lights.append(item);
     }
-    result["lights"] = lights;
-    py::list domes;
-    for (const auto& dome : frame.domes) {
-        py::dict item;
-        item["path"] = dome.path;
-        item["light"] = py::cast(dome.light, py::return_value_policy::copy);
-        item["world"] = floatArrayFromMat4(dome.world);
-        domes.append(item);
-    }
-    result["domes"] = domes;
+    result["lights"] = frame.lightingChanged ? py::object(lights) : py::none();
     return result;
 }
+
+class PythonSceneCollector {
+  public:
+    py::dict collect(SceneBackend& scene, const SceneResourceManager& resources,
+                     const std::string& cameraPath) {
+        _pending =
+            _updates.prepare(_collector.collect(scene, resources, cameraPath));
+        auto result = sceneFrameToDict(_pending);
+        // Native resolves paths on its own copy; the baseline retains source
+        // identity.
+        result["_snapshot"] = py::cast(RenderSceneFrame(_pending));
+        return result;
+    }
+    void accept() { _updates.accept(_pending); }
+
+  private:
+    RenderSceneDataCollector _collector;
+    RenderSceneUpdateTracker _updates;
+    RenderSceneFrame _pending;
+};
 
 class PythonRenderBackend final : public KE::RenderBackend {
   public:
@@ -170,18 +188,21 @@ class PythonRenderBackend final : public KE::RenderBackend {
     }
     void renderScene(const glm::mat4&, const glm::mat4&, bool) override {
         py::gil_scoped_acquire gil;
+        const auto update = _updates.prepare(_scene);
+        auto frame = sceneFrameToDict(update);
         if (_gpuOutput) {
             // Pass ovrtx image handles to App; the Python adapter owns the mapping.
             _image = {};
-            auto output = _adapter.attr("render_gpu")(sceneFrameToDict(_scene));
+            auto output = _adapter.attr("render_gpu")(frame);
             _cudaImage = {_width, _height, output["device"].cast<int>(),
                           output["array"].cast<uintptr_t>(),
                           output["ready_event"].cast<uintptr_t>()};
             if (!_cudaImage.array)
                 throw std::runtime_error("Render adapter returned no CUDA image");
+            _updates.accept(update);
             return;
         }
-        auto output = _adapter.attr("render")(sceneFrameToDict(_scene));
+        auto output = _adapter.attr("render")(frame);
         auto pixels = py::array_t<uint8_t, py::array::c_style>::ensure(output);
         if (!pixels || pixels.ndim() != 3 || pixels.shape(0) != _height ||
             pixels.shape(1) != _width || pixels.shape(2) != 3)
@@ -190,6 +211,7 @@ class PythonRenderBackend final : public KE::RenderBackend {
         _pending = {
             _width, _height,
             std::vector<uint8_t>(pixels.data(), pixels.data() + pixels.size())};
+        _updates.accept(update);
     }
     void endFrame(const KE::RenderPickHit&, bool) override {
         _image = std::move(_pending);
@@ -274,6 +296,7 @@ class PythonRenderBackend final : public KE::RenderBackend {
     bool _gpuOutput = false;
     KE::CudaRenderImage _cudaImage;
     RenderSceneFrame _scene;
+    RenderSceneUpdateTracker _updates;
     KE::RenderImage _image, _pending;
     int _width = 0, _height = 0;
 };
@@ -286,16 +309,8 @@ std::unique_ptr<KE::RenderBackend> makePythonRenderBackend(py::object factory,
 
 void bind_scene_input(py::module& m) {
     py::class_<RenderSceneFrame>(m, "_RenderSceneFrame");
-    py::class_<RenderSceneDataCollector>(m, "_RenderSceneDataCollector")
+    py::class_<PythonSceneCollector>(m, "_RenderSceneDataCollector")
         .def(py::init<>())
-        .def("collect",
-             [](RenderSceneDataCollector& collector, SceneBackend& scene,
-                const SceneResourceManager& resources,
-                const std::string& cameraPath) {
-                 auto frame = collector.collect(scene, resources, cameraPath);
-                 auto result = sceneFrameToDict(frame);
-                 // Native adapters consume the typed snapshot directly.
-                 result["_snapshot"] = py::cast(std::move(frame));
-                 return result;
-             });
+        .def("collect", &PythonSceneCollector::collect)
+        .def("accept", &PythonSceneCollector::accept);
 }

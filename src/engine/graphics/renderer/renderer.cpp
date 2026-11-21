@@ -1,6 +1,5 @@
 #include "renderer.hpp"
 #include "engine/graphics/renderer/render_backend/native/native_render_system.hpp"
-#include "engine/scene/types/light_color.hpp"
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/types/camera.hpp"
@@ -129,6 +128,7 @@ void Renderer::syncScene(const Scene::RenderSceneFrame& scene) {
         throw std::runtime_error(
             "Render backend does not support static scene data");
     renderBackend().syncScene(scene);
+    _snapshotLighting = true;
 }
 
 void Renderer::prepareFrame(Camera& camera, UpAxis upAxis) {
@@ -298,6 +298,9 @@ void Renderer::release() {
     _sceneBatches.clear();
     _sceneResources = nullptr;
     _backendCapabilities = {};
+    _lightCollector = {};
+    _snapshotLighting = false;
+    _sceneLighting = false;
 }
 
 void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
@@ -357,76 +360,19 @@ const std::vector<SpotLight>& Renderer::spotLights() const {
 }
 
 void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
-    if (!_rasterizer)
+    if (_snapshotLighting ||
+        (_renderBackend ? !capabilities().sceneBatches : !_rasterizer))
         return;
-    _rasterizer->setRectLights({});
-    _rasterizer->setDomeRadiance(glm::vec3(0));
-    if (!scene || !scene->getRootPrim())
+    auto lights =
+        _lightCollector.collect(scene ? scene->getRootPrim() : nullptr);
+    // Preserve explicit Native light setters until a scene takes ownership.
+    if (!lights.authored && !_sceneLighting)
         return;
-
-    // Renderer light sync only scans this subtree. Define scene lights under
-    // /lights so mesh/debug/skeleton prims never join the per-frame search.
-    Scene::Prim* lightsRoot = scene->getRootPrim()->getPrimAtPath("/lights");
-    if (!lightsRoot)
-        return;
-
-    bool hasLightPrim = false;
-    bool hasDirectionalLight = false;
-    DirectionalLight directionalLight;
-    directionalLight.intensity = 0.0f;
-    directionalLight.ambient = glm::vec3(0.0f);
-    std::vector<PointLight> pointLights;
-    std::vector<SpotLight> spotLights;
-    std::vector<RectLightInstance> rectLights;
-    glm::vec3 domeRadiance(0.0f);
-    pointLights.reserve(MaxPointLights);
-    spotLights.reserve(MaxSpotLights);
-
-    lightsRoot->traverse([&](Scene::Prim* prim) {
-        if (!prim || prim->getType() != Scene::PrimType::Light)
-            return;
-
-        hasLightPrim = true;
-        if (!prim->isActiveInHierarchy() || !prim->isVisibleInHierarchy())
-            return;
-
-        switch (prim->getLightType()) {
-        case Scene::LightType::Directional:
-            if (!hasDirectionalLight) {
-                directionalLight = evaluateWorldLight(prim->getDirectionalLight(),
-                                                       prim->computeWorldMatrix());
-                hasDirectionalLight = true;
-            }
-            break;
-        case Scene::LightType::Point:
-            if (pointLights.size() < static_cast<size_t>(MaxPointLights))
-                pointLights.push_back(evaluateWorldLight(prim->getPointLight(),
-                                                         prim->computeWorldMatrix()));
-            break;
-        case Scene::LightType::Spot:
-            if (spotLights.size() < static_cast<size_t>(MaxSpotLights))
-                spotLights.push_back(evaluateWorldLight(prim->getSpotLight(),
-                                                        prim->computeWorldMatrix()));
-            break;
-        case Scene::LightType::Rect:
-            rectLights.push_back({prim->getRectLight(), prim->computeWorldMatrix()});
-            break;
-        case Scene::LightType::Dome: {
-            const auto light = prim->getDomeLight();
-            domeRadiance += Scene::emittedRadiance(light) * light.diffuse;
-            break;
-        }
-        }
-    });
-
-    if (!hasLightPrim)
-        return;
-
-    setLight(directionalLight);
-    setPointLights(std::move(pointLights));
-    setSpotLights(std::move(spotLights));
-    _rasterizer->setRectLights(std::move(rectLights));
-    _rasterizer->setDomeRadiance(domeRadiance);
+    if (_renderBackend)
+        _renderBackend->syncLights(lights);
+    else
+        _rasterizer->setSceneLights(lights);
+    _sceneLighting = lights.authored;
 }
 
 Backend::Framebuffer* Renderer::shadowFbo() {

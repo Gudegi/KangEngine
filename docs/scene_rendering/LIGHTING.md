@@ -1,7 +1,8 @@
 # Scene Lighting
 
-Create lights as prims under `/lights`, then use the prim to position, rotate,
+Create lights as prims, then use the prim to position, rotate,
 scale or hide them. Changes appear on the next rendered frame.
+`/lights` is a convenient group; lights may also belong to other scene hierarchies.
 
 Examples assume `import kangengine as ke` and run in `App.setup()`, using
 `self.scene`. The manual examples use **Y-up**, with one scene unit treated as
@@ -24,11 +25,16 @@ use a [PBR material](MATERIALS_TEXTURES.md#create-a-pbr-material).
 Dome in Native supplies uniform ambient illumination, not an HDRI background
 or environment reflections.
 
-Directional, Point and Spot use the first eligible lights encountered under
-`/lights`; excess lights are ignored. Lights are selected depth-first through
+Native Directional, Point and Spot use the first eligible lights encountered;
+excess lights are ignored. Lights are selected depth-first through
 the scene hierarchy, in creation order within each parent, without sorting by
 distance or brightness. More than 16 eligible Rect lights raises an error. Hidden or
 inactive lights, including those under hidden or inactive parents, are excluded.
+
+ovrtx supports all five types without Native's fixed light counts. Directional
+`ambient` must be zero; use a Dome for environment illumination. Point and Spot
+do not support `range`. Brightness and falloff may differ from Native.
+Rect supports emission textures.
 
 ## Common rules
 
@@ -222,7 +228,7 @@ orientation remain on the prim.
 - `color_temperature` uses kelvin when `enable_color_temperature` is true.
 - `diffuse` and `specular` scale the corresponding lighting contributions.
 
-Sharp specular highlights may show artifacts. Light textures and emission
+In Native, sharp specular highlights may show artifacts. Light textures and emission
 shaping are not supported. Objects between a panel and a surface do not block
 its light.
 
@@ -313,15 +319,15 @@ renderers: tone mapping, shadows and indirect lighting also affect the result.
 Directional lights support shadows. For a mesh created with
 `self.scene.add_mesh()`, use `mesh.set_casts_shadow(enabled=True)` to include it
 as a shadow caster. See [Mesh rendering options](MATERIALS_TEXTURES.md#mesh-rendering-options).
-Point, Spot and Rect shadows are not supported, even when a mesh has shadow
+In Native, Point, Spot and Rect shadows are not supported, even when a mesh has shadow
 casting enabled. Directional ambient and Dome fill remain unshadowed, so high
 fill values can make directional shadows look faint.
 
 ## If the scene is too dark or too bright
 
 - Check the material first: Point, Spot and Rect require PBR or PBR ground.
-- Check that the light is under `/lights` and that neither it nor a parent is
-  hidden or inactive. Check the count limits before adding more lights.
+- Check that neither the light nor a parent is hidden or inactive.
+  Check the count limits before adding more lights.
 - Check directions against the table, including the scene's up-axis. Rect
   emits from only one side. Check Point/Spot `range` against the scene units.
 - Check the default directional light. It may be hidden, or it may still be

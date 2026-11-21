@@ -109,6 +109,7 @@ Prim* Prim::addChild(const std::string& name, PrimType type) {
 
     _childrenMap[name] = childPtr;
     _children.emplace_back(std::move(child));
+    markStructureChanged();
 
     return childPtr;
 }
@@ -126,7 +127,13 @@ bool Prim::removeChild(const std::string& name) {
                                    }),
                     _children.end());
     markWorldTransformDirtyRecursive();
+    markStructureChanged();
     return true;
+}
+
+void Prim::markStructureChanged() {
+    for (auto* prim = this; prim; prim = prim->_parent)
+        ++prim->_structureVersion;
 }
 
 Prim* Prim::getChild(const std::string& name) const {
@@ -245,6 +252,7 @@ std::shared_ptr<RenderComponent> Prim::addRenderComponent() {
                                  "' already has a RenderComponent");
     _renderComponent =
         std::shared_ptr<RenderComponent>(new RenderComponent(this));
+    markStructureChanged();
     return _renderComponent;
 }
 
@@ -257,6 +265,7 @@ bool Prim::removeRenderComponent() {
         return false;
     _renderComponent->detach();
     _renderComponent.reset();
+    markStructureChanged();
     return true;
 }
 

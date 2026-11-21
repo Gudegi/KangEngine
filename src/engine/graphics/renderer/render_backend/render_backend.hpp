@@ -17,6 +17,7 @@ namespace KE {
 class Camera;
 namespace Scene {
 struct RenderSceneFrame;
+struct RenderLightData;
 struct RenderMeshData;
 struct RenderMaterialSource;
 struct RenderInstanceData;
@@ -49,9 +50,14 @@ class RenderBackend {
     virtual RenderBackendCapabilities capabilities() const = 0;
     virtual void initialize(int width, int height) = 0;
     virtual void resize(int width, int height) = 0;
-    // Complete object/light snapshot from one resource manager; no Prim access.
-    // Sources are immutable. Camera matrices still come from frame calls.
+    // Full state or explicit upserts/removals from one resource manager; no
+    // Prim access. Unchanged lighting is retained. Camera matrices still come
+    // from frame calls.
     virtual void syncScene(const Scene::RenderSceneFrame& scene) = 0;
+    virtual void syncLights(const Scene::RenderLightData&) {
+        throw std::runtime_error(
+            "Render backend does not support scene lights");
+    }
     // Borrowed arrays/material source stay alive until backend teardown. No
     // Prim access. ExternalBuffer updates override owner poses; visibility is
     // batch-wide. Optional skin weights are consumed during registration.

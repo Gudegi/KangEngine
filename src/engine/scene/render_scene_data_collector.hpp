@@ -5,7 +5,7 @@
 #include "engine/scene/render_scene_data.hpp"
 #include "engine/scene/render_material_data.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
-#include "engine/scene/types/light.hpp"
+#include "engine/scene/render_light_data.hpp"
 
 #include <map>
 #include <string>
@@ -38,21 +38,30 @@ struct RenderCameraSource {
     float farPlane = 100.0f;
 };
 
-struct RenderDomeLightSource {
-    std::string path;
-    DomeLight light;
-    glm::mat4 world{1.0f};
-};
-
-// Complete static scene state consumed by either render adapter.
+// Full scene state or an incremental update consumed by either render adapter.
 struct RenderSceneFrame {
     std::vector<RenderObjectSource> objects;
     RenderCameraSource camera;
-    std::vector<DirectionalLight> lights;
-    std::vector<RenderDomeLightSource> domes;
+    RenderLightData lighting;
+    // Incremental frames upsert objects and remove only the listed identities.
+    bool incremental = false;
+    std::vector<RenderInstanceId> removedObjects;
+    bool lightingChanged = true;
 };
 
-// Evaluates scenes for Native/ovrtx without retaining Prims or GPU state.
+// Advances its baseline only after a backend accepts the submitted update.
+class RenderSceneUpdateTracker {
+  public:
+    RenderSceneFrame prepare(const RenderSceneFrame& frame) const;
+    void accept(const RenderSceneFrame& update);
+
+  private:
+    std::map<RenderInstanceId, RenderObjectSource> _objects;
+    RenderLightData _lighting;
+    bool _initialized = false;
+};
+
+// Evaluates scene state; cached Prim pointers are non-owning and structure-scoped.
 class RenderSceneDataCollector {
   public:
     RenderSceneFrame collect(SceneBackend& scene,
@@ -67,6 +76,10 @@ class RenderSceneDataCollector {
     void forget(const RenderComponent& component);
 
   private:
+    RenderLightCollector _lights;
+    std::weak_ptr<TransformComponent> _root;
+    uint64_t _structureVersion = 0;
+    std::vector<Prim*> _prims;
     RenderSceneFrame collectScene(SceneBackend& scene,
                                   const SceneResourceManager& resources,
                                   const SceneRenderSystem* registrations);

@@ -7,10 +7,6 @@ from .._core import _ke
 
 
 def _validate_frame(frame, texture_paths, validated_meshes):
-    if len(frame["lights"]) > 1:
-        raise ValueError("Scene renderer currently supports at most one directional light")
-    if any(any(light["ambient"]) for light in frame["lights"]):
-        raise ValueError("Scene renderer currently requires directional ambient=[0, 0, 0]")
     for item in frame["objects"]:
         material = item["material"]
         if (material["model"] != "pbr" or material["unlit"] or
@@ -35,8 +31,8 @@ def _validate_frame(frame, texture_paths, validated_meshes):
 class SceneRenderer:
     """Render a scene to RGB images without changing its authoring code.
 
-    Supports opaque, lit PBR triangle meshes, base-color file textures, one
-    directional light, dome lights and a perspective camera. Sources stay
+    Supports opaque, lit PBR triangle meshes, base-color file textures, scene
+    lights and a perspective camera. Sources stay
     immutable after registration; register a new resource to replace geometry
     or an image.
     Native also accepts memory images; ovrtx currently requires file sources.
@@ -80,7 +76,9 @@ class SceneRenderer:
         self._check_thread()
         if self._adapter is None:
             raise RuntimeError("SceneRenderer is closed")
-        return self._adapter.render(self._collect())
+        image = self._adapter.render(self._collect())
+        self._collector.accept()
+        return image
 
     def _check_thread(self):
         if threading.get_ident() != self._owner_thread:

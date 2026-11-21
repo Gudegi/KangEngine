@@ -5,6 +5,7 @@
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/types/light_color.hpp"
+#include "engine/scene/render_light_data.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
@@ -58,6 +59,46 @@ void appendAABBLines(const KE::Geometry::AABB& box,
 } // namespace
 
 namespace KE {
+
+void Rasterizer::setSceneLights(const Scene::RenderLightData& lighting) {
+    DirectionalLight directional;
+    directional.intensity = 0;
+    directional.ambient = glm::vec3(0);
+    bool hasDirectional = false;
+    std::vector<PointLight> points;
+    std::vector<SpotLight> spots;
+    std::vector<RectLightInstance> rectangles;
+    glm::vec3 domeRadiance(0.0f);
+    for (const auto& source : lighting.lights) {
+        if (const auto* light =
+                std::get_if<Scene::DirectionalLight>(&source.light)) {
+            if (!hasDirectional) {
+                directional = evaluateWorldLight(*light, source.world);
+                hasDirectional = true;
+            }
+        } else if (const auto* light =
+                       std::get_if<Scene::PointLight>(&source.light)) {
+            if (points.size() < MaxPointLights)
+                points.push_back(evaluateWorldLight(*light, source.world));
+        } else if (const auto* light =
+                       std::get_if<Scene::SpotLight>(&source.light)) {
+            if (spots.size() < MaxSpotLights)
+                spots.push_back(evaluateWorldLight(*light, source.world));
+        } else if (const auto* light =
+                       std::get_if<Scene::RectLight>(&source.light)) {
+            rectangles.push_back({*light, source.world});
+        } else if (const auto* light =
+                       std::get_if<Scene::DomeLight>(&source.light)) {
+            domeRadiance += Scene::emittedRadiance(*light) * light->diffuse;
+        }
+    }
+    // Validate the limited area-light array before replacing the other lights.
+    setRectLights(std::move(rectangles));
+    setLight(directional);
+    setPointLights(std::move(points));
+    setSpotLights(std::move(spots));
+    setDomeRadiance(domeRadiance);
+}
 
 void Rasterizer::setRectLights(std::vector<RectLightInstance> lights) {
     if (lights.size() > MaxRectLights)

@@ -8,6 +8,7 @@
 #include "engine/graphics/renderer/render_backend/render_image.hpp"
 #include "engine/graphics/renderer/render_backend/render_backend.hpp"
 #include "engine/scene/scene_render_bridge.hpp"
+#include "engine/scene/render_light_data.hpp"
 #include "utils/types.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -266,6 +267,9 @@ class Renderer {
     std::unique_ptr<RenderBackend> _renderBackend;
     std::unique_ptr<NativeRenderExtension> _native;
     RenderBackendCapabilities _backendCapabilities;
+    Scene::RenderLightCollector _lightCollector;
+    bool _snapshotLighting = false;
+    bool _sceneLighting = false;
     const Scene::SceneResourceManager* _sceneResources = nullptr;
     RenderBackend& renderBackend();
     RenderableHandle
