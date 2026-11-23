@@ -178,6 +178,7 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_vertex_color_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/debug_draw_transform_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/debug_geometry_ownership_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/quaternion_binding_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mesh_component_smoke.py
@@ -188,6 +189,10 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_binding_updates_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/skinned_instance_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_policy_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/visual_resource_registration_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/material_texture_scope_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_updates_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/shared_material_updates_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/shared_material_updates_smoke.py --scene-renderer

@@ -89,6 +89,7 @@ class SceneResourceManager {
     void bindScene(SceneBackend* scene);
     SceneBackend* scene() const { return _scene; }
 
+    // Reuses the identity and metadata of an already registered mesh pointer.
     ResourceHandle registerMesh(const std::string& name,
                                 std::shared_ptr<MeshData> mesh,
                                 const std::string& uri = {});
@@ -140,6 +141,7 @@ class SceneResourceManager {
     SceneBackend* _scene = nullptr;
     ResourceHandle _nextHandle = 1;
     std::unordered_map<ResourceHandle, Entry> _entries;
+    std::unordered_map<const MeshData*, ResourceHandle> _meshHandles;
     std::unordered_map<const Material*, ResourceHandle> _materialHandles;
     std::unordered_map<const Backend::Texture*, ResourceHandle> _textureHandles;
     mutable bool _usageCacheDirty = true;

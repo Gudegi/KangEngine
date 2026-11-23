@@ -656,7 +656,7 @@ void bind_scene(py::module& m) {
             "immutable source.")
         .def("register_mesh", &KE::Scene::SceneResourceManager::registerMesh,
              py::arg("name"), py::arg("mesh"), py::arg("uri") = "",
-             "Register mesh data and return a resource handle.")
+             "Register mesh data; the same mesh object keeps its handle and metadata.")
         .def("register_material",
              &KE::Scene::SceneResourceManager::registerMaterial,
              py::arg("name"), py::arg("material"), py::arg("uri") = "",

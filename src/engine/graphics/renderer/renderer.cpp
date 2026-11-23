@@ -6,9 +6,11 @@
 #include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/component/render_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 
 #include <stdexcept>
+#include <algorithm>
 #include <utility>
 
 namespace KE {
@@ -441,12 +443,52 @@ Renderer::addSceneRenderable(Material& material, Scene::Prim& prim,
         mesh.mesh->indices.empty() ||
         (skinnedMesh && !skinnedMesh->hasValidVertexSkinning()))
         return InvalidHandle;
-    const auto key = std::make_tuple(mesh.mesh.get(), &material, source);
-    auto it = _sceneBatches.find(key);
-    if (it == _sceneBatches.end()) {
+
+    // Skinning matrices and deformable vertices belong to one registration.
+    const size_t skinningId = skinnedMesh ? _nextSkinningId++ : 0;
+    const auto key =
+        std::make_tuple(mesh.mesh.get(), &material, source, skinningId);
+    SceneBatchState state;
+    if (auto component = prim.getRenderComponent())
+        state = {component->isDoubleSided(), component->castsShadow(),
+                 component->alphaMode(), component->alphaCutoff()};
+
+    const auto [first, last] = _sceneBatches.equal_range(key);
+    if (source == TransformSource::SceneGraph && !skinnedMesh) {
+        for (auto candidate = first; candidate != last; ++candidate) {
+            auto& batch = *candidate->second;
+            if (!batch.hasGeometryUpdates || !batch.bridge.contains(prim))
+                continue;
+            if (batch.state != state && batch.bridge.size() > 1)
+                throw std::runtime_error("cannot split render policies of a "
+                                         "shared dynamic geometry batch");
+            setSceneBatchState(batch.handle, state);
+            return batch.handle;
+        }
+    }
+    auto it = std::find_if(first, last, [&](const auto& entry) {
+        return source == TransformSource::ExternalBuffer ||
+               entry.second->state == state;
+    });
+    if (it == last && source == TransformSource::SceneGraph) {
+        // A sole owner can change policy without reallocating GPU geometry.
+        it = std::find_if(first, last, [&](const auto& entry) {
+            return entry.second->bridge.size() == 1 &&
+                   entry.second->bridge.contains(prim);
+        });
+        if (it != last) {
+            setSceneBatchState(it->second->handle, state);
+            return it->second->handle;
+        }
+    }
+
+    if (it == last) {
         auto batch = std::make_unique<SceneBatch>();
+        batch->key = key;
         batch->mesh = mesh;
         batch->material = &material;
+        batch->state = state;
+
         // Native keeps live legacy material bindings; other backends receive
         // source values and textures only.
         batch->materialSource = Scene::SceneRenderBridge::materialSource(
@@ -454,6 +496,7 @@ Renderer::addSceneRenderable(Material& material, Scene::Prim& prim,
         auto* native = dynamic_cast<NativeRenderSystem*>(_renderBackend.get());
         if (native)
             native->bindLegacyMaterial(batch->materialSource, &material);
+
         try {
             batch->handle = renderBackend().registerSceneBatch(
                 mesh, batch->materialSource, batch->bridge.instances(), source,
@@ -468,10 +511,14 @@ Renderer::addSceneRenderable(Material& material, Scene::Prim& prim,
                 native->bindLegacyMaterial(batch->materialSource, nullptr);
             return InvalidHandle;
         }
-        it = _sceneBatches.emplace(key, std::move(batch)).first;
+        it = _sceneBatches.emplace(key, std::move(batch));
         _sceneBatchHandles.emplace(it->second->handle, it->second.get());
+        renderBackend().setSceneBatchState(it->second->handle, state);
     }
+
     auto& batch = *it->second;
+    if (batch.bridge.contains(prim))
+        return batch.handle;
     batch.bridge.add(prim);
     if (_rasterizer)
         _rasterizer->attachScenePrim(batch.handle, prim, batch.bridge);
@@ -496,6 +543,19 @@ Renderer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
                        : InvalidHandle;
 }
 
+void Renderer::releaseEmptySkinnedBatch(RenderableHandle handle) {
+    const auto found = _sceneBatchHandles.find(handle);
+    if (found == _sceneBatchHandles.end())
+        return;
+    const auto& batch = *found->second;
+    if (std::get<3>(batch.key) == 0 || !batch.bridge.empty())
+        return;
+    const auto key = batch.key;
+    renderBackend().removeSceneBatch(handle);
+    _sceneBatchHandles.erase(found);
+    _sceneBatches.erase(key);
+}
+
 void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     ++_instanceRevision;
     if (_rasterizer)
@@ -505,6 +565,7 @@ void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
         if (it != _sceneBatchHandles.end())
             it->second->bridge.remove(*prim);
     }
+    releaseEmptySkinnedBatch(handle);
 }
 
 void Renderer::removePrim(Scene::Prim* prim) {
@@ -514,6 +575,11 @@ void Renderer::removePrim(Scene::Prim* prim) {
     else if (prim) {
         for (auto& [key, batch] : _sceneBatches)
             batch->bridge.remove(*prim);
+    }
+    for (auto it = _sceneBatchHandles.begin();
+         it != _sceneBatchHandles.end();) {
+        const auto handle = it++->first;
+        releaseEmptySkinnedBatch(handle);
     }
 }
 
@@ -646,6 +712,9 @@ void Renderer::updateRenderableGeometry(RenderableHandle handle,
         _renderBackend->updateRenderableGeometry(handle, positions, normals);
     else if (_rasterizer)
         _rasterizer->updateRenderableGeometry(handle, positions, normals);
+    if (auto it = _sceneBatchHandles.find(handle);
+        it != _sceneBatchHandles.end())
+        it->second->hasGeometryUpdates = true;
 }
 
 void Renderer::updateRenderableSkinningMatrices(

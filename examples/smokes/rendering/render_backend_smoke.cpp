@@ -8,6 +8,8 @@
 #include "engine/scene/component/render_component.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/native/native_scene.hpp"
+#include "engine/scene/debug_draw.hpp"
+#include "utils/asset_path.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -78,6 +80,7 @@ class RecordingBackend final : public RenderBackend {
         std::vector<glm::mat4> boneMatrices;
     };
     std::map<RenderableHandle, Batch> batches;
+    RenderableHandle nextBatchHandle = 0;
     RenderableHandle
     registerSceneBatch(const Scene::RenderMeshData& mesh,
                        const Scene::RenderMaterialSource& material,
@@ -85,12 +88,15 @@ class RecordingBackend final : public RenderBackend {
                        TransformSource source,
                        const Scene::SkinnedMeshData* skin) override {
         require(_sceneBatches, "backend does not support scene batches");
-        const auto handle = static_cast<RenderableHandle>(batches.size());
+        const auto handle = nextBatchHandle++;
         batches.emplace(handle, Batch{mesh, &material, &instances, {}, {}});
         batches.at(handle).external = source == TransformSource::ExternalBuffer;
         if (skin)
             batches.at(handle).boneWeights = skin->boneWeights;
         return handle;
+    }
+    void removeSceneBatch(RenderableHandle handle) override {
+        batches.erase(handle);
     }
     void setSceneBatchState(RenderableHandle handle,
                             const SceneBatchState& state) override {
@@ -546,7 +552,7 @@ void checkBatchRegistration() {
             batch.instances.transforms[0][3] == glm::vec4(2, 1, 0, 1) &&
             batch.instances.transforms[1][3] == glm::vec4(2, 2, 0, 1),
         "batch registration changed geometry, material, or world transforms");
-    const auto id = batch.instances.ids[0];
+    auto id = batch.instances.ids[0];
     require(batch.material->resource == materialId &&
                 batch.material->textures.at("diffuse_map").first == textureId &&
                 batch.material->textures.at("diffuse_map").second->srgb,
@@ -558,32 +564,36 @@ void checkBatchRegistration() {
                     glm::vec4(material.diffuse, 1) &&
                 batch.material->values.unlit,
             "legacy material updates were not converted for the backend");
-    auto positions = mesh->vertices;
-    positions.front().x += 2.0f;
-    registry.updateGeometry(*firstComponent, positions);
-    require(recording->lastPositions == &positions &&
-                mesh->vertices.front() != positions.front(),
-            "geometry updates copied input or modified the source mesh");
     requireRejected([&] { registry.setTexture(*firstComponent, nullptr, 0); });
     require(id != 0 && id != batch.instances.ids[1],
             "instance identities are not distinct");
     registry.setDoubleSided(*firstComponent, true);
     registry.setCastsShadow(*firstComponent, false);
     registry.setAlphaMode(*firstComponent, AlphaMode::Blend, 0.3f);
-    require(batch.state.doubleSided && !batch.state.castsShadow &&
-                batch.state.alphaMode == AlphaMode::Blend &&
-                batch.state.alphaCutoff == 0.3f,
-            "common batch state lost surface flags");
+    const auto& changed = recording->batches.at(registry.handle(*firstComponent));
+    require(changed.state == SceneBatchState{true, false, AlphaMode::Blend, 0.3f} &&
+                batch.state == SceneBatchState{} &&
+                !registry.sharesBatch(*firstComponent, *secondComponent),
+            "object policies changed a shared peer");
+    registry.setDoubleSided(*firstComponent, false);
+    registry.setCastsShadow(*firstComponent, true);
+    registry.setAlphaMode(*firstComponent, AlphaMode::Opaque);
+    sync();
+    require(registry.handle(*firstComponent) == handle &&
+                registry.sharesBatch(*firstComponent, *secondComponent) &&
+                batch.instances.ids.size() == 2,
+            "restored policies did not reuse the original batch");
+    const auto firstIdx = batch.instances.transforms[0][3].y == 3 ? 0 : 1;
+    id = batch.instances.ids[firstIdx];
     first->setDisplayColorAlpha({0.1f, 0.3f, 0.9f, 0.4f});
     parent->setLocalTranslation({4, 0, 0});
     second->setVisible(false);
     sync();
-    require(recording->batches.size() == 1 &&
-                batch.instances.ids ==
+    require(batch.instances.ids ==
                     std::vector<Scene::RenderInstanceId>{id} &&
                 batch.instances.transforms[0][3] == glm::vec4(4, 1, 0, 1) &&
                 batch.instances.colors[0] == glm::vec4(0.1f, 0.3f, 0.9f, 0.4f),
-            "state updates rebuilt a batch or lost visibility/color/identity");
+            "state updates lost visibility/color/identity");
     registry.setMaterial(*firstComponent, &replacement);
     const auto replacementHandle = registry.handle(*firstComponent);
     sync();
@@ -592,6 +602,21 @@ void checkBatchRegistration() {
             recording->batches.at(replacementHandle)
                     .material->values.shadingModel == MaterialShadingModel::PBR,
         "material replacement did not transfer the instance between batches");
+    auto positions = mesh->vertices;
+    positions.front().x += 2.0f;
+    registry.updateGeometry(*firstComponent, positions);
+    registry.setDoubleSided(*firstComponent, true);
+    require(registry.handle(*firstComponent) == replacementHandle &&
+                recording->lastPositions == &positions &&
+                mesh->vertices.front() != positions.front(),
+            "single dynamic geometry policy change replaced its runtime data");
+    auto* authored = scene.definePrim("/group/authored", Scene::PrimType::Mesh);
+    authored->setMeshData(mesh);
+    authored->addRenderComponent()->setDoubleSided(true);
+    auto authoredComponent = registry.addRenderable(*authored, &material);
+    require(recording->batches.at(registry.handle(*authoredComponent)).state.doubleSided &&
+                registry.handle(*authoredComponent) != handle,
+            "registration ignored authored render policies");
     auto* external = scene.definePrim("/group/external", Scene::PrimType::Mesh);
     external->setMeshData(mesh);
     auto externalComponent = registry.addRenderable(
@@ -605,6 +630,14 @@ void checkBatchRegistration() {
     external->setLocalTranslation({100, 0, 0});
     sync();
     auto& externalBatch = recording->batches.at(externalHandle);
+    const auto* externalData = externalBatch.instances.transforms.data();
+    registry.setDoubleSided(*externalComponent, true);
+    registry.setCastsShadow(*externalComponent, false);
+    registry.setAlphaMode(*externalComponent, AlphaMode::Mask, 0.3f);
+    require(registry.handle(*externalComponent) == externalHandle &&
+                externalBatch.instances.transforms.data() == externalData &&
+                externalBatch.state == SceneBatchState{true, false, AlphaMode::Mask, 0.3f},
+            "ExternalBuffer policies replaced the batch or transform storage");
     require(externalBatch.instances.transforms == transforms &&
                 externalBatch.source->ids.size() == 1,
             "owner scene transform overwrote external poses");
@@ -633,12 +666,39 @@ void checkBatchRegistration() {
     require(skinBatch.boneMatrices == boneMatrices &&
                 skinned->resolveMeshData()->vertices == skin.mesh.vertices,
             "skinning update bypassed the backend or changed source geometry");
+    auto* clone = scene.definePrim("/group/clone", Scene::PrimType::Mesh);
+    clone->setMeshData(skinned->resolveMeshData());
+    auto cloneComponent = registry.addSkinnedRenderable(*clone, &material, skin);
+    require(registry.handle(*cloneComponent) != registry.handle(*skinComponent),
+            "independent skinned registrations shared a batch");
+    registry.updateSkinning(*cloneComponent, {glm::mat4(1)});
+    require(skinBatch.boneMatrices == boneMatrices,
+            "clone update overwrote the original pose");
+    const auto skinHandle = registry.handle(*skinComponent);
+    registry.setDoubleSided(*skinComponent, true);
+    registry.setCastsShadow(*skinComponent, false);
+    registry.setAlphaMode(*skinComponent, AlphaMode::Mask, 0.3f);
+    require(registry.handle(*skinComponent) == skinHandle &&
+                skinBatch.boneMatrices == boneMatrices,
+            "skinned policy changes replaced the current pose");
     registry.detachSubtree(*parent);
     scene.removePrim("/group");
     sync();
     for (const auto& [key, removed] : recording->batches)
         require(removed.source->ids.empty(),
                 "deleted Prim retained drawable data");
+    const auto cachedStaticBatches = recording->batches.size();
+    auto* repeated = scene.definePrim("/repeated", Scene::PrimType::Mesh);
+    repeated->setMeshData(mesh);
+    for (int i = 0; i < 300; ++i) {
+        auto component = registry.addSkinnedRenderable(*repeated, &material, skin);
+        require(recording->batches.size() == cachedStaticBatches + 1,
+                "skinned registration reused an active batch");
+        registry.unregister(*component);
+        require(recording->batches.size() == cachedStaticBatches,
+                "deleted skinned batch still borrowed scene data");
+        sync();
+    }
     renderer.release();
 }
 
@@ -760,6 +820,108 @@ void checkAppScene(bool native) {
                 "subtree removal was not submitted");
     app.close();
 }
+void checkCreatedResources() {
+    App app;
+    app.initialize(32, 32, true, UpAxis::Y, Backend::BackendType::OpenGL,
+                   Scene::BackendType::Native, true);
+    PBRMaterial material;
+    auto& resources = app.getSceneResourceManager();
+    auto* texture = app.loadTexture(getAssetPath("textures/awesomeface.png"));
+    const auto textureId = resources.textureHandle(texture);
+    require(textureId != Scene::InvalidResourceHandle &&
+                resources.textureSource(textureId)->flip,
+            "App texture lost its source identity");
+    const auto resourceCount = resources.size();
+    require(app.loadTexture(getAssetPath("textures/awesomeface.png")) == texture &&
+                resources.size() == resourceCount,
+            "App reloaded a cached texture");
+    material.baseColorTexture = texture;
+    material.roughness = 0.23f;
+    auto* copy = dynamic_cast<PBRMaterial*>(app.rememberMaterial(material.clone()));
+    require(copy && copy->baseColorTexture == texture && copy->roughness == 0.23f,
+            "material clone lost parameters or shared texture");
+    copy->roughness = 0.8f;
+    require(material.roughness == 0.23f &&
+                resources.materialHandle(copy) != Scene::InvalidResourceHandle,
+            "retained material mutated its source or lost registration");
+    auto check = [&](Scene::Prim* prim) {
+        require(prim && prim->getMeshComponent(), "created visual has no mesh");
+        const auto source = prim->resolveMeshData();
+        const auto handle = prim->getMeshComponent()->resourceHandle();
+        require(source && resources.mesh(handle) == source,
+                "created visual has no registered source mesh");
+        require(resources.materialHandle(&material) != Scene::InvalidResourceHandle,
+                "created visual has no registered material");
+        return handle;
+    };
+
+    App::MeshPrimDesc desc;
+    desc.path = "/mesh";
+    desc.material = &material;
+    desc.meshData = Scene::Prim::createCubeData(1);
+    const auto created = app.addMeshPrim(std::move(desc));
+    const auto meshId = check(created.prim);
+    auto* instance = app.getScene()->definePrim("/instance", Scene::PrimType::MeshInstance);
+    instance->setMeshSourcePath("/mesh");
+    const auto count = resources.size();
+    app.addRenderable(&material, instance, TransformSource::ExternalBuffer);
+    require(check(instance) == meshId && resources.size() == count,
+            "mesh instance duplicated its source resource");
+
+    Scene::SkinnedMeshData skin;
+    skin.mesh = *created.prim->resolveMeshData();
+    skin.boneIndices.assign(skin.mesh.vertices.size(), glm::ivec4(0));
+    skin.boneWeights.assign(skin.mesh.vertices.size(), glm::vec4(1, 0, 0, 0));
+    const auto skinned = app.addSkinnedMeshPrim(&material, "/skin", skin);
+    const auto skinId = check(skinned.prim);
+    app.updateRenderableSkinningMatrices(skinned.handle, {glm::mat4(1)});
+    require(resources.mesh(skinId)->vertices == skin.mesh.vertices,
+            "skinning changed the registered source");
+
+    const std::vector<glm::vec3> starts{{0, 0, 0}}, ends{{0, 1, 0}};
+    Scene::DebugDraw::logLines(&app, &material, "/line", starts, ends);
+    Scene::DebugDraw::logArrows(&app, &material, "/arrow", starts, ends);
+    for (const auto* path : {"/line", "/arrow"})
+        require(app.getScene()->getPrimAtPath(path)->getRenderComponent()->transformSource() ==
+                    TransformSource::ExternalBuffer,
+                "debug component lost external ownership");
+    const auto lineId = check(app.getScene()->getPrimAtPath("/line"));
+    check(app.getScene()->getPrimAtPath("/arrow"));
+    Scene::DebugDraw::updateLines(
+        &app, *app.getScene()->getPrimAtPath("/line")->getRenderComponent(),
+        starts, {{0, 2, 0}});
+    require(check(app.getScene()->getPrimAtPath("/line")) == lineId,
+            "debug update changed the source resource");
+
+    const float rawStart[] = {3, 0, 0}, rawEnd[] = {3, 1, 0};
+    const auto rawLine = Scene::DebugDraw::logLines(
+        &app, &material, "/raw_line", rawStart, rawEnd, nullptr, 1, 0, 0.1f);
+    const float arrowStart[] = {5, 0, 0}, arrowEnd[] = {5, 1, 0};
+    Scene::DebugDraw::logArrows(
+        &app, &material, "/raw_arrow", arrowStart, arrowEnd, nullptr, 1, 0, 0.1f);
+    app.drawFrame();
+    for (const float x : {3.0f, 5.0f}) {
+        const auto hit = app.raycast({{x, 0.3f, 5}, {0, 0, -1}});
+        require(hit.hit && hit.transformSource == TransformSource::ExternalBuffer &&
+                    hit.instanceIndex == 0,
+                "raw debug picking lost external instance identity");
+    }
+    check(app.getScene()->getPrimAtPath("/raw_line"));
+    check(app.getScene()->getPrimAtPath("/raw_arrow"));
+    const float movedStart[] = {4, 0, 0}, movedEnd[] = {4, 1, 0};
+    Scene::DebugDraw::updateLines(
+        &app, rawLine, movedStart, movedEnd, nullptr, 1, 0);
+    app.drawFrame();
+    require(!app.raycast({{3, 0.3f, 5}, {0, 0, -1}}).hit &&
+                app.raycast({{4, 0.3f, 5}, {0, 0, -1}}).hit,
+            "raw debug update did not move the external instance");
+    app.removePrim("/raw_line");
+    app.drawFrame();
+    require(!app.raycast({{4, 0.3f, 5}, {0, 0, -1}}).hit,
+            "removed debug geometry remained pickable");
+    app.close();
+}
+
 void checkSceneLights() {
     std::vector<std::string> calls;
     auto backend =
@@ -810,7 +972,8 @@ int main(int argc, char** argv) {
     checkAppScene(false);
     if (argc > 1 && std::string(argv[1]) == "--app") {
         checkAppScene(true);
+        checkCreatedResources();
     }
     std::cout << "PASS: backend initialization, frame order, capabilities, "
-                 "capture, release, delayed picking and identity\n";
+                 "capture, release, policies, delayed picking and identity\n";
 }

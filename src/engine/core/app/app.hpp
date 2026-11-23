@@ -11,6 +11,8 @@
 #include <atomic>
 #include <iostream>
 #include <memory>
+#include <map>
+#include <tuple>
 #include <string>
 #include <thread>
 #include <glm/vec3.hpp>
@@ -123,6 +125,9 @@ class App {
     Renderer _renderer;
     Scene::SceneRenderSystem _sceneRenderSystem;
     Scene::SceneResourceManager _sceneResourceManager;
+    std::map<std::tuple<std::string, bool, bool>,
+             std::unique_ptr<Backend::Texture>> _textures;
+    std::vector<std::unique_ptr<Material>> _materials;
     InteractionController _interaction;
     bool _externalForceDragEnabled = false;
     bool _showExitConfirmation = false;
@@ -199,6 +204,10 @@ class App {
     const Scene::SceneResourceManager& getSceneResourceManager() const {
         return _sceneResourceManager;
     }
+    // Retain imported resources until close(), after renderer registrations end.
+    Backend::Texture* loadTexture(const std::string& path, bool flip = true,
+                                  bool srgb = false);
+    Material* rememberMaterial(std::unique_ptr<Material> material);
     void setLight(const DirectionalLight& light) {
         getRenderer().setLight(light);
     }

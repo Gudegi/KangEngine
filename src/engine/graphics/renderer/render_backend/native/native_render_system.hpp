@@ -34,6 +34,7 @@ class NativeRenderSystem final : public RenderBackend {
         const Scene::RenderInstanceData& instances,
         TransformSource source = TransformSource::SceneGraph,
         const Scene::SkinnedMeshData* skinnedMesh = nullptr) override;
+    void removeSceneBatch(RenderableHandle handle) override;
     // Legacy GPU texture fields remain Native-only; nullptr removes the
     // binding.
     void bindLegacyMaterial(const Scene::RenderMaterialSource& source,
@@ -105,6 +106,7 @@ class NativeRenderSystem final : public RenderBackend {
     Scene::RenderLightData _sceneLighting;
     void syncSceneSnapshot(const Scene::RenderSceneFrame& scene);
     std::map<const Scene::RenderMaterialSource*, Material*> _legacyMaterials;
+    std::map<RenderableHandle, const Scene::RenderMaterialSource*> _batchMaterials;
     std::map<const Scene::RenderMaterialSource*, std::unique_ptr<Material>>
         _sourceMaterials;
     void updateMaterialSource(const Scene::RenderMaterialSource& source,

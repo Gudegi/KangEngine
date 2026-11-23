@@ -3,7 +3,9 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/renderer.hpp"
 #include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -13,11 +15,34 @@ namespace Scene {
 
 SceneRenderSystem::~SceneRenderSystem() { clear(); }
 
-void SceneRenderSystem::bind(Renderer* renderer) {
-    if (!_registrations.empty() && renderer != _renderer)
+void SceneRenderSystem::bind(Renderer* renderer,
+                             SceneResourceManager* resources) {
+    if (!_registrations.empty() &&
+        (renderer != _renderer || resources != _resources))
         throw std::runtime_error(
             "cannot rebind SceneRenderSystem with active registrations");
     _renderer = renderer;
+    _resources = resources;
+}
+
+void SceneRenderSystem::registerResources(RenderComponent& component,
+                                          Material* material) {
+    if (!_resources)
+        return;
+
+    auto& prim = *component.owner();
+    const auto mesh = component.resolveMeshData();
+    if (mesh) {
+        const auto meshComponent = prim.getMeshComponent();
+        const auto handle = _resources->registerMesh(
+            prim.getName(), mesh, "scene://mesh" + prim.getPath());
+        meshComponent->setResourceHandle(handle);
+    }
+    if (material &&
+        _resources->materialHandle(material) == InvalidResourceHandle)
+        _resources->registerMaterial(prim.getName(), material,
+                                     "scene://material" + prim.getPath());
+    _resources->invalidateUsageCache();
 }
 
 void SceneRenderSystem::syncScene(SceneBackend& scene,
@@ -125,6 +150,8 @@ void SceneRenderSystem::finishRegistration(
     registration.handle = renderable;
     registration.mesh = component->resolveMeshData().get();
     registration.material = material;
+    registration.state = {component->isDoubleSided(), component->castsShadow(),
+                          component->alphaMode(), component->alphaCutoff()};
     if (skinnedMesh)
         registration.skinnedMesh = *skinnedMesh;
     _registrations.emplace(component.get(), registration);
@@ -141,6 +168,7 @@ void SceneRenderSystem::finishRegistration(
 bool SceneRenderSystem::registerRenderable(
     const std::shared_ptr<RenderComponent>& component, Material* material) {
     validateRegistration(component);
+    registerResources(*component, material);
     RenderableHandle handle = InvalidHandle;
     if (_renderer->capabilities().sceneBatches || _renderer->rasterizer()) {
         handle = _renderer->addRenderable(material, component->owner(),
@@ -164,6 +192,7 @@ bool SceneRenderSystem::registerSkinnedRenderable(
     const std::shared_ptr<RenderComponent>& component, Material* material,
     const SkinnedMeshData& skinnedMesh) {
     validateRegistration(component);
+    registerResources(*component, material);
     const auto handle = _renderer->addSkinnedRenderable(
         material, component->owner(), skinnedMesh,
         component->transformSource());
@@ -196,7 +225,14 @@ void SceneRenderSystem::syncState(RenderComponent& component) {
 
     const auto mesh = component.resolveMeshData();
     auto* material = registration.prim->getMaterial();
-    if (mesh.get() != registration.mesh || material != registration.material) {
+    const SceneBatchState state{component.isDoubleSided(),
+                                component.castsShadow(), component.alphaMode(),
+                                component.alphaCutoff()};
+    const bool policyChanged =
+        component.transformSource() == TransformSource::SceneGraph &&
+        !registration.skinnedMesh && state != registration.state;
+    if (mesh.get() != registration.mesh || material != registration.material ||
+        policyChanged) {
         if (component.transformSource() == TransformSource::ExternalBuffer)
             throw std::runtime_error(
                 "cannot replace mesh or material of a registered "
@@ -218,28 +254,26 @@ void SceneRenderSystem::syncState(RenderComponent& component) {
                                            component.transformSource());
         if (replacement == InvalidHandle)
             throw std::runtime_error(
-                "failed to register replacement scene mesh or material");
+                "failed to register replacement scene batch");
         try {
-            _renderer->setSceneBatchState(
-                replacement,
-                {component.isDoubleSided(), component.castsShadow(),
-                 component.alphaMode(), component.alphaCutoff()});
+            _renderer->setSceneBatchState(replacement, state);
             for (const auto& [texture, slot] : registration.textureBindings)
                 _renderer->setRenderableTexture(replacement, texture, slot);
         } catch (...) {
-            _renderer->removePrim(replacement, registration.prim);
+            if (replacement != registration.handle)
+                _renderer->removePrim(replacement, registration.prim);
             throw;
         }
-        _renderer->removePrim(registration.handle, registration.prim);
+        if (replacement != registration.handle)
+            _renderer->removePrim(registration.handle, registration.prim);
         registration.handle = replacement;
         registration.mesh = mesh.get();
         registration.material = material;
+        registration.state = state;
         return;
     }
-    _renderer->setSceneBatchState(
-        registration.handle,
-        {component.isDoubleSided(), component.castsShadow(),
-         component.alphaMode(), component.alphaCutoff()});
+    _renderer->setSceneBatchState(registration.handle, state);
+    registration.state = state;
 }
 
 bool SceneRenderSystem::unregister(RenderComponent& component) {
@@ -301,14 +335,14 @@ bool SceneRenderSystem::setMaterial(RenderComponent& component,
     return true;
 }
 
-void SceneRenderSystem::setTexture(RenderComponent& component,
-                                   Backend::Texture* texture,
-                                   TextureRole role) {
-    setTexture(component, texture, textureRoleSlot(role));
+void SceneRenderSystem::setBatchTexture(RenderComponent& component,
+                                        Backend::Texture* texture,
+                                        TextureRole role) {
+    setBatchTexture(component, texture, textureRoleSlot(role));
 }
 
-void SceneRenderSystem::setTexture(RenderComponent& component,
-                                   Backend::Texture* texture, int slot) {
+void SceneRenderSystem::setBatchTexture(RenderComponent& component,
+                                        Backend::Texture* texture, int slot) {
     requireBatch(component);
     auto it = _registrations.find(&component);
     _renderer->setRenderableTexture(it->second.handle, texture, slot);

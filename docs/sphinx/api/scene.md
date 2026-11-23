@@ -81,7 +81,7 @@ outlive its resource registration.
 ## Debug geometry
 
 Use `app.debug.geometry` for mesh-based debug lines, arrows, and axes.
-These objects are ordinary SceneGraph renderables and return
+These instanced debug meshes are registered in the scene and return
 `DebugPrimitiveView` instances.
 
 `ke.scene.DebugDraw` is the low-level native implementation used by that
@@ -99,6 +99,9 @@ facade:
 Registering a mesh/material/texture or authored shader-source/pipeline assigns
 a runtime `ResourceHandle` and creates a metadata-only mirror prim under
 `/.Resources/...`.
+
+Registering the same mesh object again reuses its handle, name, and URI.
+App scene registration also registers meshes supplied through `scene.add_renderable()`.
 
 Resource prims are not renderable world objects:
 

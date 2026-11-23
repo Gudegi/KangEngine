@@ -94,7 +94,7 @@ class MeshInstancer {
     AlphaMode _alphaMode = AlphaMode::Opaque;
     float _alphaCutoff = 0.5f;
     bool _hasSkinning = false;
-    bool _hasDynamicGeometry = false;
+    bool _hasGeometryUpdates = false;
     bool _hasTangents = false;
     TransformSource _transformSource{};
     Geometry::AABB _localBounds;
@@ -269,6 +269,8 @@ class MeshInstancer {
     AlphaMode alphaMode() const { return _alphaMode; }
     float alphaCutoff() const { return _alphaCutoff; }
     bool hasSkinning() const { return _hasSkinning; }
+    bool hasPrims() const { return !_prims.empty(); }
+    bool hasGeometryUpdates() const { return _hasGeometryUpdates; }
     bool hasTangents() const { return _hasTangents; }
     bool hasVertexColors() const { return _vertexColors != nullptr; }
     const Geometry::AABB& localBounds() const { return _localBounds; }
@@ -293,6 +295,13 @@ class MeshInstancer {
         for (const auto& [texture, textureSlot] : _textures)
             if (textureSlot == slot)
                 return texture;
+        if (_material && _material->shadingModel() == MaterialShadingModel::Color) {
+            const auto* color = static_cast<const ColorMaterial*>(_material);
+            if (slot == RendererTextureSlot::BaseColor)
+                return color->baseColorTexture;
+            if (slot == RendererTextureSlot::Normal)
+                return color->normalTexture;
+        }
         return nullptr;
     }
     Material* material() const { return _material; }

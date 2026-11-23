@@ -77,7 +77,7 @@ def main():
 
             def set_texture(index, surface, texture):
                 if index == 0:
-                    surface.set_texture(texture)
+                    materials[index].set_base_color_texture(texture)
                 elif index == 1:
                     materials[index].set_diffuse_map(texture)
                 else:

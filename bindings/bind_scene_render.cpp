@@ -47,23 +47,22 @@ void bind_scene_render(py::module& m) {
              "it to the matching renderer batch. ExternalBuffer renderables "
              "reject dynamic material replacement.")
         .def(
-            "set_texture",
+            "set_batch_texture",
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,
                KE::Backend::Texture* texture, KE::TextureRole role) {
-                self.setTexture(component, texture, role);
+                self.setBatchTexture(component, texture, role);
             },
             py::arg("component"), py::arg("texture"), py::arg("role"),
-            "Set a texture by material role through component registration.")
+            "Override a Native ColorMaterial texture for the entire batch.")
         .def(
-            "set_texture",
+            "set_batch_texture",
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,
                KE::Backend::Texture* texture,
-               int slot) { self.setTexture(component, texture, slot); },
+               int slot) { self.setBatchTexture(component, texture, slot); },
             py::arg("component"), py::arg("texture"), py::arg("slot") = 0,
-            "Set a texture by raw renderer slot through component "
-            "registration.")
+            "Override a raw texture slot for the entire Native batch.")
         .def("set_external_buffer",
              &KE::Scene::SceneRenderSystem::setExternalBuffer,
              py::arg("component"), py::arg("descriptor"),
@@ -135,6 +134,10 @@ void bind_scene_render(py::module& m) {
             },
             py::arg("component"), py::arg("bone_matrices"),
             "Update skinned bone matrices through component registration.");
+
+    // TODO: Remove this alias after callers migrate to set_batch_texture().
+    scene.attr("SceneRenderSystem").attr("set_texture") =
+        scene.attr("SceneRenderSystem").attr("set_batch_texture");
 
     py::class_<KE::Scene::DebugDraw>(
         scene, "DebugDraw",

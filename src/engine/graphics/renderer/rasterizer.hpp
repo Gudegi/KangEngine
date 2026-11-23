@@ -2,6 +2,7 @@
 #define _RASTERIZER_HPP_
 
 #include "engine/graphics/renderer/render_pipeline.hpp"
+#include "engine/graphics/renderer/render_backend/render_backend.hpp"
 #include "engine/graphics/renderer/selection_mask_pass.hpp"
 #include "engine/graphics/renderer/picking_pass.hpp"
 #include "engine/graphics/renderer/shader_library.hpp"
@@ -72,8 +73,7 @@ class Rasterizer : public RenderPipeline {
                        const Scene::RenderInstanceData& instances,
                        const Scene::SkinnedMeshData* skinnedMesh = nullptr,
                        TransformSource source = TransformSource::SceneGraph);
-    void removeSceneBatch(const Scene::RenderMeshData& mesh,
-                          Material* material);
+    void removeSceneBatch(RenderableHandle handle);
     void invalidateSceneBatch(RenderableHandle handle);
     // =====================================================================
     // Scene Mesh Pipelines - batching and renderable registration
@@ -83,12 +83,19 @@ class Rasterizer : public RenderPipeline {
         const Scene::MeshData* mesh;
         Material* material;
         TransformSource transformSource;
+        const Scene::RenderInstanceData* instances = nullptr;
+        size_t batchId = 0;
         bool operator<(const InstancerKey& o) const {
             if (mesh != o.mesh)
                 return mesh < o.mesh;
             if (material != o.material)
                 return material < o.material;
-            return transformSource < o.transformSource;
+            if (transformSource != o.transformSource)
+                return transformSource < o.transformSource;
+            if (instances != o.instances)
+                return std::less<const Scene::RenderInstanceData*>{}(
+                    instances, o.instances);
+            return batchId < o.batchId;
         }
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
@@ -104,6 +111,8 @@ class Rasterizer : public RenderPipeline {
 
     std::map<InstancerKey, RenderableHandle> _handleMap;
     std::vector<MeshInstancer*> _handleTable;
+    std::vector<RenderableHandle> _freeHandles;
+    size_t _nextBatchId = 1;
     struct PrimSourceRegistrations {
         // To specify which track is in the Scene panel
         uint32_t sceneGraph = 0;
@@ -117,7 +126,9 @@ class Rasterizer : public RenderPipeline {
     RenderableHandle
     registerMeshBatch(const Scene::RenderMeshData& input, Material* material,
                       TransformSource source,
-                      const Scene::SkinnedMeshData* skinnedMesh = nullptr);
+                      const Scene::SkinnedMeshData* skinnedMesh = nullptr,
+                      const Scene::RenderInstanceData* instances = nullptr,
+                      const SceneBatchState& state = {});
 
     struct RenderHookEntry {
         RenderHookHandle handle = InvalidRenderHook;

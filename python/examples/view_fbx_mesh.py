@@ -71,6 +71,10 @@ class FBXMeshViewer(ke.App):
                 if diffuse_texture is not None
                 else self.mesh_material
             )
+            if diffuse_texture is not None:
+                shader = self._remember_material(shader.clone())
+                shader.base_color_texture = diffuse_texture
+                shader.normal_texture = normal_texture
             view = self.scene.add_mesh(
                 prim_path,
                 mesh.mesh_data,
@@ -78,7 +82,6 @@ class FBXMeshViewer(ke.App):
                 color=_mesh_material_color(mesh, _mesh_color(idx)),
             )
             if diffuse_texture is not None:
-                view.set_texture(diffuse_texture, 0)
                 if Path(diffuse_path).suffix.lower() in {".png", ".tga"}:
                     # FBX does not reliably describe alpha semantics. Atlas
                     # textures in these formats commonly use binary cutouts;
@@ -86,7 +89,6 @@ class FBXMeshViewer(ke.App):
                     view.set_alpha_mode(ke.render.AlphaMode.MASK, 0.5)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
-                view.set_texture(normal_texture, 5)
                 normal_mapped_count += 1
             view.set_double_sided(self.double_sided)
             view.set_casts_shadow(self.cast_shadows)

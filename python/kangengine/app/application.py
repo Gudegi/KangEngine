@@ -230,11 +230,15 @@ class RenderablePrimView:
         """Return the per-instance base-color multiplier."""
         return self.prim.get_display_color_alpha()
 
-    def set_texture(self, texture, role_or_slot=render_api.TextureRole.BASE_COLOR):
-        self._render_system.set_texture(
+    def set_batch_texture(self, texture, role_or_slot=render_api.TextureRole.BASE_COLOR):
+        """Override a Native ColorMaterial texture for the entire render batch."""
+        self._render_system.set_batch_texture(
             self.component, unwrap_native(texture), role_or_slot
         )
         return self
+
+    # TODO: Remove this alias after callers migrate to set_batch_texture().
+    set_texture = set_batch_texture
 
     def set_material(self, material):
         """Replace this renderable's material and move it to the right batch."""
@@ -339,7 +343,7 @@ class ObjImportView:
 
 
 class DebugGeometry:
-    """Mesh-based debug geometry owned by the SceneGraph."""
+    """Scene-registered debug meshes driven by external world transforms."""
 
     def __init__(self, scene_context: "SceneContext"):
         self._scene = scene_context
@@ -436,6 +440,7 @@ class DebugGeometry:
             path,
             geometry_api.create_sphere_data(1.0, segments, rings),
             material,
+            transform_source=render_api.TransformSource.EXTERNAL_BUFFER,
         )
         view._render_system.update_instances(view.component, transforms, colors)
         view.set_casts_shadow(False)
@@ -1576,6 +1581,7 @@ class App(_NativeApp):
         if transform_source is None:
             transform_source = render_api.TransformSource.SCENE_GRAPH
         self._ensure_prim_mesh_resource(prim)
+        self._register_material_resource(material)
         self._add_skinned_renderable(
             material,
             prim,

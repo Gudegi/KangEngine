@@ -24,6 +24,7 @@ namespace Scene {
 class Prim;
 } // namespace Scene
 
+// Removed batches invalidate their handles; released slots may be reused.
 using RenderableHandle = uint32_t;
 static constexpr RenderableHandle InvalidHandle = ~0u;
 

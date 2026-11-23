@@ -10,6 +10,7 @@ import numpy as np
 import numpy.typing as npt
 
 from .._core import _ke
+from .._public import unwrap_native
 
 if TYPE_CHECKING:
     from ..app import App, RenderablePrimView
@@ -158,7 +159,6 @@ class _SkinnedSurfacePart:
     native_mesh: Any
     native_skin: Any
     bind_geometry_modified: bool = False
-    texture_overrides: dict[Any, Any] | None = None
     alpha_mode: Any = None
     alpha_cutoff: float = 0.5
     opaque_alpha_mode: Any = None
@@ -253,8 +253,8 @@ class SkinnedSurface:
         """Create one logical surface from every skinned mesh in an FBX result.
 
         By default, distinct imported FBX materials become retained PBR
-        materials. Passing ``material`` applies one caller-owned override to
-        every part instead.
+        materials. With ``material``, imported textures use copies of that
+        material; its parameters and existing textures remain unchanged.
         """
         motion = result.motion
         meshes = result.skinned_meshes
@@ -262,8 +262,8 @@ class SkinnedSurface:
             raise ValueError("FBX result contains no skinned meshes")
         base_path = path.rstrip("/")
         parts: list[_SkinnedSurfacePart] = []
-        imported_materials: list[Any | None] = []
         imported_pbr_materials: dict[tuple[Any, ...], Any] = {}
+        textured_materials: dict[tuple[str, str], Material] = {}
 
         def load_texture(texture_path: str) -> Any | None:
             if not texture_path or not Path(texture_path).is_file():
@@ -280,23 +280,29 @@ class SkinnedSurface:
             )
             part_color = color
             part_material = material
+
+            diffuse_path = ""
+            normal_path = ""
+            if use_imported_materials and imported_material is not None:
+                diffuse_path = imported_material.diffuse_texture_path
+                normal_path = imported_material.normal_texture_path
+            diffuse = load_texture(diffuse_path)
+            normal = load_texture(normal_path)
+            texture_key = (
+                str(Path(diffuse_path).resolve()) if diffuse is not None else "",
+                str(Path(normal_path).resolve()) if normal is not None else "",
+            )
+
             if part_material is None:
-                diffuse = None
-                normal = None
                 base_color = _ke.Vec4(1.0, 1.0, 1.0, 1.0)
                 material_key: tuple[Any, ...] = (None,)
                 if use_imported_materials and imported_material is not None:
-                    diffuse_path = imported_material.diffuse_texture_path
-                    normal_path = imported_material.normal_texture_path
-                    diffuse = load_texture(diffuse_path)
-                    normal = load_texture(normal_path)
                     rgba = tuple(float(v) for v in imported_material.diffuse_color)
                     base_color = _ke.Vec4(*rgba)
                     material_key = (
                         imported_material.name,
                         rgba,
-                        str(Path(diffuse_path).resolve()) if diffuse is not None else "",
-                        str(Path(normal_path).resolve()) if normal is not None else "",
+                        *texture_key,
                     )
                 part_material = imported_pbr_materials.get(material_key)
                 if part_material is None:
@@ -314,6 +320,21 @@ class SkinnedSurface:
                 and imported_material is not None
             ):
                 part_color = _ke.Vec4(*imported_material.diffuse_color)
+
+            if material is not None and (diffuse is not None or normal is not None):
+                part_material = textured_materials.get(texture_key)
+                if part_material is None:
+                    part_material = material.clone()
+                    phong = isinstance(unwrap_native(part_material), _ke.PhongMaterial)
+                    if diffuse is not None:
+                        slot = "diffuse_map" if phong else "base_color_texture"
+                        setattr(part_material, slot, diffuse)
+                    if normal is not None:
+                        slot = "normal_map" if phong else "normal_texture"
+                        setattr(part_material, slot, normal)
+                    app._remember_material(part_material)
+                    textured_materials[texture_key] = part_material
+
             name = (
                 "".join(
                     character if character.isalnum() or character == "_" else "_"
@@ -330,37 +351,13 @@ class SkinnedSurface:
                 color=part_color,
             )
             parts.extend(child._parts)
-            imported_materials.append(imported_material)
-
-        surface = cls._from_parts(parts)
-        if use_imported_materials:
-            for part, imported_material in zip(parts, imported_materials):
-                if imported_material is None:
-                    continue
-                diffuse = load_texture(imported_material.diffuse_texture_path)
-                if diffuse is not None and material is not None:
-                    part.view.set_texture(diffuse, 0)
-                    if part.texture_overrides is None:
-                        part.texture_overrides = {}
-                    part.texture_overrides[0] = diffuse
-                if diffuse is not None:
-                    if Path(
-                        imported_material.diffuse_texture_path
-                    ).suffix.lower() in {".png", ".tga"}:
-                        # FBX frequently omits alpha semantics for face and
-                        # foliage atlases. Match the generic FBX mesh importer:
-                        # keep depth writes and discard transparent texels.
-                        part.view.set_alpha_mode(_ke.AlphaMode.MASK, 0.5)
-                        part.alpha_mode = _ke.AlphaMode.MASK
-                        part.alpha_cutoff = 0.5
-                        part.opaque_alpha_mode = _ke.AlphaMode.MASK
-                normal = load_texture(imported_material.normal_texture_path)
-                if normal is not None and material is not None:
-                    part.view.set_texture(normal, 5)
-                    if part.texture_overrides is None:
-                        part.texture_overrides = {}
-                    part.texture_overrides[5] = normal
-        return surface
+            if (
+                diffuse is not None
+                and Path(diffuse_path).suffix.lower() in {".png", ".tga"}
+            ):
+                # FBX often omits cutout semantics for face and foliage atlases.
+                child.set_alpha_mode(_ke.AlphaMode.MASK, 0.5)
+        return cls._from_parts(parts)
 
     def create_instance(
         self,
@@ -371,9 +368,9 @@ class SkinnedSurface:
     ) -> SkinnedSurface:
         """Create an independently posed instance sharing this surface's assets.
 
-        Bind geometry, skin weights, textures, and materials are shared unless
-        a material override is supplied. The new prims and runtime skinning
-        buffers are independent from the source surface.
+        Source geometry, skin weights, textures, and materials are shared unless
+        a material override is supplied. GPU geometry and skinning matrices
+        are independent from the source surface.
         """
         self._require_alive()
         base_path = path.rstrip("/")
@@ -389,10 +386,9 @@ class SkinnedSurface:
             )
             prim = app.scene.define_prim(part_path, _ke.scene.PrimType.MESH)
             prim.set_mesh_data(source.native_mesh)
-            if color is None:
-                prim.set_display_color_alpha(source.view.get_base_color())
-            else:
-                prim.set_display_color_alpha(color)
+            instance_color = source.view.get_base_color() if color is None else color
+            if instance_color is not None:
+                prim.set_display_color_alpha(instance_color)
             part_material = source.material if material is None else material
             view = app.add_skinned_mesh(prim, part_material, source.native_skin)
             part = _SkinnedSurfacePart(
@@ -402,14 +398,11 @@ class SkinnedSurface:
                 part_material,
                 source.native_mesh,
                 source.native_skin,
-                texture_overrides=dict(source.texture_overrides or {}),
                 alpha_mode=source.alpha_mode,
                 alpha_cutoff=source.alpha_cutoff,
                 opaque_alpha_mode=source.opaque_alpha_mode,
                 casts_shadow=source.casts_shadow,
             )
-            for role, texture in part.texture_overrides.items():
-                view.set_texture(texture, role)
             if part.alpha_mode is not None:
                 view.set_alpha_mode(part.alpha_mode, part.alpha_cutoff)
             view.set_casts_shadow(part.casts_shadow)

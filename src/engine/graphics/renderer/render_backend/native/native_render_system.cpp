@@ -128,11 +128,29 @@ RenderableHandle NativeRenderSystem::registerSceneBatch(
             mesh, native, instances, skinnedMesh, source);
         if (handle == InvalidHandle && createdSource)
             _sourceMaterials.erase(&material);
+        if (handle != InvalidHandle)
+            _batchMaterials[handle] = &material;
         return handle;
     } catch (...) {
         if (createdSource)
             _sourceMaterials.erase(&material);
         throw;
+    }
+}
+
+void NativeRenderSystem::removeSceneBatch(RenderableHandle handle) {
+    _rasterizer->removeSceneBatch(handle);
+    const auto found = _batchMaterials.find(handle);
+    if (found == _batchMaterials.end())
+        return;
+    const auto* source = found->second;
+    _batchMaterials.erase(found);
+    const bool used = std::any_of(
+        _batchMaterials.begin(), _batchMaterials.end(),
+        [source](const auto& entry) { return entry.second == source; });
+    if (!used) {
+        _legacyMaterials.erase(source);
+        _sourceMaterials.erase(source);
     }
 }
 
@@ -165,10 +183,12 @@ void NativeRenderSystem::updateMaterialSource(
         return found->second.get();
     };
     if (auto* color = dynamic_cast<ColorMaterial*>(&material)) {
-        if (!source.textures.empty())
-            throw std::invalid_argument(
-                "Color material textures require Native batch bindings");
+        for (const auto& [slot, resource] : source.textures)
+            if (slot != "base_color_texture" && slot != "normal_texture")
+                throw std::invalid_argument("Unsupported Color texture slot: " + slot);
         color->setStyle(value.colorStyle);
+        color->baseColorTexture = texture("base_color_texture");
+        color->normalTexture = texture("normal_texture");
     } else if (auto* phong = dynamic_cast<PhongMaterial*>(&material)) {
         for (const auto& [slot, resource] : source.textures)
             if (slot != "diffuse_map" && slot != "specular_map" &&
@@ -411,7 +431,7 @@ void NativeRenderSystem::syncSceneSnapshot(
             continue;
         }
         auto& batch = *it->second;
-        _rasterizer->removeSceneBatch(batch.mesh, &batch.material);
+        removeSceneBatch(batch.handle);
         bindLegacyMaterial(batch.materialSource, nullptr);
         it = _sceneBatches.erase(it);
     }

@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add base-color and normal textures to `ColorMaterial`.
+- Add `Material.clone()` to copy parameters while sharing textures.
 - Add `asset.load_ply()` for ASCII and binary PLY meshes and colored point clouds.
 - Add optional normals and linear RGB vertex colors to `MeshData.from_arrays()`,
   with vertex colors supported on static and skinned meshes.
@@ -11,6 +13,9 @@
 
 ### Changed
 
+- Apply imported FBX textures to material copies, preserving the supplied material.
+- Rename `set_texture()` to `set_batch_texture()` to clarify its batch-wide scope;
+  keep the previous name as an alias.
 - Change object selection from Shift + left click to left click. Clicking empty
   space clears selection; Shift + drag applies force in Force mode.
 - Change viewport picking from AABB intersections to mesh surface picking at
@@ -26,6 +31,15 @@
 
 ### Fixed
 
+- Release skinned GPU buffers when their surfaces are removed.
+- Improve registration time for large numbers of static objects.
+- Disable gizmo editing for externally positioned debug geometry.
+- Register source meshes consistently when creating renderable scene objects.
+- Keep SceneGraph render options independent between objects sharing a mesh
+  and material.
+- Keep cloned skinned surfaces' poses and vertex updates independent.
+- Preserve unset colors when cloning skinned surfaces and retain directly
+  supplied materials when registering skinned meshes.
 - Preserve vertex colors when merging articulation visual meshes.
 - Apply instance alpha to alpha-masked shadows.
 - Fix Python callbacks in `Prim.traverse()`.

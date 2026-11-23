@@ -226,6 +226,11 @@ Use double-sided rendering for surfaces that must be visible from both sides.
 Use `AlphaMode.MASK` for fully visible or fully transparent cutouts, and
 `AlphaMode.BLEND` for partial transparency.
 
+These options apply per object for SceneGraph rendering and to the whole batch
+for ExternalBuffer rendering. Shared dynamic geometry cannot be split by changing
+one object's options after vertex updates; configure its options before updating
+vertices.
+
 ## Color materials
 
 `ColorMaterial` uses an object's color and optional colors stored at each vertex.
@@ -233,9 +238,13 @@ Choose a style for plain color, an image texture, or a checkerboard:
 
 ```python
 plain: ke.material.ColorMaterial = self.create_color_material()
+
 textured: ke.material.ColorMaterial = self.create_color_material(
     style=ke.material.ColorStyle.TEXTURED,
 )
+textured.base_color_texture = self.load_texture(path="textures/color.png", srgb=True)
+textured.normal_texture = self.load_texture(path="textures/normal.png", srgb=False)
+
 checker: ke.material.ColorMaterial = self.create_color_material(
     style=ke.material.ColorStyle.CHECKERBOARD,
 )
@@ -245,6 +254,20 @@ debug_checker: ke.material.ColorMaterial = self.create_color_material(
 ```
 
 `DEBUG_CHECKER` draws a grid to reveal stretched or missing texture coordinates (UVs).
+
+Unlit rendering also samples `base_color_texture`.
+
+Texture changes affect every object sharing the material. To change one object,
+assign a copy with independent parameters and shared textures:
+
+```python
+copied_material: ke.material.Material = material.clone()
+mesh.set_material(material=copied_material)
+```
+
+`mesh.set_batch_texture()` is a Native ColorMaterial override for the entire batch;
+it takes precedence over the material texture. `set_texture()` remains its
+compatibility alias. Use material fields for Phong and PBR textures.
 
 `VertexColorMaterial`, `VertexColorStyle`, and `create_vertex_color_material()`
 remain aliases of `ColorMaterial`, `ColorStyle`, and `create_color_material()`.
@@ -306,7 +329,7 @@ and the material values below:
 
 | Material | Material color used |
 | --- | --- |
-| ColorMaterial | Base-color texture, when assigned to the surface |
+| ColorMaterial | `base_color_texture` |
 | PhongMaterial | `diffuse` × `diffuse_map` |
 | PBRMaterial | `base_color` × `base_color_texture` |
 

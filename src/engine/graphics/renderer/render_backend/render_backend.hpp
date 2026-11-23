@@ -41,6 +41,15 @@ struct SceneBatchState {
     bool castsShadow = true;
     AlphaMode alphaMode = AlphaMode::Opaque;
     float alphaCutoff = 0.5f;
+
+    bool operator==(const SceneBatchState& other) const {
+        return doubleSided == other.doubleSided &&
+               castsShadow == other.castsShadow &&
+               alphaMode == other.alphaMode && alphaCutoff == other.alphaCutoff;
+    }
+    bool operator!=(const SceneBatchState& other) const {
+        return !(*this == other);
+    }
 };
 
 class RenderBackend {
@@ -58,7 +67,7 @@ class RenderBackend {
         throw std::runtime_error(
             "Render backend does not support scene lights");
     }
-    // Borrowed arrays/material source stay alive until backend teardown. No
+    // Borrowed arrays/material source stay alive until batch removal. No
     // Prim access. ExternalBuffer updates override owner poses; visibility is
     // batch-wide. Optional skin weights are consumed during registration.
     virtual RenderableHandle
@@ -67,6 +76,9 @@ class RenderBackend {
                        const Scene::RenderInstanceData& instances,
                        TransformSource source = TransformSource::SceneGraph,
                        const Scene::SkinnedMeshData* skinnedMesh = nullptr) = 0;
+    virtual void removeSceneBatch(RenderableHandle) {
+        throw std::runtime_error("Render backend does not support batch removal");
+    }
     virtual void setSceneBatchState(RenderableHandle handle,
                                     const SceneBatchState& state) = 0;
     // CPU arrays are consumed during the call; source MeshData stays immutable.

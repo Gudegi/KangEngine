@@ -3,6 +3,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/render_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/types/light_color.hpp"
 #include "engine/scene/render/render_light_data.hpp"
@@ -215,16 +216,42 @@ RenderableHandle
 Rasterizer::registerMeshBatch(const Scene::RenderMeshData& input,
                               Material* material,
                               TransformSource transformSource,
-                              const Scene::SkinnedMeshData* skinnedMesh) {
+                              const Scene::SkinnedMeshData* skinnedMesh,
+                              const Scene::RenderInstanceData* instances,
+                              const SceneBatchState& state) {
     const auto& meshData = input.mesh;
     if (!material || !meshData || meshData->vertices.empty() ||
         meshData->indices.empty() ||
         (skinnedMesh && !skinnedMesh->hasValidVertexSkinning()))
         return InvalidHandle;
 
-    InstancerKey key{meshData.get(), material, transformSource};
-    auto it = _instancers.find(key);
+    // Common batches keep their instance source; direct static draws also
+    // share matching policies. Skinned registrations retain independent poses.
+    InstancerKey key{meshData.get(), material, transformSource, instances};
+    auto it = _instancers.end();
+    if (!skinnedMesh) {
+        for (auto candidate = _instancers.lower_bound(key);
+             candidate != _instancers.end(); ++candidate) {
+            const auto& existing = candidate->first;
+            if (existing.mesh != key.mesh || existing.material != key.material ||
+                existing.transformSource != key.transformSource ||
+                existing.instances != instances)
+                break;
+            const auto& batch = candidate->second;
+            const SceneBatchState current{batch.isDoubleSided(),
+                                           batch.castsShadow(), batch.alphaMode(),
+                                           batch.alphaCutoff()};
+            if (!batch.hasSkinning() &&
+                (instances || transformSource == TransformSource::ExternalBuffer ||
+                 current == state)) {
+                it = candidate;
+                key = existing;
+                break;
+            }
+        }
+    }
     if (it == _instancers.end()) {
+        key.batchId = _nextBatchId++;
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
         try {
             if (skinnedMesh)
@@ -235,6 +262,9 @@ Rasterizer::registerMeshBatch(const Scene::RenderMeshData& input,
                                    material);
                 _raycastMeshes.try_emplace(meshData.get(), meshData);
             }
+            newIt->second.setDoubleSided(state.doubleSided);
+            newIt->second.setCastsShadow(state.castsShadow);
+            newIt->second.setAlphaMode(state.alphaMode, state.alphaCutoff);
         } catch (...) {
             _instancers.erase(newIt);
             throw;
@@ -243,9 +273,16 @@ Rasterizer::registerMeshBatch(const Scene::RenderMeshData& input,
     }
     auto hIt = _handleMap.find(key);
     if (hIt == _handleMap.end()) {
-        RenderableHandle h = static_cast<RenderableHandle>(_handleTable.size());
+        RenderableHandle h;
+        if (_freeHandles.empty()) {
+            h = static_cast<RenderableHandle>(_handleTable.size());
+            _handleTable.push_back(&it->second);
+        } else {
+            h = _freeHandles.back();
+            _freeHandles.pop_back();
+            _handleTable[h] = &it->second;
+        }
         _handleMap[key] = h;
-        _handleTable.push_back(&it->second);
         return h;
     }
     return hIt->second;
@@ -257,12 +294,42 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
     if (!prim)
         return InvalidHandle;
     const auto input = Scene::SceneRenderBridge::meshData(*prim);
-    const auto handle = registerMeshBatch(input, material, transformSource);
+    SceneBatchState state;
+    if (auto component = prim->getRenderComponent())
+        state = {component->isDoubleSided(), component->castsShadow(),
+                 component->alphaMode(), component->alphaCutoff()};
+    if (transformSource == TransformSource::SceneGraph) {
+        for (const auto& [key, handle] : _handleMap) {
+            auto* batch = _handleTable[handle];
+            if (key.mesh != input.mesh.get() || key.material != material ||
+                key.transformSource != transformSource ||
+                !batch->hasGeometryUpdates())
+                continue;
+            const auto bridge = _sceneBridges.find(batch);
+            if (bridge == _sceneBridges.end() || !bridge->second->contains(*prim))
+                continue;
+            const SceneBatchState current{batch->isDoubleSided(),
+                                           batch->castsShadow(), batch->alphaMode(),
+                                           batch->alphaCutoff()};
+            if (state != current && bridge->second->size() > 1)
+                throw std::runtime_error(
+                    "cannot split render policies of a shared dynamic geometry batch");
+            batch->setDoubleSided(state.doubleSided);
+            batch->setCastsShadow(state.castsShadow);
+            batch->setAlphaMode(state.alphaMode, state.alphaCutoff);
+            return handle;
+        }
+    }
+    const auto handle = registerMeshBatch(input, material, transformSource,
+                                           nullptr, nullptr, state);
     if (handle == InvalidHandle)
         return handle;
 
-    registerPrimSource(prim, transformSource);
     auto* instancer = _handleTable[handle];
+    const auto existing = _sceneBridges.find(instancer);
+    if (existing != _sceneBridges.end() && existing->second->contains(*prim))
+        return handle;
+    registerPrimSource(prim, transformSource);
     if (transformSource == TransformSource::SceneGraph) {
         auto& sceneBridge = _sceneBridges[instancer];
         if (!sceneBridge) {
@@ -293,7 +360,8 @@ RenderableHandle Rasterizer::registerSceneBatch(
     const Scene::RenderMeshData& mesh, Material* material,
     const Scene::RenderInstanceData& instances,
     const Scene::SkinnedMeshData* skinnedMesh, TransformSource source) {
-    const auto handle = registerMeshBatch(mesh, material, source, skinnedMesh);
+    const auto handle =
+        registerMeshBatch(mesh, material, source, skinnedMesh, &instances);
     if (handle != InvalidHandle) {
         auto bridge = _sceneBridges.find(_handleTable[handle]);
         if (bridge != _sceneBridges.end() &&
@@ -305,22 +373,27 @@ RenderableHandle Rasterizer::registerSceneBatch(
     return handle;
 }
 
-void Rasterizer::removeSceneBatch(const Scene::RenderMeshData& mesh,
-                                  Material* material) {
-    const InstancerKey key{mesh.mesh.get(), material,
-                           TransformSource::SceneGraph};
-    auto it = _handleMap.find(key);
+void Rasterizer::removeSceneBatch(RenderableHandle handle) {
+    auto it = std::find_if(_handleMap.begin(), _handleMap.end(),
+                           [handle](const auto& entry) {
+                               return entry.second == handle;
+                           });
     if (it == _handleMap.end())
         return;
-    _forwardPass.releaseBatch(*_handleTable[it->second]);
-    _handleTable[it->second] = nullptr;
+    const auto key = it->first;
+    auto* instancer = _handleTable[handle];
+    _forwardPass.releaseBatch(*instancer);
+    _sceneBridges.erase(instancer);
+    _legacySceneBridges.erase(instancer);
+    _handleTable[handle] = nullptr;
+    _freeHandles.push_back(handle);
     _handleMap.erase(it);
     _instancers.erase(key);
     const bool used = std::any_of(
         _instancers.begin(), _instancers.end(),
-        [&](const auto& entry) { return entry.first.mesh == mesh.mesh.get(); });
+        [&](const auto& entry) { return entry.first.mesh == key.mesh; });
     if (!used)
-        _raycastMeshes.erase(mesh.mesh.get());
+        _raycastMeshes.erase(key.mesh);
 }
 
 void Rasterizer::invalidateSceneBatch(RenderableHandle handle) {
@@ -339,12 +412,16 @@ void Rasterizer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
             return;
     }
     _handleTable[handle]->removePrim(prim);
+    if (input == _sceneBridges.end() && _handleTable[handle]->hasSkinning() &&
+        !_handleTable[handle]->hasPrims())
+        removeSceneBatch(handle);
 }
 
 void Rasterizer::removePrim(Scene::Prim* prim) {
     if (!prim)
         return;
-    for (auto& [key, instancer] : _instancers) {
+    for (auto it = _instancers.begin(); it != _instancers.end();) {
+        auto& [key, instancer] = *it++;
         const auto input = _sceneBridges.find(&instancer);
         if (input != _sceneBridges.end()) {
             input->second->remove(*prim);
@@ -352,6 +429,9 @@ void Rasterizer::removePrim(Scene::Prim* prim) {
                 continue;
         }
         instancer.removePrim(prim);
+        if (input == _sceneBridges.end() && instancer.hasSkinning() &&
+            !instancer.hasPrims())
+            removeSceneBatch(_handleMap.at(key));
     }
     _primSourceRegistrations.erase(prim);
 }

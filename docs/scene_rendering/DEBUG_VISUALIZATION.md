@@ -105,8 +105,9 @@ an empty batch clears the previous arrows while retaining reusable buffers.
 
 ## Scene debug geometry
 
-`debug.geometry` creates mesh-based, instanced SceneGraph renderables.
-Keep the returned view to update or remove them:
+`debug.geometry` creates instanced meshes registered in the scene. Their
+world-space poses use `ExternalBuffer`; update them through the returned view,
+not Prim transforms or the gizmo:
 
 ```python
 self.debug_spheres = self.debug.geometry.add_spheres(

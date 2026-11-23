@@ -81,8 +81,10 @@ part of `SkinnedSurface`, and neither type requires the other.
 
 ## Skinned surfaces and SMPL
 
-Imported FBX materials become retained PBR materials. Pass `material=...` to
-override all parts with one material.
+Imported FBX materials become retained PBR materials. With `material=...`,
+imported textures are applied to copies of the supplied material, leaving the
+original unchanged. Use `use_imported_materials=False` to use only the supplied
+material.
 
 SMPL uses the same surface with an optional vertex-correction step before GPU
 skinning:

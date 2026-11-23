@@ -6,6 +6,7 @@
 #include "engine/scene/render/render_material_data.hpp"
 
 #include <vector>
+#include <unordered_set>
 #include <utility>
 
 namespace KE {
@@ -33,6 +34,8 @@ class SceneRenderBridge {
     void add(Prim& prim);
     void remove(const Prim& prim);
     bool empty() const { return _entries.empty(); }
+    size_t size() const { return _entries.size(); }
+    bool contains(const Prim& prim) const;
     void collect();
     // Queries may follow selection/visibility edits without a frame update.
     void refreshSelection();
@@ -47,6 +50,7 @@ class SceneRenderBridge {
         RenderInstanceId id;
     };
     std::vector<Entry> _entries;
+    std::unordered_set<const Prim*> _prims;
     std::vector<Prim*> _instancePrims;
     RenderInstanceData _instances;
 };

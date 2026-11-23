@@ -31,12 +31,19 @@ ResourceHandle
 SceneResourceManager::registerMesh(const std::string& name,
                                    std::shared_ptr<MeshData> mesh,
                                    const std::string& uri) {
+    const auto found = _meshHandles.find(mesh.get());
+    if (found != _meshHandles.end())
+        return found->second;
+    const auto* pointer = mesh.get();
     Entry entry;
     entry.type = ResourceType::Mesh;
     entry.name = name;
     entry.uri = uri;
     entry.mesh = std::move(mesh);
-    return registerEntry(std::move(entry));
+    const auto handle = registerEntry(std::move(entry));
+    if (pointer)
+        _meshHandles[pointer] = handle;
+    return handle;
 }
 
 ResourceHandle SceneResourceManager::registerMaterial(const std::string& name,
@@ -360,6 +367,7 @@ void SceneResourceManager::clear() {
             _scene->removePrim(path);
     }
     _entries.clear();
+    _meshHandles.clear();
     _materialHandles.clear();
     _textureHandles.clear();
     _usageCache.clear();

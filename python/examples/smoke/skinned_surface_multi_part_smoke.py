@@ -37,6 +37,7 @@ class _View:
     def __init__(self, prim, material=None):
         self.prim = prim
         self.material = material
+        self.textures = {}
 
     def update_skinning(self, matrices):
         self.matrices = matrices
@@ -58,7 +59,7 @@ class _View:
     def set_alpha_mode(self, mode, cutoff):
         self.alpha_mode = (mode, cutoff)
 
-    def set_texture(self, texture, slot):
+    def set_batch_texture(self, texture, slot):
         if not hasattr(self, "textures"):
             self.textures = {}
         self.textures[slot] = texture
@@ -90,6 +91,11 @@ class _App:
         self.mesh_resources = {}
         self._next_mesh_handle = 1
         self.pbr_materials = []
+        self.materials = []
+
+    def _remember_material(self, material):
+        self.materials.append(material)
+        return material
 
     def add_skinned_mesh(self, prim, material, skin):
         ke.App._ensure_prim_mesh_resource(self, prim)
@@ -124,7 +130,9 @@ class _Device:
         self.created = []
 
     def create_texture(self, path, flip_vertically):
-        texture = (path, flip_vertically)
+        texture = ke.render.TextureSource(
+            path, False, flip_vertically, len(self.created) + 1, self
+        )
         self.created.append(texture)
         return texture
 
@@ -171,8 +179,9 @@ def main():
         ],
     )
     app = _App()
+    material = ke.material.ColorMaterial(ke.material.ColorStyle.TEXTURED)
     surface = ke.visual.SkinnedSurface.create_from_fbx_result(
-        app, "/character", result, material=object()
+        app, "/character", result, material=material
     )
     assert len(surface.prims) == 2
     assert len(surface.assets) == 2
@@ -182,7 +191,10 @@ def main():
         assert app.mesh_resources[handle] is prim.mesh
     assert len(app._device.created) == 1
     assert len(app.textures) == 1
-    assert all(0 in view.textures for view in surface.views)
+    assert material.base_color_texture is None
+    assert surface.views[0].material is surface.views[1].material
+    assert all(view.material.base_color_texture is app.textures[0] for view in surface.views)
+    assert all(not view.textures for view in surface.views)
     assert all(
         view.alpha_mode == (ke.render.AlphaMode.MASK, 0.5)
         for view in surface.views
@@ -198,6 +210,37 @@ def main():
         view.alpha_mode == (ke.render.AlphaMode.MASK, 0.5)
         for view in imported_surface.views
     )
+
+    override = ke.material.ColorMaterial()
+    replacement = surface.create_instance("/replacement", material=override)
+    assert all(view.material is override for view in replacement.views)
+    assert override.base_color_texture is None
+    replacement.remove()
+    plain = ke.visual.SkinnedSurface.create_from_fbx_result(
+        app, "/plain", result, material=override, use_imported_materials=False
+    )
+    assert all(view.material is override for view in plain.views)
+    plain.remove()
+
+    result.skinned_meshes[1].materials[0].normal_texture_path = texture_path
+    for factory, diffuse_slot, normal_slot in (
+        (ke.material.ColorMaterial, "base_color_texture", "normal_texture"),
+        (ke.material.PhongMaterial, "diffuse_map", "normal_map"),
+        (ke.material.PBRMaterial, "base_color_texture", "normal_texture"),
+    ):
+        template = factory()
+        template.unlit = True
+        mapped = ke.visual.SkinnedSurface.create_from_fbx_result(
+            app, "/mapped", result, material=template
+        )
+        first, second = [view.material for view in mapped.views]
+        assert first is not second and first.unlit and second.unlit
+        assert getattr(first, diffuse_slot) is getattr(second, diffuse_slot)
+        assert getattr(first, normal_slot) is None
+        assert getattr(second, normal_slot) is app.textures[0]
+        assert getattr(template, diffuse_slot) is None
+        assert getattr(template, normal_slot) is None
+        mapped.remove()
 
     rotations = np.zeros((24, 4), dtype=np.float32)
     rotations[:, 0] = 1.0

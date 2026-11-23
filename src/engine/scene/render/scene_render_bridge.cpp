@@ -35,8 +35,14 @@ RenderMeshData SceneRenderBridge::meshData(const Prim& prim) {
 }
 
 void SceneRenderBridge::add(Prim& prim) {
+    if (!_prims.insert(&prim).second)
+        return;
     _entries.push_back(
         {&prim, nextInstanceId.fetch_add(1, std::memory_order_relaxed)});
+}
+
+bool SceneRenderBridge::contains(const Prim& prim) const {
+    return _prims.count(&prim) != 0;
 }
 
 RenderMaterialData SceneRenderBridge::materialData(const Material& material) {
@@ -45,7 +51,10 @@ RenderMaterialData SceneRenderBridge::materialData(const Material& material) {
     input.colorStyle = material.colorStyle();
     input.unlit = material.isUnlit();
     input.hasNativeTextures = !material.texturePaths.empty();
-    if (input.shadingModel == MaterialShadingModel::Phong) {
+    if (input.shadingModel == MaterialShadingModel::Color) {
+        const auto& color = static_cast<const ColorMaterial&>(material);
+        input.hasNativeTextures |= color.baseColorTexture || color.normalTexture;
+    } else if (input.shadingModel == MaterialShadingModel::Phong) {
         const auto& phong = static_cast<const PhongMaterial&>(material);
         input.baseColor = glm::vec4(phong.diffuse, 1.0f);
         input.ambient = phong.ambient;
@@ -76,7 +85,10 @@ SceneRenderBridge::materialTextures(const Material& material) {
         if (texture)
             textures.emplace_back(slot, texture);
     };
-    if (const auto* phong = dynamic_cast<const PhongMaterial*>(&material)) {
+    if (const auto* color = dynamic_cast<const ColorMaterial*>(&material)) {
+        add("base_color_texture", color->baseColorTexture);
+        add("normal_texture", color->normalTexture);
+    } else if (const auto* phong = dynamic_cast<const PhongMaterial*>(&material)) {
         add("diffuse_map", phong->diffuseMap);
         add("specular_map", phong->specularMap);
         add("alpha_map", phong->alphaMap);
@@ -134,6 +146,8 @@ SceneRenderBridge::materialSource(const Material& material,
 }
 
 void SceneRenderBridge::remove(const Prim& prim) {
+    if (!_prims.erase(&prim))
+        return;
     _entries.erase(
         std::remove_if(_entries.begin(), _entries.end(),
                        [&](const Entry& entry) { return entry.prim == &prim; }),

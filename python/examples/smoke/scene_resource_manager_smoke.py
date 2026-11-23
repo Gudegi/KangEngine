@@ -44,11 +44,19 @@ def main():
         raise AssertionError("ResourceComponent uri mismatch")
     prim_path = prim.get_path()
 
+    assert registry.register_mesh("Alias", mesh, "memory://alias") == handle
+    assert len(registry) == 1
+    assert component.display_name == "Unit Plane"
+    assert component.uri == "memory://unit-plane"
+
     registry.clear()
     if len(registry) != 0:
         raise AssertionError("SceneResourceManager clear failed")
     if backend.get_root_prim().get_prim_at_path(prim_path) is not None:
         raise AssertionError("SceneResourceManager clear left a stale Resource prim")
+    replacement = registry.register_mesh("Reloaded", mesh)
+    assert registry.mesh(replacement) is mesh
+    assert len(registry) == 1
 
     print("PASS: SceneResourceManager smoke completed")
 

@@ -166,11 +166,11 @@ class FbxCharacterViewer(ke.App):
             shader = (
                 self.textured_mesh_material if texture is not None else self.mesh_material
             )
-            view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             if texture is not None:
-                view.set_texture(texture, 0)
-                if normal_texture is not None:
-                    view.set_texture(normal_texture, 5)
+                shader = self._remember_material(shader.clone())
+                shader.base_color_texture = texture
+                shader.normal_texture = normal_texture
+            view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             # view.set_double_sided(True)
             self.mesh_prims.append(prim)
             self.mesh_colors.append(color)

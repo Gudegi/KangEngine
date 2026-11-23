@@ -244,25 +244,31 @@ class Renderer {
         RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
   private:
-    RenderPickRequest _pickView;
-    std::optional<RenderPickRequest> _pendingPick;
-    uint64_t _nextPickId = 1;
-    uint64_t _instanceRevision = 0;
-    uint64_t _pickInstanceRevision = 0;
+    using SceneBatchKey =
+        std::tuple<const Scene::MeshData*, Material*, TransformSource, size_t>;
     struct SceneBatch {
+        SceneBatchKey key;
         Scene::RenderMeshData mesh;
         Material* material = nullptr;
         Scene::RenderMaterialSource materialSource;
         Scene::SceneRenderBridge bridge;
         SceneBatchState state;
+        bool hasGeometryUpdates = false;
         RenderableHandle handle = InvalidHandle;
     };
+
+    RenderPickRequest _pickView;
+    std::optional<RenderPickRequest> _pendingPick;
+    uint64_t _nextPickId = 1;
+    uint64_t _instanceRevision = 0;
+    uint64_t _pickInstanceRevision = 0;
+
+    size_t _nextSkinningId = 1;
     // Backend draws borrow these arrays; release the backend before the
     // sources.
-    std::map<std::tuple<const Scene::MeshData*, Material*, TransformSource>,
-             std::unique_ptr<SceneBatch>>
-        _sceneBatches;
+    std::multimap<SceneBatchKey, std::unique_ptr<SceneBatch>> _sceneBatches;
     std::unordered_map<RenderableHandle, SceneBatch*> _sceneBatchHandles;
+
     // Native extension resources are released before the frame backend.
     std::unique_ptr<RenderBackend> _renderBackend;
     std::unique_ptr<NativeRenderExtension> _native;
@@ -271,13 +277,6 @@ class Renderer {
     bool _snapshotLighting = false;
     bool _sceneLighting = false;
     const Scene::SceneResourceManager* _sceneResources = nullptr;
-    RenderBackend& renderBackend();
-    RenderableHandle
-    addSceneRenderable(Material& material, Scene::Prim& prim,
-                       TransformSource source,
-                       const Scene::SkinnedMeshData* skinnedMesh);
-    void syncSceneInstances();
-    NativeRenderSystem& nativeRenderSystem();
     RendererProfiler _profiler;
     // Borrowed aliases for existing Native accessors; owned by the backend.
     Backend::GraphicsDevice* _device = nullptr;
@@ -285,6 +284,15 @@ class Renderer {
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
     RendererSettings _settings;
+
+    RenderBackend& renderBackend();
+    NativeRenderSystem& nativeRenderSystem();
+    RenderableHandle
+    addSceneRenderable(Material& material, Scene::Prim& prim,
+                       TransformSource source,
+                       const Scene::SkinnedMeshData* skinnedMesh);
+    void releaseEmptySkinnedBatch(RenderableHandle handle);
+    void syncSceneInstances();
 };
 
 } // namespace KE

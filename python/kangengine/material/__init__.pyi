@@ -60,6 +60,9 @@ class ColorStyle(Enum):
 
 class NativeMaterial:
     """Native renderer material base used for advanced interop."""
+    def clone(self) -> NativeMaterial:
+        """Copy parameters while sharing texture references."""
+        ...
     texture_paths: dict[str, str]
     texture_resources: dict[str, int]
     texture_srgb: dict[str, bool]
@@ -70,6 +73,14 @@ class NativeMaterial:
 
 class NativeColorMaterial(NativeMaterial):
     """Native color material used for advanced interop."""
+    base_color_texture: Texture | None
+    normal_texture: Texture | None
+    def set_base_color_texture(self, texture: Texture | None) -> NativeColorMaterial:
+        """Set the non-owned base-color texture."""
+        ...
+    def set_normal_texture(self, texture: Texture | None) -> NativeColorMaterial:
+        """Set the non-owned tangent-space normal texture."""
+        ...
 
 class NativePhongMaterial(NativeMaterial):
     """Native Phong material used for advanced interop."""
@@ -80,6 +91,9 @@ class NativePBRMaterial(NativeMaterial):
 class Material:
     """Base facade wrapping a native renderer material."""
     def __init__(self, native: NativeMaterial) -> None: ...
+    def clone(self) -> Material:
+        """Copy material parameters while sharing textures in the same App."""
+        ...
     @property
     def unlit(self) -> bool:
         """Display base color and textures without lighting; defaults to False."""
@@ -121,6 +135,24 @@ class ColorMaterial(Material):
         ...
     def set_style(self, style: ColorStyle) -> ColorMaterial:
         """Set the rendering style and return this material."""
+        ...
+    @property
+    def base_color_texture(self) -> Texture | TextureSource | None:
+        """Optional color texture shared by this material's objects."""
+        ...
+    @base_color_texture.setter
+    def base_color_texture(self, texture: Texture | TextureSource | None) -> None: ...
+    @property
+    def normal_texture(self) -> Texture | TextureSource | None:
+        """Optional linear tangent-space normal texture."""
+        ...
+    @normal_texture.setter
+    def normal_texture(self, texture: Texture | TextureSource | None) -> None: ...
+    def set_base_color_texture(self, texture: Texture | TextureSource | None) -> ColorMaterial:
+        """Set the color texture and return this material."""
+        ...
+    def set_normal_texture(self, texture: Texture | TextureSource | None) -> ColorMaterial:
+        """Set the normal texture and return this material."""
         ...
 
 class PhongMaterial(Material):

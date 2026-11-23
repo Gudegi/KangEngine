@@ -6,6 +6,8 @@
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/native_scene.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/render/render_scene_data.hpp"
@@ -34,7 +36,36 @@ void checkLegacyBinding(Backend::GraphicsDevice& device) {
     Renderer renderer;
     renderer.bind(&device, &rasterizer, nullptr, nullptr);
     renderer.setViewportSize(96, 64);
-    renderer.addRenderable(&material, prim);
+    const auto staticHandle = renderer.addRenderable(&material, prim);
+    Scene::SceneRenderSystem registry;
+    registry.bind(&renderer);
+    auto* policyPrim = scene.definePrim("/policy", Scene::PrimType::Mesh);
+    policyPrim->setMeshData(prim->resolveMeshData());
+    policyPrim->setVisible(false);
+    policyPrim->addRenderComponent()->setDoubleSided(true);
+    auto policyComponent = registry.addRenderable(*policyPrim, &material);
+    require(registry.handle(*policyComponent) != staticHandle,
+            "legacy registration ignored authored render policies");
+    registry.setDoubleSided(*policyComponent, false);
+    require(registry.handle(*policyComponent) == staticHandle,
+            "legacy policy restore did not reuse the original batch");
+    registry.setAlphaMode(*policyComponent, AlphaMode::Mask, 0.3f);
+    require(registry.handle(*policyComponent) != staticHandle,
+            "legacy alpha policy changed the shared batch");
+    Scene::SkinnedMeshData skin;
+    skin.mesh = *prim->resolveMeshData();
+    skin.boneIndices.assign(skin.mesh.vertices.size(), glm::ivec4(0));
+    skin.boneWeights.assign(skin.mesh.vertices.size(), glm::vec4(1, 0, 0, 0));
+    RenderableHandle previous = staticHandle;
+    for (const char* path : {"/skin", "/clone"}) {
+        auto* skinned = scene.definePrim(path, Scene::PrimType::Mesh);
+        skinned->setMeshData(prim->resolveMeshData());
+        skinned->setVisible(false);
+        const auto handle = renderer.addSkinnedRenderable(&material, skinned, skin);
+        require(handle != InvalidHandle && handle != staticHandle && handle != previous,
+                "legacy skin registration shared static or skinned state");
+        previous = handle;
+    }
     Scene::DirectionalLight light;
     light.intensity = 4;
     scene.definePrim("/light", Scene::PrimType::Light)->setDirectionalLight(light);
@@ -53,9 +84,60 @@ void checkLegacyBinding(Backend::GraphicsDevice& device) {
     const size_t center = (32 * 96 + 48) * 3;
     require(pixels[center + 1] > pixels[center] + 100 && hooks == 1,
             "legacy binding lost offscreen output or render hooks");
+    registry.unregister(*policyComponent);
     renderer.release();
     require(rasterizer.raycast({{0, 0, 4}, {0, 0, -1}}).hit,
             "facade release destroyed a borrowed Rasterizer");
+}
+
+void checkSkinnedBatchRemoval(Backend::GraphicsDevice& device) {
+    for (bool direct : {false, true}) {
+        Renderer renderer;
+        renderer.initialize(device, 32, 32);
+        Scene::NativeScene scene;
+        ColorMaterial material(ColorStyle::Unlit);
+        auto mesh = std::make_shared<Scene::MeshData>(Scene::Prim::createCubeData(1));
+        Scene::SkinnedMeshData skin;
+        skin.mesh = *mesh;
+        skin.boneIndices.assign(mesh->vertices.size(), glm::ivec4(0));
+        skin.boneWeights.assign(mesh->vertices.size(), glm::vec4(1, 0, 0, 0));
+        auto* anchor = scene.definePrim("/anchor", Scene::PrimType::Mesh);
+        auto* repeated = scene.definePrim("/repeated", Scene::PrimType::Mesh);
+        anchor->setMeshData(mesh);
+        repeated->setMeshData(mesh);
+        auto add = [&](Scene::Prim* prim) {
+            return direct ? renderer.rasterizer()->addSkinnedRenderable(
+                                &material, prim, skin, TransformSource::SceneGraph)
+                          : renderer.addSkinnedRenderable(
+                                &material, prim, skin, TransformSource::SceneGraph);
+        };
+        const auto anchorHandle = add(anchor);
+        RenderableHandle reused = InvalidHandle;
+        for (int i = 0; i < 300; ++i) {
+            const auto handle = add(repeated);
+            require(handle != anchorHandle, "skinned registration reused a live handle");
+            if (i == 0)
+                reused = handle;
+            require(handle == reused, "deleted handle slots accumulated");
+            renderer.syncFrame(&scene, glm::mat4(1), glm::mat4(1));
+            if (direct) {
+                if (i % 2)
+                    renderer.rasterizer()->removePrim(repeated);
+                else
+                    renderer.rasterizer()->removePrim(handle, repeated);
+            } else if (i % 2) {
+                renderer.removePrim(repeated);
+            } else {
+                renderer.removePrim(handle, repeated);
+            }
+            glm::mat4 transform;
+            require(!renderer.rasterizer()->getRenderableInstanceTransform(handle, 0, transform),
+                    "deleted skin batch retained its instancer");
+            require(renderer.rasterizer()->getRenderableInstanceTransform(anchorHandle, 0, transform),
+                    "deleting a skin batch removed a live peer");
+        }
+        renderer.release();
+    }
 }
 
 void checkMaterialSources(Backend::GraphicsDevice& device) {
@@ -114,7 +196,10 @@ void checkMaterialSources(Backend::GraphicsDevice& device) {
             const auto preview = renderer.readCameraPreview();
             require(preview.pixels[center] > preview.pixels[center + 2] + 100,
                     "camera preview ignored source material updates");
+        }
+        {
             material.values.baseColor = glm::vec4(1);
+            instances.colors.front() = glm::vec4(1);
             const auto plain = draw();
             auto texture = std::make_shared<Scene::TextureSourceResource>();
             texture->path = getAssetPath("textures/awesomeface.png");
@@ -471,6 +556,7 @@ int main() {
     checkSceneData(device);
     checkDynamicBatches(device);
     checkMaterialSources(device);
+    checkSkinnedBatchRemoval(device);
     checkLegacyBinding(device);
     std::cout << "PASS: Native scene data, frames without App, resize, hooks, "
                  "preview, "

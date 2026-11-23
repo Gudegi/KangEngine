@@ -45,8 +45,7 @@ class DebugDraw {
                       float length = 1.0f, float radius = 0.005f,
                       int segments = 8);
 
-    // Instanced debug lines, closer to Newton viewer.log_lines(). Debug
-    // geometry is excluded from the shadow pass.
+    // Instanced debug geometry uses external world transforms and casts no shadows.
     static RenderableHandle logLines(App* app, Material* material,
                                      const std::string& path,
                                      const std::vector<glm::vec3>& starts,

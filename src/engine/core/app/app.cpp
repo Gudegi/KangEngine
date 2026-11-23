@@ -229,11 +229,53 @@ void App::close() {
     _editorViewportPanel = nullptr;
     _imagePresenter.reset();
     _renderer.release();
+    _materials.clear();
+    _textures.clear();
     _graphicsDevice.reset();
     _profileContext.reset();
     if (_window.getGlfwWindow())
         GLFWCallbackWrapper::setApp(nullptr);
     _window.close();
+}
+
+Backend::Texture* App::loadTexture(const std::string& path, bool flip, bool srgb) {
+    requireOwnerThread();
+    if (!_initialized)
+        throw std::runtime_error("Initialize App before loading textures");
+    _renderer.native();
+    const auto resolved = std::filesystem::absolute(path).lexically_normal();
+    const auto key = std::make_tuple(resolved.string(), flip, srgb);
+    const auto found = _textures.find(key);
+    if (found != _textures.end())
+        return found->second.get();
+
+    auto texture = _renderer.device()->createTexture(
+        resolved.string(), flip, Backend::SamplerDesc{}, srgb);
+    if (!texture)
+        throw std::runtime_error("Failed to load texture: " + resolved.string());
+    Scene::TextureSourceResource source;
+    source.path = resolved.string();
+    source.flip = flip;
+    source.srgb = srgb;
+    const std::string uri = source.path + "#flip=" + std::to_string(flip) +
+                            "&srgb=" + std::to_string(srgb);
+    auto* result = texture.get();
+    _textures.emplace(key, std::move(texture));
+    _sceneResourceManager.registerTexture(resolved.filename().string(), result,
+                                          uri, std::move(source));
+    return result;
+}
+
+Material* App::rememberMaterial(std::unique_ptr<Material> material) {
+    requireOwnerThread();
+    if (!_initialized || !material)
+        throw std::invalid_argument(
+            "Material retention requires an initialized App and material");
+    auto* result = material.get();
+    _materials.push_back(std::move(material));
+    _sceneResourceManager.registerMaterial(
+        "Material_" + std::to_string(_materials.size()), result);
+    return result;
 }
 
 void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
@@ -352,7 +394,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _renderWidth = _width;
     _renderHeight = _height;
     _renderer.bindSceneResources(_sceneResourceManager);
-    _sceneRenderSystem.bind(&_renderer);
+    _sceneRenderSystem.bind(&_renderer, &_sceneResourceManager);
     registerBuiltinRenderResources();
 
     DirectionalLight defaultLight;
@@ -836,6 +878,17 @@ void App::executeFrame(bool update) {
         auto sceneSync = profile.cpuScope("scene_sync");
         _sceneRenderSystem.syncScene(*_scene, _sceneResourceManager);
         _renderer.syncFrame(getScene(), _viewMatrix, _projectionMatrix);
+    }
+    // Scene policy changes can move a selected object to another batch.
+    const auto& selection = _interaction.selection();
+    if (selection.hit && selection.prim &&
+        selection.transformSource == TransformSource::SceneGraph &&
+        selection.prim->hasRenderComponent() &&
+        (_renderer.capabilities().sceneBatches || getRasterizer()) &&
+        _renderer.resolvePick(selection).prim != selection.prim) {
+        RayPickResult current;
+        if (_renderer.buildPrimSelection(*selection.prim, current))
+            _interaction.select(current);
     }
     if (_renderer.capabilities().screenPicking &&
         (_mousePickRequested ||

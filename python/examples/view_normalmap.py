@@ -43,8 +43,6 @@ class BrickwallNormalMapViewer(ke.App):
             self.wall_material,
             color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
         )
-        self.wall_view.set_texture(self.diffuse_texture, 0)
-        self.wall_view.set_texture(self.normal_texture, 5)
         self.wall_view.set_double_sided(True)
 
         ground_view = self.scene.add_mesh(

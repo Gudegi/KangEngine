@@ -76,7 +76,12 @@ void RenderComponent::setDoubleSided(bool doubleSided) {
     if (_doubleSided == doubleSided)
         return;
     _doubleSided = doubleSided;
-    markChanged();
+    try {
+        markChanged();
+    } catch (...) {
+        _doubleSided = !doubleSided;
+        throw;
+    }
 }
 
 bool RenderComponent::castsShadow() const {
@@ -89,7 +94,12 @@ void RenderComponent::setCastsShadow(bool castsShadow) {
     if (_castsShadow == castsShadow)
         return;
     _castsShadow = castsShadow;
-    markChanged();
+    try {
+        markChanged();
+    } catch (...) {
+        _castsShadow = !castsShadow;
+        throw;
+    }
 }
 
 AlphaMode RenderComponent::alphaMode() const {
@@ -106,9 +116,17 @@ void RenderComponent::setAlphaMode(AlphaMode mode, float cutoff) {
     requireAttached();
     if (_alphaMode == mode && _alphaCutoff == cutoff)
         return;
+    const auto previousMode = _alphaMode;
+    const auto previousCutoff = _alphaCutoff;
     _alphaMode = mode;
     _alphaCutoff = cutoff;
-    markChanged();
+    try {
+        markChanged();
+    } catch (...) {
+        _alphaMode = previousMode;
+        _alphaCutoff = previousCutoff;
+        throw;
+    }
 }
 
 TransformSource RenderComponent::transformSource() const {

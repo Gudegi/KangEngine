@@ -2,6 +2,7 @@
 #define _SCENE_RENDER_SYSTEM_HPP_
 
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/graphics/renderer/render_backend/render_backend.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/render/render_scene_data_collector.hpp"
 
@@ -36,7 +37,7 @@ class SceneRenderSystem {
     SceneRenderSystem(const SceneRenderSystem&) = delete;
     SceneRenderSystem& operator=(const SceneRenderSystem&) = delete;
 
-    void bind(Renderer* renderer);
+    void bind(Renderer* renderer, SceneResourceManager* resources = nullptr);
     void syncScene(SceneBackend& scene, const SceneResourceManager& resources);
     RayPickResult resolvePick(const RenderPickHit& hit) const;
     RayPickResult buildPrimSelection(Prim& prim) const;
@@ -57,10 +58,16 @@ class SceneRenderSystem {
     void setAlphaMode(RenderComponent& component, AlphaMode mode,
                       float cutoff = 0.5f);
     bool setMaterial(RenderComponent& component, Material* material);
+    // Native ColorMaterial overrides apply to the entire execution batch.
+    void setBatchTexture(RenderComponent& component, Backend::Texture* texture,
+                         TextureRole role);
+    void setBatchTexture(RenderComponent& component, Backend::Texture* texture,
+                         int slot);
+    // TODO: Remove these aliases after callers migrate to setBatchTexture().
     void setTexture(RenderComponent& component, Backend::Texture* texture,
-                    TextureRole role);
+                    TextureRole role) { setBatchTexture(component, texture, role); }
     void setTexture(RenderComponent& component, Backend::Texture* texture,
-                    int slot);
+                    int slot) { setBatchTexture(component, texture, slot); }
     void setExternalBuffer(RenderComponent& component,
                            const ExternalBufferDesc& desc);
     void setInstanceColors(RenderComponent& component,
@@ -93,12 +100,14 @@ class SceneRenderSystem {
         RenderableHandle handle = InvalidHandle;
         const MeshData* mesh = nullptr;
         Material* material = nullptr;
+        SceneBatchState state;
         std::optional<SkinnedMeshData> skinnedMesh;
         std::vector<std::pair<Backend::Texture*, int>> textureBindings;
     };
 
     void validateRegistration(
         const std::shared_ptr<RenderComponent>& component) const;
+    void registerResources(RenderComponent& component, Material* material);
     bool registerRenderable(const std::shared_ptr<RenderComponent>& component,
                             Material* material);
     bool
@@ -115,6 +124,7 @@ class SceneRenderSystem {
     void clear();
 
     Renderer* _renderer = nullptr;
+    SceneResourceManager* _resources = nullptr;
     RenderSceneDataCollector _collector;
     std::unordered_map<const RenderComponent*, Registration> _registrations;
 };

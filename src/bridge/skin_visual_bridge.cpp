@@ -4,7 +4,6 @@
 #include "animation/skeleton_math.hpp"
 #include "animation/skinning.hpp"
 #include "engine/core/app/app.hpp"
-#include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/component/selection_component.hpp"
@@ -13,8 +12,8 @@
 #include "engine/scene/scene_backend.hpp"
 
 #include <algorithm>
-#include <array>
 #include <filesystem>
+#include <map>
 #include <stdexcept>
 
 namespace KE {
@@ -91,7 +90,7 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     if (!material)
         throw std::runtime_error(
             "SkinVisualBridge::fromFBX requires Material");
-    // This legacy importer owns Native GPU textures as well as skin batches.
+    // Skinning uploads currently require Native.
     app->getRenderer().native();
 
     SkinVisualBridge bridge;
@@ -125,15 +124,7 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
         glm::vec4(0.55f, 0.78f, 0.48f, 1.0f),
     };
 
-    const std::array<unsigned char, 4> whitePixel = {255, 255, 255, 255};
-    Backend::TextureDesc whiteDesc;
-    whiteDesc.width = 1;
-    whiteDesc.height = 1;
-    whiteDesc.channels = 4;
-    whiteDesc.data = whitePixel.data();
-    whiteDesc.name = "fbx_white_fallback";
-    bridge._fallbackWhiteTexture =
-        app->getRenderer().device()->createTexture(whiteDesc);
+    std::map<std::pair<std::string, std::string>, Material*> texturedMaterials;
 
     for (int i = 0; i < static_cast<int>(meshes.size()); ++i) {
         auto& imported = meshes[static_cast<size_t>(i)];
@@ -160,39 +151,81 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
                                     glm::mat4(1.0f));
         binding.baseColor = color;
 
+        std::string texturePath =
+            useMaterials ? diffuseTexturePathFromMaterial(imported.metadata)
+                         : "";
+        std::string normalTexturePath =
+            useMaterials ? normalTexturePathFromMaterial(imported.metadata)
+                         : "";
+        if (!std::filesystem::is_regular_file(texturePath))
+            texturePath.clear();
+        if (!std::filesystem::is_regular_file(normalTexturePath))
+            normalTexturePath.clear();
+
+        Material* partMaterial = material;
+        if (!texturePath.empty() || !normalTexturePath.empty()) {
+            const auto key = std::make_pair(texturePath, normalTexturePath);
+            const auto found = texturedMaterials.find(key);
+            if (found == texturedMaterials.end()) {
+                auto copy = material->clone();
+                auto* diffuse = texturePath.empty()
+                                    ? nullptr
+                                    : app->loadTexture(texturePath);
+                auto* normal = normalTexturePath.empty()
+                                   ? nullptr
+                                   : app->loadTexture(normalTexturePath);
+
+                std::string diffuseSlot = "base_color_texture";
+                std::string normalSlot = "normal_texture";
+                if (auto* colorMaterial =
+                        dynamic_cast<ColorMaterial*>(copy.get())) {
+                    if (diffuse)
+                        colorMaterial->baseColorTexture = diffuse;
+                    if (normal)
+                        colorMaterial->normalTexture = normal;
+                } else if (auto* phong =
+                               dynamic_cast<PhongMaterial*>(copy.get())) {
+                    if (diffuse)
+                        phong->diffuseMap = diffuse;
+                    if (normal)
+                        phong->normalMap = normal;
+                    diffuseSlot = "diffuse_map";
+                    normalSlot = "normal_map";
+                } else if (auto* pbr = dynamic_cast<PBRMaterial*>(copy.get())) {
+                    if (diffuse)
+                        pbr->baseColorTexture = diffuse;
+                    if (normal)
+                        pbr->normalTexture = normal;
+                } else {
+                    throw std::invalid_argument(
+                        "FBX textures require a built-in material");
+                }
+
+                // Replace copied source handles along with their GPU
+                // references.
+                for (const auto& slot : {std::make_pair(diffuseSlot, diffuse),
+                                         std::make_pair(normalSlot, normal)}) {
+                    if (!slot.second)
+                        continue;
+                    copy->textureResources[slot.first] =
+                        app->getSceneResourceManager().textureHandle(
+                            slot.second);
+                    copy->texturePaths.erase(slot.first);
+                }
+
+                partMaterial = app->rememberMaterial(std::move(copy));
+                texturedMaterials.emplace(key, partMaterial);
+            } else {
+                partMaterial = found->second;
+            }
+        }
+
         App::MeshPrimResult result = app->addSkinnedMeshPrim(
-            material, path, std::move(imported.skinnedMeshData), glm::vec3(0.0f),
-            color, true);
+            partMaterial, path, std::move(imported.skinnedMeshData),
+            glm::vec3(0.0f), color, true);
         binding.prim = result.prim;
         binding.component =
             binding.prim ? binding.prim->getRenderComponent() : nullptr;
-
-        const std::string texturePath =
-            useMaterials ? diffuseTexturePathFromMaterial(imported.metadata)
-                         : "";
-        Backend::Texture* diffuseTexture = bridge._fallbackWhiteTexture.get();
-        if (!texturePath.empty() && std::filesystem::exists(texturePath)) {
-            bridge._textures.push_back(
-                app->getRenderer().device()->createTexture(texturePath, true));
-            diffuseTexture = bridge._textures.back().get();
-        }
-        const std::string normalTexturePath =
-            useMaterials ? normalTexturePathFromMaterial(imported.metadata)
-                         : "";
-        Backend::Texture* normalTexture = nullptr;
-        if (!normalTexturePath.empty() &&
-            std::filesystem::exists(normalTexturePath)) {
-            bridge._textures.push_back(
-                app->getRenderer().device()->createTexture(normalTexturePath,
-                                                           true));
-            normalTexture = bridge._textures.back().get();
-        }
-        if (binding.component && diffuseTexture)
-            app->getSceneRenderSystem().setTexture(*binding.component,
-                                                   diffuseTexture, 0);
-        if (binding.component && normalTexture)
-            app->getSceneRenderSystem().setTexture(*binding.component,
-                                                   normalTexture, 5);
 
         bridge._meshes.push_back(std::move(binding));
     }
@@ -321,8 +354,6 @@ bool SkinVisualBridge::remove() {
         return false;
     const bool removed = _app->removePrim(_basePath);
     _meshes.clear();
-    _textures.clear();
-    _fallbackWhiteTexture.reset();
     _globalTransforms.clear();
     _globalMatrices.clear();
     _app = nullptr;

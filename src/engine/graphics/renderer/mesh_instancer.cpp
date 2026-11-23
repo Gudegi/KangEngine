@@ -584,7 +584,7 @@ void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
     if (!normals.empty() && normals.size() != _vertexCount)
         throw std::runtime_error(
             "Dynamic geometry normals must match the uploaded mesh");
-    _hasDynamicGeometry = true;
+    _hasGeometryUpdates = true;
     if (!_vbos.empty())
         _vbos[0]->setData(positions.data(),
                           sizeof(glm::vec3) * positions.size());
@@ -646,7 +646,7 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
                                         Scene::Prim** outPrim) const {
     outInstanceIndex = -1;
     outDistance = std::numeric_limits<float>::infinity();
-    if (_hasSkinning || _hasDynamicGeometry || _usesGpuExternalTransforms ||
+    if (_hasSkinning || _hasGeometryUpdates || _usesGpuExternalTransforms ||
         _worldBounds.empty() || !_hasVisibleOwnerPrim())
         return false;
 

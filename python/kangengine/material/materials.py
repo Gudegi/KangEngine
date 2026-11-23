@@ -37,6 +37,13 @@ class Material(NativeWrapper):
         object.__setattr__(self, "_texture_sources", {})
         object.__setattr__(self, "_resources", None)
 
+    def clone(self):
+        """Copy material parameters while sharing textures in the same App."""
+        material = type(self)(native=self._native.clone())
+        material._texture_sources.update(self._texture_sources)
+        object.__setattr__(material, "_resources", self._resources)
+        return material
+
     def _bind_resources(self, resources):
         for source in self._texture_sources.values():
             if source._resources is not resources:
@@ -127,6 +134,32 @@ class ColorMaterial(Material):
 
     def set_style(self, style):
         self._native.set_style(style)
+        return self
+
+    @property
+    def base_color_texture(self):
+        """Optional color texture shared by this material's objects."""
+        return self._get_texture("base_color_texture")
+
+    @base_color_texture.setter
+    def base_color_texture(self, texture) -> None:
+        self._set_texture("base_color_texture", texture)
+
+    @property
+    def normal_texture(self):
+        """Optional linear tangent-space normal texture."""
+        return self._get_texture("normal_texture")
+
+    @normal_texture.setter
+    def normal_texture(self, texture) -> None:
+        self._set_texture("normal_texture", texture)
+
+    def set_base_color_texture(self, texture):
+        self.base_color_texture = texture
+        return self
+
+    def set_normal_texture(self, texture):
+        self.normal_texture = texture
         return self
 
 
