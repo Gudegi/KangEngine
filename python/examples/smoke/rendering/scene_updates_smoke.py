@@ -72,6 +72,42 @@ def main():
     idle = collect()
     assert idle["objects"] == [] and idle["removed_objects"] == [] and idle["lights"] is None
 
+    # Shared material values can change without a component version change.
+    versions = [scene.get_prim_at_path(path).get_material_binding_component().version
+                for path in ids]
+    for field, value, exported, expected in (
+        ("base_color", ke.Vec4(0.3, 0.5, 0.7, 1), "base_color", [0.3, 0.5, 0.7, 1]),
+        ("roughness", 0.25, "roughness", 0.25),
+        ("emissive_color", ke.Vec3(0.1, 0.2, 0.3), "emissive", [0, 0, 0]),
+        ("emissive_strength", 2.0, "emissive", [0.2, 0.4, 0.6]),
+    ):
+        setattr(material.native, field, value)
+        changed = collect()["objects"]
+        assert {item["id"] for item in changed} == set(ids.values()), field
+        for item in changed:
+            np.testing.assert_allclose(item["material"][exported], expected)
+        collector.accept()
+        setattr(material.native, field, value)
+        assert not collect()["objects"], field
+    assert versions == [scene.get_prim_at_path(path).get_material_binding_component().version
+                        for path in ids]
+
+    original_textures = material.texture_resources
+    replacement = resources.register_texture_source(
+        "Replacement", str(Path(ke.__file__).parent / "assets/textures/awesomeface.png"),
+        srgb=False,
+    )
+    for textures in ({"base_color_texture": replacement}, {}, original_textures):
+        material.texture_resources = textures
+        changed = collect()["objects"]
+        assert {item["id"] for item in changed} == set(ids.values())
+        for item in changed:
+            assert {slot: source["id"] for slot, source in item["textures"].items()} == textures
+        # Until accepted, material changes must remain available for retry.
+        assert {item["id"] for item in collect()["objects"]} == set(ids.values())
+        collector.accept()
+        assert not collect()["objects"]
+
     second.set_display_color(ke.Vec3(0.2, 0.4, 0.6))
     color_update = collect()["objects"]
     assert [item["id"] for item in color_update] == [ids["/group/second"]]

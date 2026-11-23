@@ -188,6 +188,9 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_binding_updates_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_updates_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/shared_material_updates_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/shared_material_updates_smoke.py --scene-renderer
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/vertex_color_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/unlit_material_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/app_texture_source_smoke.py
