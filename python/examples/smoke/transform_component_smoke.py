@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 import kangengine as ke
 
 
@@ -31,6 +33,30 @@ def _quat_wxyz(value):
 def main():
     scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
 
+    source = scene.define_prim("/source", ke.scene.PrimType.XFORM)
+    source.set_local_scale(ke.Vec3(2, 3, 4))
+    source.set_local_rotation_axis_angle(ke.Vec3(0, 0, 1), math.pi / 2)
+    source.set_local_translation(ke.Vec3(1, 2, 3))
+    matrix = source.compute_local_matrix()
+    for use_component in (False, True):
+        mixed = scene.define_prim(f"/mixed_{use_component}", ke.scene.PrimType.XFORM)
+        api = mixed.get_transform_component() if use_component else mixed
+        api.set_local_matrix(matrix)
+        api.set_local_translation(ke.Vec3(8, 9, 10))
+        _close_tuple(_translation(mixed.compute_local_matrix()), (8, 9, 10))
+        for i in range(3):
+            _close_tuple(_vec3_tuple(mixed.compute_local_matrix()[i]),
+                         _vec3_tuple(matrix[i]))
+        api.set_local_scale(ke.Vec3(5, 6, 7))
+        _close_tuple(_translation(mixed.compute_local_matrix()), (8, 9, 10))
+        _close_tuple(_vec3_tuple(mixed.compute_local_matrix()[0]), (0, 5, 0))
+        api.set_local_matrix(matrix)
+        api.set_local_rotation_axis_angle(ke.Vec3(0, 0, 1), 0.0)
+        _close_tuple(_translation(mixed.compute_local_matrix()), (1, 2, 3))
+        for i, scale in enumerate((2, 3, 4)):
+            _close_tuple(_vec3_tuple(mixed.compute_local_matrix()[i]),
+                         tuple(scale if axis == i else 0 for axis in range(3)))
+
     parent = scene.define_prim("/World/Parent", ke.scene.PrimType.XFORM)
     child = scene.define_prim("/World/Parent/Child", ke.scene.PrimType.XFORM)
 
@@ -44,6 +70,18 @@ def main():
         raise AssertionError("parent TransformComponent owner mismatch")
     if "TransformComponent" not in repr(parent_transform):
         raise AssertionError("TransformComponent repr missing type name")
+
+    # Attribute callers and component setters must address the same source.
+    version = child_transform.version
+    child.set_attribute_vec3("xformOp:translate", ke.Vec3(4, 5, 6))
+    assert child_transform.version == version + 1
+    _close_tuple(_vec3_tuple(child_transform.get_local_translation()), (4, 5, 6))
+    child_transform.set_local_translation(ke.Vec3(7, 8, 9))
+    _close_tuple(_vec3_tuple(child.get_attribute_vec3("xformOp:translate")), (7, 8, 9))
+    version = child_transform.version
+    child.set_attribute_string("label", "child")
+    assert child_transform.version == version
+    assert child.get_attribute_string("label") == "child"
 
     parent_version = parent_transform.version
     parent.set_local_translation(ke.Vec3(1.0, 0.0, 0.0))
@@ -107,6 +145,41 @@ def main():
         pass
     else:
         raise AssertionError("zero rotation axis should be rejected")
+
+    child.set_world_matrix(matrix)
+    child.set_world_translation(ke.Vec3(8, 9, 10))
+    _close_tuple(_translation(child.compute_world_matrix()), (8, 9, 10))
+    for i in range(3):
+        _close_tuple(_vec3_tuple(child.compute_world_matrix()[i]),
+                     _vec3_tuple(matrix[i]))
+
+    # Translation does not require decomposing scale, shear, or perspective.
+    probe = scene.define_prim("/World/Parent/Probe", ke.scene.PrimType.XFORM)
+    for kind in ("affine", "shear", "reflection", "singular", "homogeneous", "perspective"):
+        value = np.diag([2, 3, 4, 1]).astype(np.float32)
+        value[:3, 3] = [4, 6, 8]
+        if kind == "shear":
+            value[0, 1] = 0.5
+        elif kind == "reflection":
+            value[0, 0] = -2
+        elif kind == "singular":
+            value[0, 0] = 0
+        elif kind == "homogeneous":
+            value *= 2
+        elif kind == "perspective":
+            value[3] = [0.1, 0.2, 0.3, 2]
+        probe.set_local_matrix(value.T.copy())
+        np.testing.assert_allclose(probe.get_local_translation(), value[:3, 3] / value[3, 3])
+        world = np.asarray(probe.compute_world_matrix())
+        np.testing.assert_allclose(probe.get_world_translation(), world[:3, 3] / world[3, 3])
+    value[3, 3] = 0
+    probe.set_local_matrix(value.T.copy())
+    try:
+        probe.get_local_translation()
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("zero homogeneous w was accepted")
 
     if not parent.has_transform_component():
         raise AssertionError("Prim should report mandatory TransformComponent")

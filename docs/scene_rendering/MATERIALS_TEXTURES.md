@@ -251,8 +251,25 @@ remain aliases of `ColorMaterial`, `ColorStyle`, and `create_color_material()`.
 
 ## Per-vertex colors
 
-The `color` passed to `scene.add_mesh()` tints the whole object. For a separate
-color at each vertex, pass `[N, 3]` **linear RGB** values when creating the mesh.
+The `color` passed to `scene.add_mesh()` multiplies the material color for that
+object without modifying the shared material. `prim.set_display_color()` changes
+RGB while preserving alpha; `prim.set_display_color_alpha()` changes RGBA.
+
+Basic surface RGB is multiplied per channel in linear space:
+
+| Material | Surface RGB before lighting |
+| --- | --- |
+| `ColorMaterial` (plain) | object color × vertex color |
+| `ColorMaterial` (textured) | texture color × object color × vertex color |
+| `PhongMaterial` | `diffuse` × `diffuse_map` RGB × object color × vertex color |
+| `PBRMaterial` | `base_color.rgb` × `base_color_texture` RGB × object color × vertex color |
+
+Missing colors or textures act as white. Lighting, specular highlights, and
+emission are calculated separately. Alpha follows the material's opacity inputs
+and the mesh's alpha mode.
+
+For a separate color at each vertex, pass `[N, 3]` **linear RGB** values when
+creating the mesh.
 The vertex array is `[N, 3]` and triangle indices are `[M, 3]`:
 
 ```python

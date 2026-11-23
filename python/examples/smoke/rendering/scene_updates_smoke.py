@@ -72,6 +72,13 @@ def main():
     idle = collect()
     assert idle["objects"] == [] and idle["removed_objects"] == [] and idle["lights"] is None
 
+    second.set_display_color(ke.Vec3(0.2, 0.4, 0.6))
+    color_update = collect()["objects"]
+    assert [item["id"] for item in color_update] == [ids["/group/second"]]
+    np.testing.assert_allclose(color_update[0]["color"], [0.2, 0.4, 0.6, 1])
+    collector.accept()
+    assert not collect()["objects"]
+
     second.set_local_translation(ke.Vec3(2, 0, 0))
     changed = collect()
     assert [item["id"] for item in changed["objects"]] == [ids["/group/second"]]

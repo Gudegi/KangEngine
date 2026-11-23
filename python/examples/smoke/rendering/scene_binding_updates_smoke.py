@@ -38,6 +38,16 @@ def main():
         assert initial[64, 64, 0] > initial[64, 64, 2] + 50
         assert system.shares_batch(first.component, second.component)
 
+        # Object tint must update pixels without changing the shared material.
+        first.prim.set_display_color(ke.Vec3(0, 1, 1))
+        tinted = capture()
+        assert tinted[64, 64, 0] < initial[64, 64, 0] - 50
+        assert system.shares_batch(first.component, second.component)
+        np.testing.assert_allclose(red.base_color, [1, 0.02, 0.02, 1])
+        assert second.prim.get_display_color_alpha() is None
+        first.component.display_color = ke.Vec4(1, 1, 1, 1)
+        np.testing.assert_array_equal(capture(), initial)
+
         # Direct authoring and the view API must use the same registration path.
         first.prim.set_material(blue.native)
         direct = capture()

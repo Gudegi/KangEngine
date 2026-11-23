@@ -39,11 +39,6 @@ bool isRenderableType(PrimType type) {
     return type == PrimType::Mesh || type == PrimType::MeshInstance;
 }
 
-glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
-    if (glm::length(direction) < 1e-4f)
-        return glm::normalize(fallback);
-    return glm::normalize(direction);
-}
 } // namespace
 
 Prim::Prim(const std::string& name, PrimType type, Prim* parent)
@@ -269,6 +264,26 @@ bool Prim::removeRenderComponent() {
     return true;
 }
 
+void Prim::setDisplayColor(glm::vec3 color) {
+    const auto rgba = getDisplayColorAlpha();
+    setDisplayColorAlpha(glm::vec4(color, rgba ? rgba->a : 1.0f));
+}
+
+std::optional<glm::vec3> Prim::getDisplayColor() const {
+    const auto color = getDisplayColorAlpha();
+    return color ? std::optional<glm::vec3>(glm::vec3(*color)) : std::nullopt;
+}
+
+void Prim::setDisplayColorAlpha(glm::vec4 color) {
+    if (!_renderComponent)
+        addRenderComponent();
+    _renderComponent->setDisplayColor(color);
+}
+
+std::optional<glm::vec4> Prim::getDisplayColorAlpha() const {
+    return _renderComponent ? _renderComponent->displayColor() : std::nullopt;
+}
+
 std::shared_ptr<MaterialBindingComponent> Prim::addMaterialBindingComponent() {
     if (_materialBindingComponent)
         throw std::runtime_error("Prim '" + _path +
@@ -468,67 +483,31 @@ bool Prim::removeCollisionShapeComponent() {
 }
 
 LightType Prim::getLightType(LightType defaultType) const {
-    if (_lightComponent)
-        return _lightComponent->type();
-    if (!hasAttribute("light:type"))
-        return defaultType;
-    const int value = getAttribute<int>("light:type");
-    if (value < static_cast<int>(LightType::Directional) ||
-        value > static_cast<int>(LightType::Dome))
-        return defaultType;
-    return static_cast<LightType>(value);
+    return _lightComponent ? _lightComponent->type() : defaultType;
 }
 
 void Prim::setDirectionalLight(const DirectionalLight& light) {
     if (!_lightComponent)
         addLightComponent();
     _lightComponent->setDirectionalLight(light);
-
-    setAttribute("light:type", static_cast<int>(LightType::Directional));
-    setAttribute("light:direction",
-                 safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
-    setAttribute("light:color", light.color);
-    setAttribute("light:intensity", std::max(0.0f, light.intensity));
-    setAttribute("light:ambient", light.ambient);
 }
 
 DirectionalLight Prim::getDirectionalLight() {
-    if (_lightComponent)
-        return _lightComponent->directionalLight();
-
-    DirectionalLight light;
-    const glm::vec3 localDirection =
-        getAttribute<glm::vec3>("light:direction", light.direction);
-    light.direction = safeDirection(localDirection, light.direction);
-    light.color = getAttribute<glm::vec3>("light:color", light.color);
-    light.intensity =
-        std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
-    light.ambient = getAttribute<glm::vec3>("light:ambient", light.ambient);
-    return light;
+    return _lightComponent ? _lightComponent->directionalLight()
+                           : DirectionalLight{};
 }
 
 void Prim::setPointLight(const PointLight& light) {
     if (!_lightComponent)
         addLightComponent();
     _lightComponent->setPointLight(light);
-
-    setAttribute("light:type", static_cast<int>(LightType::Point));
-    setAttribute("light:color", light.color);
-    setAttribute("light:intensity", std::max(0.0f, light.intensity));
-    setAttribute("light:range", std::max(0.0f, light.range));
 }
 
 PointLight Prim::getPointLight() {
     if (_lightComponent)
         return _lightComponent->pointLight();
-
     PointLight light;
     light.position = getLocalTranslation();
-    light.color = getAttribute<glm::vec3>("light:color", light.color);
-    light.intensity =
-        std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
-    light.range =
-        std::max(0.0f, getAttribute<float>("light:range", light.range));
     return light;
 }
 
@@ -536,38 +515,13 @@ void Prim::setSpotLight(const SpotLight& light) {
     if (!_lightComponent)
         addLightComponent();
     _lightComponent->setSpotLight(light);
-
-    setAttribute("light:type", static_cast<int>(LightType::Spot));
-    setAttribute("light:direction",
-                 safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
-    setAttribute("light:color", light.color);
-    setAttribute("light:intensity", std::max(0.0f, light.intensity));
-    setAttribute("light:range", std::max(0.0f, light.range));
-    setAttribute("light:innerConeAngle", std::max(0.0f, light.innerConeAngle));
-    setAttribute("light:outerConeAngle",
-                 std::max(light.innerConeAngle, light.outerConeAngle));
 }
 
 SpotLight Prim::getSpotLight() {
     if (_lightComponent)
         return _lightComponent->spotLight();
-
     SpotLight light;
-    const glm::vec3 localDirection =
-        getAttribute<glm::vec3>("light:direction", light.direction);
     light.position = getLocalTranslation();
-    light.direction = safeDirection(localDirection, light.direction);
-    light.color = getAttribute<glm::vec3>("light:color", light.color);
-    light.intensity =
-        std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
-    light.range =
-        std::max(0.0f, getAttribute<float>("light:range", light.range));
-    light.innerConeAngle =
-        std::max(0.0f, getAttribute<float>("light:innerConeAngle",
-                                           light.innerConeAngle));
-    light.outerConeAngle = std::max(
-        light.innerConeAngle,
-        getAttribute<float>("light:outerConeAngle", light.outerConeAngle));
     return light;
 }
 
@@ -713,14 +667,38 @@ void Prim::traverse(std::function<void(Prim*)> func) {
     }
 }
 
-void Prim::onAttributeChanged(const Token& name) {
-    if (XformTokens::isXformAttribute(name))
-        markLocalTransformDirty();
+void Prim::setAttributeValue(const Token& name, AttributeValue value) {
+    if (XformTokens::isXformAttribute(name)) {
+        getTransformComponentOrThrow().setXformAttribute(name, std::move(value));
+        return;
+    }
+    _Attributes[name] = std::move(value);
 }
 
-void Prim::markLocalTransformDirty() {
-    if (_transformComponent)
-        _transformComponent->markLocalTransformDirty();
+const AttributeValue* Prim::findAttribute(const Token& name) const {
+    if (XformTokens::isXformAttribute(name)) {
+        if (!_transformComponent)
+            return nullptr;
+        const auto& attributes = _transformComponent->_xformAttributes;
+        const auto it = attributes.find(name);
+        return it != attributes.end() ? &it->second : nullptr;
+    }
+    const auto it = _Attributes.find(name);
+    return it != _Attributes.end() ? &it->second : nullptr;
+}
+
+std::unordered_map<Token, AttributeValue, Token::Hash>
+Prim::getAttributes() const {
+    auto attributes = _Attributes;
+    if (_transformComponent) {
+        const auto& xform = _transformComponent->_xformAttributes;
+        attributes.insert(xform.begin(), xform.end());
+    }
+    return attributes;
+}
+
+void Prim::setXformOpOrder(const std::vector<std::string>& order) {
+    getTransformComponentOrThrow().setXformOpOrder(order);
 }
 
 void Prim::markWorldTransformDirtyRecursive() {

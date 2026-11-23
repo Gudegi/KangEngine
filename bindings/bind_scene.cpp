@@ -233,6 +233,9 @@ void bind_scene(py::module& m) {
                       &KE::Scene::RenderComponent::setVisible,
                       "Get or set local render visibility. Registered "
                       "components sync this change to the renderer.")
+        .def_property("display_color", &KE::Scene::RenderComponent::displayColor,
+                      &KE::Scene::RenderComponent::setDisplayColor,
+                      "Linear RGBA multiplier; None means unauthored white.")
         .def_property("double_sided",
                       &KE::Scene::RenderComponent::isDoubleSided,
                       &KE::Scene::RenderComponent::setDoubleSided,
@@ -1069,13 +1072,13 @@ void bind_scene(py::module& m) {
              "Compatibility alias for local scale.")
         // Display color
         .def("set_display_color", &KE::Scene::Prim::setDisplayColor,
-             py::arg("color"), "Set RGB display color metadata.")
+             py::arg("color"), "Set linear RGB tint, preserving opacity.")
         .def("get_display_color", &KE::Scene::Prim::getDisplayColor,
-             "Return RGB display color metadata if present.")
+             "Return RGB tint, or None if unauthored.")
         .def("set_display_color_alpha", &KE::Scene::Prim::setDisplayColorAlpha,
-             py::arg("color"), "Set RGBA display color metadata.")
+             py::arg("color"), "Set linear RGB tint and opacity multiplier.")
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha,
-             "Return RGBA display color metadata if present.")
+             "Return RGBA tint, or None if unauthored.")
         .def("set_material", &KE::Scene::Prim::setMaterial, py::arg("material"),
              "Bind a non-owned material to this prim at the scene level.")
         .def("get_material", &KE::Scene::Prim::getMaterial,

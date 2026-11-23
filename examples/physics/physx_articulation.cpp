@@ -185,7 +185,7 @@ class ScissorLiftApp : public App {
         auto meshPtr = std::make_shared<Scene::MeshData>(std::move(mesh));
         auto* prim = getScene()->definePrim(path, Scene::PrimType::Mesh);
         prim->setMeshData(meshPtr);
-        prim->setAttribute("primvars:displaycolorAlpha", color);
+        prim->setDisplayColorAlpha(color);
         addRenderable(&cubeMaterial, prim);
         return prim;
     }

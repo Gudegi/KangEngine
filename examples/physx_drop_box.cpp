@@ -222,8 +222,7 @@ class MyApp : public App {
             auto* prim =
                 getScene()->definePrim(primPath, Scene::PrimType::Mesh);
             prim->setMeshData(boxMeshPtr);
-            prim->setAttribute("primvars:displaycolorAlpha",
-                               boxSpawns[i].color);
+            prim->setDisplayColorAlpha(boxSpawns[i].color);
             prim->setWorldTranslation(boxSpawns[i].pos);
 
             addRenderable(&cubeMaterial, prim);

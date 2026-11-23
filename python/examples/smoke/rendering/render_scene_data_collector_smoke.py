@@ -51,6 +51,13 @@ def main():
     assert initial["material_id"] == material_id
     assert initial["textures"]["base_color_texture"]["srgb"]
     assert resources.usage_count(texture_id) == 1
+    prim.set_display_color(ke.Vec3(0.3, 0.6, 0.9))
+    tinted = collect()
+    np.testing.assert_allclose(tinted["color"], [0.3, 0.6, 0.9, 1])
+    assert tinted["id"] == initial["id"]
+    assert tinted["material"] == initial["material"]
+    prim.get_render_component().display_color = ke.Vec4(0.9, 0.6, 0.3, 0.5)
+    np.testing.assert_allclose(collect()["color"], [0.9, 0.6, 0.3, 0.5])
     prim.set_visible(False)
     assert not collect()["visible"]
     prim.set_active(False)

@@ -1,5 +1,7 @@
 """Validate Prim-owned RenderComponent attach/detach semantics."""
 
+import numpy as np
+
 import kangengine as ke
 
 
@@ -13,6 +15,21 @@ def main():
     assert component.owner is prim
     assert "RenderComponent" in repr(component)
     assert "version=" in repr(component)
+
+    assert component.display_color is None
+    assert prim.get_display_color() is None
+    assert prim.get_display_color_alpha() is None
+    prim.set_display_color(ke.Vec3(0.2, 0.4, 0.6))
+    np.testing.assert_allclose(component.display_color, [0.2, 0.4, 0.6, 1])
+    component.display_color = ke.Vec4(0.8, 0.6, 0.4, 0.3)
+    np.testing.assert_allclose(prim.get_display_color(), [0.8, 0.6, 0.4])
+    prim.set_display_color(ke.Vec3(0.1, 0.2, 0.3))
+    np.testing.assert_allclose(prim.get_display_color_alpha(), [0.1, 0.2, 0.3, 0.3])
+    color_version = component.version
+    prim.set_display_color(ke.Vec3(0.1, 0.2, 0.3))
+    assert component.version == color_version
+    assert not prim.has_attribute("primvars:displaycolor")
+    assert not prim.has_attribute("primvars:displaycolorAlpha")
 
     initial_version = component.version
     component.double_sided = True
@@ -56,6 +73,13 @@ def main():
     replacement = prim.add_render_component()
     assert replacement.attached
     assert replacement.owner is prim
+    assert replacement.display_color is None
+
+    colored = ke.scene.Prim("colored", ke.scene.PrimType.MESH)
+    colored.set_display_color_alpha(ke.Vec4(0.2, 0.4, 0.6, 0.5))
+    assert colored.has_render_component()
+    np.testing.assert_allclose(colored.get_render_component().display_color,
+                               [0.2, 0.4, 0.6, 0.5])
 
     backend = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
     backend.define_prim("/group", ke.scene.PrimType.XFORM)

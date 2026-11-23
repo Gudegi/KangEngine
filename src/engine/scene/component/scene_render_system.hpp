@@ -26,8 +26,8 @@ class Prim;
 class RenderComponent;
 class DebugDraw;
 
-// Tracks scene components for backend submission and Native batches.
-// Normal scene use does not require a RenderableHandle.
+// Registers, updates, and unregisters RenderComponents with the render backend.
+// Tracks registered Prims and Native batch handles; the backend owns GPU resources.
 class SceneRenderSystem {
   public:
     SceneRenderSystem() = default;

@@ -52,6 +52,20 @@ void RenderComponent::setVisible(bool visible) {
     _owner->setVisible(visible);
 }
 
+std::optional<glm::vec4> RenderComponent::displayColor() const {
+    requireAttached();
+    return _displayColor;
+}
+
+void RenderComponent::setDisplayColor(glm::vec4 color) {
+    requireAttached();
+    if (_displayColor && *_displayColor == color)
+        return;
+    _displayColor = color;
+    // Colors are collected per instance, without changing batch render state.
+    ComponentBase::markChanged();
+}
+
 bool RenderComponent::isDoubleSided() const {
     requireAttached();
     return _doubleSided;

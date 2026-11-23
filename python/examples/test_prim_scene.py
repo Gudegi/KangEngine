@@ -61,9 +61,8 @@ if color_alpha:
     print(f"Display color alpha: {color_alpha}")
 
 # Test has_attribute
-print(
-    f"Has 'primvars:displaycolor': {cube_prim.has_attribute('primvars:displaycolor')}"
-)
+cube_prim.set_attribute_string("label", "cube")
+print(f"Has 'label': {cube_prim.has_attribute('label')}")
 print(f"Has 'nonexistent': {cube_prim.has_attribute('nonexistent')}")
 
 # Test compute_model_matrix

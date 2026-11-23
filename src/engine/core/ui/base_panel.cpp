@@ -1989,6 +1989,15 @@ void InspectorPanel::buildPanel() {
         ImGui::Text("Triangles: %zu", mesh->indices.size() / 3);
     }
 
+    if (prim->hasRenderComponent()) {
+        ImGui::SeparatorText("Display Color");
+        auto color = prim->getDisplayColorAlpha().value_or(glm::vec4(1.0f));
+        ImGui::BeginDisabled(external);
+        if (ImGui::ColorEdit4("Tint", &color.x))
+            prim->setDisplayColorAlpha(color);
+        ImGui::EndDisabled();
+    }
+
     if (prim->hasMaterialBindingComponent())
         drawMaterialInspector(*prim);
 
@@ -2018,8 +2027,9 @@ void InspectorPanel::buildPanel() {
             activeXformOps.insert(token.str());
     }
     std::vector<std::pair<Scene::Token, Scene::AttributeValue>> attributes;
-    attributes.reserve(prim->getAttributes().size());
-    for (const auto& [token, value] : prim->getAttributes())
+    const auto authoredAttributes = prim->getAttributes();
+    attributes.reserve(authoredAttributes.size());
+    for (const auto& [token, value] : authoredAttributes)
         attributes.emplace_back(token, value);
     std::sort(attributes.begin(), attributes.end(),
               [](const auto& lhs, const auto& rhs) {

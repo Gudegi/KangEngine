@@ -2,19 +2,20 @@
 #define _SCENE_TRANSFORM_COMPONENT_HPP_
 
 #include "engine/scene/component/component.hpp"
+#include "engine/scene/native/token.hpp"
+#include "engine/scene/types/attribute_value.hpp"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
+#include <unordered_map>
 
 namespace KE {
 namespace Scene {
 
-// Local/world transform state attached to every Prim.
-//
-// Prim keeps identity, path, and hierarchy. TransformComponent owns the cached
-// local/world matrices and the dirty propagation logic for that hierarchy.
-// Existing Prim transform APIs forward here for compatibility.
+// Owns local transform operations and cached local/world matrices.
+// Prim keeps identity and hierarchy; its transform APIs delegate here.
+// Local changes also mark descendant world matrices for recalculation.
 class TransformComponent : public ComponentBase {
   public:
     void setLocalTranslation(glm::vec3 translation);
@@ -22,6 +23,7 @@ class TransformComponent : public ComponentBase {
     void setLocalRotation(glm::quat rotation);
     void setLocalRotationAxisAngle(glm::vec3 axis, float angleRadians);
     void setLocalMatrix(const glm::mat4& matrix);
+    void setXformOpOrder(const std::vector<std::string>& order);
 
     void setWorldTranslation(glm::vec3 translation);
     void setWorldRotation(glm::quat rotation);
@@ -44,7 +46,14 @@ class TransformComponent : public ComponentBase {
     void detach();
     void markLocalTransformDirty();
     void markWorldTransformDirtyRecursive(bool countSelfVersion = true);
+    void prepareTRS();
+    void setXformAttribute(const Token& name, AttributeValue value);
 
+    template <typename T> T getXformAttribute(const Token& name) const {
+        return std::get<T>(_xformAttributes.at(name));
+    }
+
+    std::unordered_map<Token, AttributeValue, Token::Hash> _xformAttributes;
     bool _suppressLocalDirtyVersion = false;
     bool _localDirty = true;
     bool _worldDirty = true;

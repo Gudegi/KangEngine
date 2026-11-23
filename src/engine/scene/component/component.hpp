@@ -10,17 +10,14 @@ namespace Scene {
 
 class Prim;
 
-// Lightweight base for explicit Prim-owned components.
+// Common lifecycle and change tracking for Prim-owned components.
 //
-// This is intentionally not a full ECS abstraction: there is no global
-// registry, runtime type table, or virtual update loop here. The base only
-// captures the lifecycle contract that all current Prim components already
-// share:
-//
-// - non-owning Prim owner pointer
-// - attached/detached state
-// - monotonically increasing version for dirty/change tracking
-// - consistent detached-component errors
+// This is not a full ECS: there is no global component registry, runtime type
+// table, or system update loop. This base provides:
+// - A non-owning Prim pointer.
+// - Attached/detached state.
+// - A monotonically increasing change version.
+// - requireAttached() to reject access after detach.
 class ComponentBase {
   public:
     ComponentBase(const ComponentBase&) = delete;

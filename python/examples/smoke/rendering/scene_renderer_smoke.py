@@ -88,6 +88,12 @@ def main():
                 assert adapter._ordinal == ordinal, "rejected path advanced the stage ordinal"
             capture("after_path_rejection")
 
+        cube = scene.get_prim_at_path("/group/cube")
+        cube.set_display_color(ke.Vec3(0.05, 1, 1))
+        object_tinted = capture("object_tinted")
+        assert object_tinted[:, :, 0].mean() < initial[:, :, 0].mean() - 1
+        cube.get_render_component().display_color = ke.Vec4(1, 1, 1, 1)
+
         parent.set_local_translation(ke.Vec3(0.9, 0, 0))
         capture("moved")
         material.base_color = ke.Vec4(0.15, 1, 1, 1)
