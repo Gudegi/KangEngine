@@ -25,13 +25,33 @@ def main():
         app.initialize(width=128, height=128, hide_ui=True, headless=True)
         app.set_camera_view(position=[3, 3, 3], target=[0, 0, 0])
         material = app.create_standard_materials().common
+
+        # Matching paths and mesh pointers do not make two scenes share handles.
+        local = app.scene.define_prim("/World/Box", ke.scene.PrimType.MESH)
+        local.set_mesh_data(mesh)
+        local_view = app.scene.add_renderable(prim=local, material=material)
+        local_handle = local.get_mesh_component().resource_handle
+        assert app.resources.mesh(local_handle) is mesh
+        assert local_handle != handle
+        local_view.remove()
+
         view = app.scene.add_renderable(prim=prim, material=material)
         component = view.component
         system = app.get_scene_render_system()
         assert system.is_registered(component)
         assert prim.get_mesh_component().resource_handle == handle
         assert resources.mesh(handle) is mesh
+        assert app.resources.mesh(local_handle) is mesh
         assert ke.scene.Token("xformOp:translate").id() == token_id
+
+        unregistered = scene.define_prim("/Unregistered", ke.scene.PrimType.MESH)
+        unregistered.set_mesh_data(mesh)
+        app.scene.add_renderable(prim=unregistered, material=material)
+        assert (
+            unregistered.get_mesh_component().resource_handle
+            == ke.scene.InvalidResourceHandle
+        )
+        assert scene.remove_prim("/Unregistered")
 
         with tempfile.TemporaryDirectory() as directory:
             def capture(name):
@@ -58,6 +78,8 @@ def main():
         view = app.scene.add_renderable(prim=surviving, material=material)
         component = view.component
         app.close()
+        assert surviving.get_mesh_component().resource_handle == handle
+        assert resources.mesh(handle) is mesh
         assert component.attached
         assert not system.is_registered(component)
         component.visible = False

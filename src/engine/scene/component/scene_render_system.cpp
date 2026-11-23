@@ -36,7 +36,13 @@ void SceneRenderSystem::registerResources(RenderComponent& component,
         const auto meshComponent = prim.getMeshComponent();
         const auto handle = _resources->registerMesh(
             prim.getName(), mesh, "scene://mesh" + prim.getPath());
-        meshComponent->setResourceHandle(handle);
+
+        // App registration must not overwrite another scene's resource identity.
+        auto* root = &prim;
+        while (root->getParent())
+            root = root->getParent();
+        if (_resources->scene() && _resources->scene()->getRootPrim() == root)
+            meshComponent->setResourceHandle(handle);
     }
     if (material &&
         _resources->materialHandle(material) == InvalidResourceHandle)
