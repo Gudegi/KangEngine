@@ -5,6 +5,43 @@ import numpy as np
 import kangengine as ke
 
 
+def check_scene_helpers(app, material):
+    render_system = app.get_scene_render_system()
+    debug_lines = app.scene.log_lines(
+        "/debug/component_lines",
+        material,
+        [[0.0, 0.0, 0.0], [0.0, 0.2, 0.0]],
+        [[0.5, 0.0, 0.0], [0.0, 0.8, 0.0]],
+        [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]],
+    )
+    assert debug_lines.component is not None
+    assert render_system.is_registered(debug_lines.component)
+    assert not debug_lines.component.casts_shadow
+    debug_lines.update_lines(
+        [[0.0, 0.0, 0.0]],
+        [[0.0, 0.5, 0.0]],
+        [[0.0, 0.0, 1.0, 1.0]],
+    )
+
+    debug_arrows = app.scene.log_arrows(
+        "/debug/component_arrows",
+        material,
+        [[0.0, 0.0, 0.0]],
+        [[0.0, 1.0, 0.0]],
+        [[1.0, 1.0, 0.0, 1.0]],
+    )
+    assert render_system.is_registered(debug_arrows.component)
+    debug_arrows.update_arrows(
+        [[0.0, 0.0, 0.0]],
+        [[1.0, 0.0, 0.0]],
+        [[1.0, 0.0, 1.0, 1.0]],
+    )
+    assert debug_lines.remove()
+    assert debug_arrows.remove()
+    assert render_system.registration_count == 0
+    assert app.remove_prim("/debug")
+
+
 def main():
     app = ke.App()
     app.initialize(width=192, height=192, hide_ui=True, headless=True)
@@ -12,6 +49,7 @@ def main():
         app.set_frame_capture_active(True)
         app.set_camera_view(position=[0, 0, 5], target=[0, 0, 0])
         material = app.create_color_material(style=ke.material.ColorStyle.UNLIT)
+        check_scene_helpers(app, material)
         system = app.get_scene_render_system()
         debug = app.debug.geometry
 

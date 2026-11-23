@@ -141,7 +141,7 @@ Build the CUDA-enabled Python module and run:
 make build_python_cuda
 
 python/.venv/bin/python \
-  python/examples/smoke/fixed_update_gpu_stress.py \
+  python/examples/smoke/sim/fixed_update_gpu_stress.py \
   --num-envs 64 \
   --frames 12 \
   --stall-ms 200 \

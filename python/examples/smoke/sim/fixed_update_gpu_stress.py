@@ -5,7 +5,7 @@ a large wall-clock delta. Physics still advances only from ``fixed_update()``.
 
 Example:
 
-    python python/examples/smoke/fixed_update_gpu_stress.py \
+    python python/examples/smoke/sim/fixed_update_gpu_stress.py \
         --num-envs 64 --frames 12 --stall-ms 200 --max-catch-up-steps 8
 """
 

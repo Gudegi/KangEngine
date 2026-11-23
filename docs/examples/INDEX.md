@@ -43,5 +43,8 @@ regions used by the MM input overlay.
 Files under `python/examples/smoke/` validate API and runtime behavior. They are
 maintainer checks, not the recommended way to learn the package.
 
+See [Verify the Build](../advanced/BUILD_FROM_SOURCE.md#verify-the-build) for
+smoke suites, requirements, and execution commands.
+
 Advanced native examples live under `examples/`; legacy examples are retained
 for regression and historical reference.

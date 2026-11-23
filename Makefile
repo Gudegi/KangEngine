@@ -1,4 +1,4 @@
-.PHONY: build build_all build_cuda build_smokes build_smokes_cuda build_current build_debug build_release build_relWithDebInfo \
+.PHONY: smoke build build_all build_cuda build_smokes build_smokes_cuda build_current build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug build_wheel \
         wheel pack_wheel \
@@ -18,6 +18,7 @@ WHEEL_DIR := $(BUILD_DIR)/wheel
 WHEEL_OUTPUT_DIR ?= python/dist/release
 EXECUTABLE := KangEngine
 PYTHON ?= python/.venv/bin/python
+SUITE ?= all
 UV ?= uv
 UNAME_S := $(shell uname -s)
 DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF -DKANGENGINE_BUILD_SMOKES=OFF
@@ -108,22 +109,21 @@ build_python_debug:
 build_python_cuda:
 	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=ON)
 
+# Run the current build without changing its configuration.
+smoke:
+	$(PYTHON) python/scripts/run_smokes.py $(foreach suite,$(SUITE),--suite $(suite))
+
 validate_physx_gpu: build_python_cuda
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/physics_gpu_system_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_root_state_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_articulation_state_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_articulation_control_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_contact_sensor_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/mimickit_engine_gpu_reset_smoke.py
+	$(PYTHON) python/scripts/run_smokes.py --suite physx-gpu
 
 validate_physx_gpu_cpp: build_smokes_cuda
-	./$(RELEASE_DIR)/physx_gpu_step_smoke
+	$(PYTHON) python/scripts/run_smokes.py --suite physx-gpu-cpp
 
 validate_fixed_update_gpu: build_python_cuda
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/fixed_update_gpu_stress.py
+	$(PYTHON) python/scripts/run_smokes.py --suite fixed-update-gpu
 
 validate_sim_visual_batch: build_python
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
+	$(PYTHON) python/scripts/run_smokes.py --suite sim-visual-batch
 
 check_python_api_style:
 	$(PYTHON) python/scripts/check_binding_style.py
@@ -147,8 +147,7 @@ validate_python_api: check_python_api_style build_python
 		python/kangengine/motion_module/__init__.py \
 		python/kangengine/motion_module/editor.py \
 		python/kangengine/motion_module/modules.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_api_surface_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_stub_surface_smoke.py
+	$(PYTHON) python/scripts/run_smokes.py --suite python-api
 
 # Keep the full workflow sequential even with make -j. 
 # wheel macOS CPU / Linux CUDA + vcpkg USD
@@ -170,37 +169,7 @@ validate_wheel:
 		--expect-usd $(WHEEL_VALIDATION_FLAGS) --wheel-dir $(WHEEL_OUTPUT_DIR)
 
 validate_render_component: build_python
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/asset/ply_loader_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_add_obj_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_vertex_color_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/debug_draw_transform_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/debug_geometry_ownership_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/quaternion_binding_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/mesh_component_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/resource_component_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_resource_manager_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/python_resource_manager_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/render_component_lifecycle_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_binding_updates_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/skinned_instance_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_policy_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/visual_resource_registration_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/material_texture_scope_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/scene_updates_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/shared_material_updates_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/shared_material_updates_smoke.py --scene-renderer
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/vertex_color_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/unlit_material_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/app_texture_source_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/app_backend_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/smoke/rendering/memory_texture_source_smoke.py
+	$(PYTHON) python/scripts/run_smokes.py --suite render-component
 
 # build Python + CPU + local USD
 build_usd_python:

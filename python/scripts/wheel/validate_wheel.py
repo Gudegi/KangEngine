@@ -201,14 +201,14 @@ def main() -> None:
         run(
             python_executable,
             "-I",
-            str(smoke / "public_api_surface_smoke.py"),
+            str(smoke / "api/public_api_surface_smoke.py"),
             cwd=temp,
             env=environment,
         )
         run(
             python_executable,
             "-I",
-            str(smoke / "public_stub_surface_smoke.py"),
+            str(smoke / "api/public_stub_surface_smoke.py"),
             cwd=temp,
             env=environment,
         )
@@ -217,7 +217,7 @@ def main() -> None:
         run(
             python_executable,
             "-I",
-            str(smoke / "physics_cpu_system_smoke.py"),
+            str(smoke / "physics/physics_cpu_system_smoke.py"),
             cwd=temp,
             env=environment,
         )
@@ -229,7 +229,7 @@ def main() -> None:
                 "-c",
                 (
                     "import runpy, sysconfig; from pathlib import Path; "
-                    f"runpy.run_path({str(smoke / 'physics_gpu_system_smoke.py')!r}, run_name='__main__'); "
+                    f"runpy.run_path({str(smoke / 'physics/physics_gpu_system_smoke.py')!r}, run_name='__main__'); "
                     "paths = {line.split()[-1] for line in Path('/proc/self/maps').read_text().splitlines() if '/' in line}; "
                     "root = Path(sysconfig.get_path('purelib')); "
                     "required = ('libPhysXGpu_64.so', 'libcudart.so.13'); "
@@ -245,11 +245,11 @@ def main() -> None:
             )
 
         for script in (
-            "scene_data_smoke.py",
-            "animation_sim_roundtrip_smoke.py",
-            "scene_resource_manager_smoke.py",
-            "render_component_lifecycle_smoke.py",
-            "sim_visual_batch_smoke.py",
+            "scene/scene_data_smoke.py",
+            "sim/animation_sim_roundtrip_smoke.py",
+            "scene/scene_resource_manager_smoke.py",
+            "scene/render_component_lifecycle_smoke.py",
+            "sim/sim_visual_batch_smoke.py",
         ):
             run(
                 python_executable, "-I", str(smoke / script), cwd=temp,
@@ -258,20 +258,20 @@ def main() -> None:
             )
         if args.render_smoke:
             for script in (
-                "scene_renderer_boundary_smoke.py",
-                "scene_render_system_smoke.py",
+                "rendering/scene_renderer_boundary_smoke.py",
+                "rendering/scene_render_system_smoke.py",
             ):
                 run(python_executable, "-I", str(smoke / script), cwd=temp, env=environment)
         else:
             print("SKIP: rendering checks (enable with --render-smoke)")
         if args.gpu_smoke:
             run(
-                python_executable, "-I", str(smoke / "mimickit_engine_gpu_reset_smoke.py"),
+                python_executable, "-I", str(smoke / "sim/mimickit_engine_gpu_reset_smoke.py"),
                 cwd=temp, env=environment,
             )
             if args.render_smoke:
                 run(
-                    python_executable, "-I", str(smoke / "cuda_gl_visual_smoke.py"),
+                    python_executable, "-I", str(smoke / "sim/cuda_gl_visual_smoke.py"),
                     cwd=temp, env=environment,
                 )
         print(f"PASS: isolated wheel {wheel.name}")

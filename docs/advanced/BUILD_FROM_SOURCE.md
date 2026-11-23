@@ -427,6 +427,7 @@ Common make targets:
 | `make wheel` | platform default | bundled vcpkg | build, package, and validate in order |
 | `make validate_physx_gpu` | Python CUDA | disabled | GPU regression tests |
 | `make validate_physx_gpu_cpp` | C++ CUDA | disabled | native GPU smoke test |
+| `make smoke` | current release configuration | current cache | run all automatic smoke checks without rebuilding |
 | `make run2` | current release configuration | current cache | build and run executable |
 
 Development extensions are written to `python/kangengine/_kangengine.so`.
@@ -434,6 +435,73 @@ Debug variants are available as `build_debug`, `build_usd_debug`,
 `build_python_debug`, and `build_usd_python_debug`.
 
 The executable target is selected in `CMakeLists.txt` by changing the active `MAIN_FILE` entry near the example list.
+
+## Verify the Build
+
+Smoke suites check the current development build. The runner does not build or
+reconfigure the engine. Python cases use the runner's interpreter and the
+repository's Python package, so build the Python extension first. Native targets
+must already exist in `build/release`, or the directory passed to `--build-dir`.
+Enable `KANGENGINE_BUILD_SMOKES=ON` in your CMake configuration to build native
+smoke targets.
+
+Run from the repository root:
+
+```bash
+python python/scripts/run_smokes.py --list
+python python/scripts/run_smokes.py --suite core
+python python/scripts/run_smokes.py --suite render --suite asset
+python python/scripts/run_smokes.py --case py:scene_render_instancing_smoke
+make smoke SUITE=render
+make smoke SUITE=core
+make smoke
+```
+
+Suites are execution presets and can overlap. Selecting multiple suites runs
+each case once. The default suite is `all`; use `make smoke SUITE=core` or
+`python python/scripts/run_smokes.py --suite core` for the smaller core suite.
+
+Both `make smoke` and `python python/scripts/run_smokes.py` run every registered
+automatic case, including CUDA, ovrtx, MCP, and stress checks. Explicit
+`SUITE=all` and `--suite all` are equivalent. This requires all their dependencies
+and excludes manual entries.
+Use `python python/scripts/run_smokes.py --suite all --list` to preview the selection.
+
+| Suite | Checks | Additional requirements |
+| --- | --- | --- |
+| `core` | API, scene data, CPU animation, render contracts | No display required |
+| `render` | Native rendering, materials, debug geometry, visuals | OpenGL and a usable display/context; some cases also require PhysX |
+| `asset` | Asset loading, textures, rigid visuals | OpenGL; some cases also require USD or PhysX |
+| `physics` | CPU physics and simulation | PhysX |
+| `gpu` | CUDA physics and CUDA/OpenGL interop | CUDA-enabled build and supported NVIDIA GPU; visual cases also require OpenGL |
+| `app` | Frame execution | OpenGL |
+| `mcp` | Application automation | OpenGL and MCP dependencies |
+| `ovrtx` | Optional renderer adapter | ovrtx environment and supported GPU; some cases also require OpenGL or PhysX |
+| `stress` | Fixed-update catch-up under stalls | CUDA physics and OpenGL |
+
+The `gpu` suite covers CUDA-specific checks. OpenGL rendering and ovrtx have
+their own suites even though they also use the GPU.
+
+Use `--list --suite render` to inspect sources and requirements without loading
+the engine. Requirements describe what each case needs; the case itself checks
+runtime availability. Each case runs sequentially in a separate process,
+including argument variants such as
+`py:shared_material_updates_smoke:scene-renderer`.
+
+A failed, timed-out, skipped, or unstartable case makes the suite exit nonzero,
+while remaining cases still run. Per-case output, durations, and `summary.json`
+are saved under `build/smoke-logs/`.
+
+Source validation targets such as `make validate_render_component`,
+`make validate_python_api`, and `make validate_physx_gpu` configure and build
+before running their checks. `make validate_render_component` selects a Python
+CPU build without USD. To preserve your current build configuration, run the matching suite
+directly, such as `--suite render-component`, `--suite python-api`, or
+`--suite physx-gpu`.
+
+The USD scene smoke requires a user-supplied file, and the native scene-input
+exporter is a utility. Both are listed as manual entries rather than included
+in automatic suites.
 
 ## OpenUSD Optional
 

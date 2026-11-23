@@ -170,7 +170,7 @@ def main():
     body = ke.asset.SMPLModel.load(
         ke.asset.smpl.repository_smpl_model_path()
     ).create_body()
-    texture_path = str(Path(__file__).resolve().parents[3] / "assets/textures/awesomeface.png")
+    texture_path = str(Path(ke.__file__).resolve().parent / "assets/textures/awesomeface.png")
     result = SimpleNamespace(
         motion=SimpleNamespace(skeleton_tree=body.skeleton_tree),
         skinned_meshes=[

@@ -1,10 +1,8 @@
 """Validate RenderComponent registration and subtree cleanup."""
 
 import gc
-import weakref
 
 import kangengine as ke
-import torch
 
 
 def main():
@@ -76,46 +74,6 @@ def main():
         pass
     else:
         raise AssertionError("update_geometry accepted mismatched normals")
-
-    debug_lines = app.scene.log_lines(
-        "/debug/component_lines",
-        material,
-        [[0.0, 0.0, 0.0], [0.0, 0.2, 0.0]],
-        [[0.5, 0.0, 0.0], [0.0, 0.8, 0.0]],
-        [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]],
-    )
-    assert debug_lines.component is not None
-    assert render_system.is_registered(debug_lines.component)
-    assert not debug_lines.component.casts_shadow
-    debug_lines.update_lines(
-        [[0.0, 0.0, 0.0]],
-        [[0.0, 0.5, 0.0]],
-        [[0.0, 0.0, 1.0, 1.0]],
-    )
-
-    debug_arrows = app.scene.log_arrows(
-        "/debug/component_arrows",
-        material,
-        [[0.0, 0.0, 0.0]],
-        [[0.0, 1.0, 0.0]],
-        [[1.0, 1.0, 0.0, 1.0]],
-    )
-    assert render_system.is_registered(debug_arrows.component)
-    debug_arrows.update_arrows(
-        [[0.0, 0.0, 0.0]],
-        [[1.0, 0.0, 0.0]],
-        [[1.0, 0.0, 1.0, 1.0]],
-    )
-    assert debug_lines.remove()
-    assert debug_arrows.remove()
-    assert render_system.registration_count == 1
-
-    transforms = torch.eye(4, dtype=torch.float32).reshape(1, 4, 4)
-    transforms_ref = weakref.ref(transforms)
-    view.set_transform_buffer(transforms)
-    del transforms
-    gc.collect()
-    assert transforms_ref() is not None
 
     temporary = app.scene.add_mesh(
         "/temporary",

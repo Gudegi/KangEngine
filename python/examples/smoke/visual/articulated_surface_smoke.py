@@ -44,8 +44,7 @@ class _App:
 
 
 def main():
-    root = Path(__file__).resolve().parents[3]
-    mjcf = root / "python/kangengine/assets/characters/kw/kw5.xml"
+    mjcf = Path(ke.__file__).resolve().parent / "assets/characters/kw/kw5.xml"
     app = _App()
     robot = ke.visual.ArticulatedSurface.create_from_mjcf(
         app, "/robot", mjcf, material=object()
