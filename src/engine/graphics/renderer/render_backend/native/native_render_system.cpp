@@ -42,6 +42,10 @@ void NativeRenderSystem::setExposure(float exposure) {
     _renderer.settings().exposure = exposure;
 }
 
+RenderDebugDraw& NativeRenderSystem::debugDraw() {
+    return _renderer.native().rasterizer().debugDraw();
+}
+
 void NativeRenderSystem::initialize(int width, int height) {
     _width = width;
     _height = height;

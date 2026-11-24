@@ -95,6 +95,7 @@ class Renderer {
     void setBackgroundColor(const glm::vec4& color);
     void setGroundStyle(const BackgroundSettings& settings);
     void setExposure(float exposure);
+    RenderDebugDraw& debugDraw();
     void syncScene(const Scene::RenderSceneFrame& scene);
     void syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
                    const glm::mat4& projection);

@@ -195,7 +195,6 @@ def main():
         if args.backend == "ovrtx":
             for operation in (
                 lambda: app.set_gamma(2.2),
-                lambda: app.debug.overlay.points(path="/unsupported", points=np.zeros((1, 3))),
                 lambda: app.raycast([0, 0, 1], [0, 0, -1]),
             ):
                 try:

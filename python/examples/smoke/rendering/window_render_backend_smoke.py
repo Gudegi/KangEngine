@@ -167,6 +167,8 @@ def main():
         app.draw_frame()
         assert not np.array_equal(first, app.window_pixels)
         app.set_camera_view(position=[0, 0, 4], target=[0, 0, 0])
+        app.debug.overlay.points("/resize/debug", [[0, 0, 0]],
+                                 [1, 0, 0, 1], size=14, overlay=True)
         for width, height in ((311, 217), (640, 360), (257, 193), (311, 217)):
             map_count = len(maps)
             resize_window(app, glfw, width, height)
@@ -175,9 +177,14 @@ def main():
             resized = app.read_rgb_pixels()
             assert resized.shape == (height, width, 3), resized.shape
             check_cube_aspect(resized)
+            assert (resized[..., 0] > 240).sum() > 50, "Debug point lost during resize"
             np.testing.assert_allclose(app.window_pixels.astype(int), resized.astype(int), atol=1)
             # Keep the next CUDA output mapped until the following resize.
             app.draw_frame()
+
+        app.debug.overlay.remove_all()
+        app.draw_frame()
+        assert (app.read_rgb_pixels()[..., 0] > 240).sum() < 50
 
         app.request_close()
         assert app.should_close()

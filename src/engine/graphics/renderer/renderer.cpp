@@ -107,6 +107,8 @@ void Renderer::setExposure(float exposure) {
     renderBackend().setExposure(exposure);
 }
 
+RenderDebugDraw& Renderer::debugDraw() { return renderBackend().debugDraw(); }
+
 void Renderer::syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
                          const glm::mat4& projection) {
     if (_pickView.view != view || _pickView.projection != projection)

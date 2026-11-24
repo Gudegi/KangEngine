@@ -52,6 +52,15 @@ def main():
             assert error < max(2, noise * 3), f"Environment toggle changed the scene: {error=}, {noise=}"
 
         app.set_camera_view(position=[-7, 4, 3], target=[-7, 1.5, -5])
+        app.debug_enabled = True
+        app.debug_on_top = True
+        app.update_debug_sample()
+        capture()
+        app.angle = 0.5
+        app.samples_dirty = True
+        capture()
+        app.debug_enabled = False
+        app.update_debug_sample()
         app.angle = 0
         app.samples_dirty = True
         before = capture()

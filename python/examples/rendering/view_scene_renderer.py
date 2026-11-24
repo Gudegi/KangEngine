@@ -30,6 +30,8 @@ class SceneRendererApp(ke.App):
         self.exposure = 1.0
         self.checker_enabled = False
         self.checker_ground = None
+        self.debug_enabled = False
+        self.debug_on_top = False
         self.set_fixed_update_hz(update_hz=60)
         self.set_ui_layout_mode(mode=ke.UILayoutMode.EDITOR)
         self.set_camera_view(position=[18, 16, 24], target=[0, 1, 0])
@@ -305,6 +307,27 @@ class SceneRendererApp(ke.App):
             descriptor, self.cuda_buffer = to_external_transform_desc(buffer)
             self.get_scene_render_system().set_external_buffer(self.cuda_instances.component, descriptor)
         self.samples_dirty = False
+        if self.debug_enabled:
+            self.update_debug_points()
+
+    def update_debug_sample(self):
+        paths = ("/sample/axes", "/sample/contact", "/sample/reference")
+        if not self.debug_enabled:
+            for path in paths:
+                self.debug.overlay.clear(path=path)
+            return
+        self.debug.overlay.axes(path=paths[0], origin=[0, 1, 0], length=3,
+                                width=3, overlay=self.debug_on_top)
+        self.debug.overlay.arrows(path=paths[1], starts=[[0, 0.1, 0]],
+                                  ends=[[0, 3, 0]], colors=rgba(ke.ColorType.YELLOW),
+                                  width=3, overlay=self.debug_on_top)
+        self.update_debug_points()
+
+    def update_debug_points(self):
+        points = [[3 * math.cos(self.angle), 1, 3 * math.sin(self.angle)], [0, 2, 0]]
+        self.debug.overlay.points(path="/sample/reference", points=points,
+                                  colors=rgba(ke.ColorType.CYAN), size=12,
+                                  overlay=self.debug_on_top)
 
     def on_ray_picked(self, result):
         self.last_pick = (f"{result.prim.get_path()} | instance {result.instance_index} | {result.distance:.2f} m"
@@ -375,12 +398,17 @@ class SceneRendererApp(ke.App):
                     self.set_camera_view(position=[0, 1.3, 12], target=[0, 1.3, 5.5])
                     self.select_prim(self.hidden_target.prim)
                 ke.imgui.text_wrapped("Click a moving skin or an instance to test its current pose.")
-            self.draw_light_controls()
+            self.draw_render_controls()
         ke.imgui.end()
         if self.samples_dirty:
             self.update_motion_samples()
 
-    def draw_light_controls(self):
+    def draw_render_controls(self):
+        if ke.imgui.collapsing_header("Debug"):
+            changed, self.debug_enabled = ke.imgui.checkbox("Points and axes", self.debug_enabled)
+            overlay_changed, self.debug_on_top = ke.imgui.checkbox("Draw through objects", self.debug_on_top)
+            if changed or overlay_changed:
+                self.update_debug_sample()
         if ke.imgui.collapsing_header("Lighting"):
             changed, self.ambient_intensity = ke.imgui.slider_float("Ambient", self.ambient_intensity, 0, 0.5)
             if changed:

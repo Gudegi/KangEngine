@@ -166,7 +166,8 @@ class PythonSceneCollector {
     RenderSceneFrame _pending;
 };
 
-class PythonRenderBackend final : public KE::RenderBackend {
+class PythonRenderBackend final : public KE::RenderBackend,
+                                  public KE::RenderDebugDraw {
   public:
     explicit PythonRenderBackend(py::object factory, bool gpuOutput)
         : _factory(std::move(factory)), _gpuOutput(gpuOutput) {}
@@ -383,6 +384,48 @@ class PythonRenderBackend final : public KE::RenderBackend {
     void setExposure(float exposure) override {
         py::gil_scoped_acquire gil;
         _adapter.attr("set_exposure")(exposure);
+    }
+    KE::RenderDebugDraw& debugDraw() override { return *this; }
+    void setLines(const std::string& path, const std::vector<glm::vec3>& starts,
+                  const std::vector<glm::vec3>& ends,
+                  const std::vector<glm::vec4>& colors, float width,
+                  bool hidden, bool overlay) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw")
+            .attr("lines")(path, floatArrayFromVecVector(starts),
+                           floatArrayFromVecVector(ends),
+                           floatArrayFromVecVector(colors), width, hidden,
+                           overlay);
+    }
+    void setPoints(const std::string& path,
+                   const std::vector<glm::vec3>& points,
+                   const std::vector<glm::vec4>& colors, float size,
+                   bool hidden, bool overlay) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw")
+            .attr("points")(path, floatArrayFromVecVector(points),
+                            floatArrayFromVecVector(colors), size, hidden,
+                            overlay);
+    }
+    void clearLines(const std::string& path) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw").attr("clear_lines")(path);
+    }
+    void clearPoints(const std::string& path) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw").attr("clear_points")(path);
+    }
+    void setVisible(const std::string& path, bool visible) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw").attr("set_visible")(path, visible);
+    }
+    void remove(const std::string& path) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw").attr("remove")(path);
+    }
+    void removeAll() override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("debug_draw").attr("remove_all")();
     }
     void beginFrame() override {
         _pending = {};

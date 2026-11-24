@@ -20,6 +20,7 @@ import numpy as np
 import ovrtx
 import ovstage
 from .._core import _ke
+from ._ovrtx_debug import OvrtxDebugDraw
 
 # Calibrated against linear HDR on a white rough PBR surface in OVRTX 0.7.
 _AMBIENT_INTENSITY_SCALE = 1 / 2500
@@ -61,6 +62,7 @@ def _base_color_texture(item):
 class OvrtxSceneAdapter:
     def __init__(self, width, height):
         self._resolution = (width, height)
+        self.debug_draw = OvrtxDebugDraw(self)
         ovrtx.library_telemetry_opt_out()
         self._renderer = ovrtx.Renderer(
             config=ovrtx.RendererConfig(keep_system_alive=False)
@@ -136,7 +138,9 @@ def Scope "Render" {{
         rel orderedVars = </Render/Camera/LdrColor>
         def RenderVar "LdrColor" {{
             string sourceName = "LdrColor"
+            opaque omni:rtx:aov
         }}
+        {self.debug_draw.schema()}
     }}
 }}
 """
@@ -947,6 +951,7 @@ def {schema} "Light"{shaping} {{
             12 / math.tan(math.radians(camera["vertical_fov"]) / 2),
         )
         self._write("/World/Camera", "clippingRange", [camera["near"], camera["far"]])
+        self.debug_draw.prepare(camera, structural_change)
         self._stage.compute_hierarchy(self._ordinal, self._ordinal)
         self._stage.advance_write_floor(self._ordinal, ovstage.Scope.ALL).wait()
 
@@ -965,7 +970,7 @@ def {schema} "Light"{shaping} {{
             render_products={"/Render/Camera"}, delta_time=1 / 60, ordinal=self._ordinal
         )
         product = self._products["/Render/Camera"].frames[-1]
-        self._output = product.render_vars["/Render/Camera/LdrColor"]
+        self._output = product.render_vars[self.debug_draw.output_path]
         if frame.get("pick") is not None:
             self._read_pick(product, objects, batches)
         self._objects = objects
@@ -1014,6 +1019,7 @@ def {schema} "Light"{shaping} {{
 
     def close(self):
         try:
+            self.debug_draw.close()
             self._batch_query_stack.close()
             self._release_output()
             if self._attached:

@@ -1771,53 +1771,53 @@ void App::updateRenderableSkinningMatrices(RenderableHandle handle,
 }
 
 void App::logDebugLines(const std::string& path,
-                        const std::vector<glm::vec3>& starts,
-                        const std::vector<glm::vec3>& ends,
-                        const std::vector<glm::vec4>& colors, float width,
-                        bool hidden, bool overlay) {
-    _renderer.native().rasterizer().logDebugLines(path, starts, ends, colors,
-                                                  width, hidden, overlay);
+                       const std::vector<glm::vec3>& starts,
+                       const std::vector<glm::vec3>& ends,
+                       const std::vector<glm::vec4>& colors, float width,
+                       bool hidden, bool overlay) {
+    _renderer.debugDraw().logLines(path, starts, ends, colors, width, hidden,
+                                  overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::mat4& transform,
-                       float length, float width, bool hidden, bool overlay) {
-    _renderer.native().rasterizer().logDebugAxes(path, transform, length, width,
-                                                 hidden, overlay);
+                      float length, float width, bool hidden, bool overlay) {
+    _renderer.debugDraw().logAxes(path, transform, length, width, hidden,
+                                 overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::vec3& origin,
-                       const glm::vec3& xAxis, const glm::vec3& yAxis,
-                       const glm::vec3& zAxis, float length, float width,
-                       bool hidden, bool overlay) {
-    _renderer.native().rasterizer().logDebugAxes(
-        path, origin, xAxis, yAxis, zAxis, length, width, hidden, overlay);
+                      const glm::vec3& xAxis, const glm::vec3& yAxis,
+                      const glm::vec3& zAxis, float length, float width,
+                      bool hidden, bool overlay) {
+    _renderer.debugDraw().logAxes(path, origin, xAxis, yAxis, zAxis, length,
+                                 width, hidden, overlay);
 }
 
 void App::clearDebugLines(const std::string& path) {
-    _renderer.native().rasterizer().clearDebugLines(path);
+    _renderer.debugDraw().clearLines(path);
 }
 
 void App::logDebugPoints(const std::string& path,
-                         const std::vector<glm::vec3>& points,
-                         const std::vector<glm::vec4>& colors, float size,
-                         bool hidden, bool overlay) {
-    _renderer.native().rasterizer().logDebugPoints(path, points, colors, size,
-                                                   hidden, overlay);
+                        const std::vector<glm::vec3>& points,
+                        const std::vector<glm::vec4>& colors, float size,
+                        bool hidden, bool overlay) {
+    _renderer.debugDraw().logPoints(path, points, colors, size, hidden,
+                                   overlay);
 }
 
 void App::clearDebugPoints(const std::string& path) {
-    _renderer.native().rasterizer().clearDebugPoints(path);
+    _renderer.debugDraw().clearPoints(path);
 }
 
 void App::setDebugVisible(const std::string& path, bool visible) {
-    _renderer.native().rasterizer().setDebugVisible(path, visible);
+    _renderer.debugDraw().setVisible(path, visible);
 }
 
 void App::removeDebug(const std::string& path) {
-    _renderer.native().rasterizer().removeDebug(path);
+    _renderer.debugDraw().remove(path);
 }
 
-void App::removeAllDebug() { _renderer.native().rasterizer().removeAllDebug(); }
+void App::removeAllDebug() { _renderer.debugDraw().removeAll(); }
 
 void App::setWorldText(const std::string& path, const WorldTextDesc& desc) {
     _renderer.native().rasterizer().setWorldText(path, desc);

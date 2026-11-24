@@ -4,6 +4,9 @@
 
 ### Added
 
+- Support debug points, lines, axes, and arrows on ovrtx, including depth testing,
+  visibility controls, and RGB capture.
+
 - Add `set_exposure()` for Native and ovrtx, plus ovrtx ambient, background color,
   and standard checker ground controls.
 - Support fixed-topology CPU mesh deformation through `update_geometry()` on ovrtx.

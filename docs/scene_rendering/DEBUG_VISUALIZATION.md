@@ -2,17 +2,15 @@
 
 Use `app.debug` as the entry point for debug visualization and text:
 
-- `app.debug.overlay` draws graphics API line and point primitives through the
-  debug render pass, without creating scene Prims or mesh objects. Axes and
-  arrows are built from line segments.
+- `app.debug.overlay` draws lines and points without creating scene Prims or
+  mesh objects. Axes and arrows are built from line segments.
 - `app.debug.geometry` creates triangle-mesh debug objects in the SceneGraph
   and draws them through the scene renderer, using instancing for batches.
 - `app.debug.world_text` draws screen-aligned text at a 3D world position.
 - `app.debug.screen_text` draws text in viewport pixel coordinates.
 
-Both drawing paths ultimately use the graphics API. Overlay uses line widths
-and point sizes in pixels; geometry uses mesh dimensions such as radii in world
-units.
+Overlay uses line widths and point sizes in pixels; geometry uses mesh
+dimensions such as radii in world units.
 
 `app.debug` groups the existing helpers; it is not a SceneGraph node or a
 separate data store. Only `geometry` creates scene objects, owned by the current
@@ -26,7 +24,7 @@ scene. Overlay and text entries do not appear in the scene graph panel.
 
 Geometry is managed through its returned scene-object view. Overlay and text
 are managed by path. Use `app.debug.*` for new code; overlay `clear*()` methods
-remain available to empty data while retaining reusable buffers.
+remain available to empty data while retaining path entries.
 
 The previous entry points (`app.debug_overlay`, `app.scene.debug_geometry`,
 `app.world_text`, and `app.screen_text`) still refer to the same helper objects.
@@ -35,6 +33,18 @@ Updates or removals through either entry point affect the same data.
 ![Debug geometry, overlay, and text](../images/scene_rendering/debug_visualization.png)
 
 ## Debug overlay
+
+OVRTX overlays use [SPG (Sensor Processing Graphs)](https://nvidia-omniverse.github.io/ovrtx/spg/overview.html).
+
+```text
+OVRTX color + depth -> SPG debug overlay -> Output image
+```
+
+Native and OVRTX support the same overlay calls, including depth testing and
+`overlay=True` to draw through objects. OVRTX includes overlays in window output
+and headless RGB captures. Its debug colors are composited after tone mapping,
+so exposure does not affect them; line ends and edge smoothing may differ from
+Native. World and screen text remain Native-only.
 
 Use `debug.overlay` for lightweight lines, points, axes, and arrows that do not
 create SceneGraph Prims:
@@ -77,7 +87,7 @@ The next draw call replaces the batch's options too, including `hidden`.
 for every overlay entry. These calls do not remove scene objects or text.
 
 For frequently reused paths, `clear_lines(path)`, `clear_points(path)`, and
-`clear(path)` remain available to empty data while retaining reusable buffers.
+`clear(path)` remain available to empty data while retaining path entries.
 `clear(path)` empties both line and point data. These methods do not remove
 entries or match path prefixes.
 
@@ -101,7 +111,7 @@ self.debug.overlay.arrows(
 
 Each arrow uses a shaft and four head segments. The head length is 20% of the
 arrow length, with an 8% half-width. Arrows of length at most `1e-8` are omitted;
-an empty batch clears the previous arrows while retaining reusable buffers.
+an empty batch clears the previous arrows while retaining the path entry.
 
 ## Scene debug geometry
 

@@ -1,5 +1,4 @@
 #include "engine/graphics/renderer/debug_renderer.hpp"
-#include "engine/graphics/material/colors.hpp"
 #include "engine/graphics/renderer/shader_library.hpp"
 #include "utils/asset_path.hpp"
 #include <algorithm>
@@ -17,43 +16,10 @@ glm::vec4 pickColor(const std::vector<glm::vec4>& colors, size_t i) {
     return colors[std::min(i, colors.size() - 1)];
 }
 
-glm::vec4 presetColor(ColorType type) {
-    const Color& c = ColorLibrary::get(type);
-    return glm::vec4(c.r, c.g, c.b, c.a);
-}
-
 size_t growVertexCapacity(size_t requested) {
     if (requested == 0)
         return 0;
     return std::max<size_t>(requested * 2, 8);
-}
-
-void validateLineInputs(const char* functionName,
-                        const std::vector<glm::vec3>& starts,
-                        const std::vector<glm::vec3>& ends,
-                        const std::vector<glm::vec4>& colors) {
-    if (starts.size() != ends.size()) {
-        throw std::invalid_argument(std::string(functionName) +
-                                    " requires starts and ends to have the "
-                                    "same length.");
-    }
-    if (!colors.empty() && colors.size() != 1 &&
-        colors.size() != starts.size()) {
-        throw std::invalid_argument(std::string(functionName) +
-                                    " colors must be empty, length 1, or "
-                                    "match the number of lines.");
-    }
-}
-
-void validatePointInputs(const char* functionName,
-                         const std::vector<glm::vec3>& points,
-                         const std::vector<glm::vec4>& colors) {
-    if (!colors.empty() && colors.size() != 1 &&
-        colors.size() != points.size()) {
-        throw std::invalid_argument(std::string(functionName) +
-                                    " colors must be empty, length 1, or "
-                                    "match the number of points.");
-    }
 }
 
 } // namespace
@@ -176,19 +142,15 @@ void DebugRenderer::ensurePointBatchGpu(PointBatch& batch) {
         batch.vertexBuffer->setData(batch.vertices.data(), bytes);
 }
 
-void DebugRenderer::logLines(const std::string& path,
-                             const std::vector<glm::vec3>& starts,
-                             const std::vector<glm::vec3>& ends,
-                             const std::vector<glm::vec4>& colors, float width,
-                             bool hidden, bool overlay) {
-    if (path.empty())
-        return;
-    validateLineInputs("DebugRenderer::logLines", starts, ends, colors);
-
+void DebugRenderer::setLines(const std::string& path,
+                            const std::vector<glm::vec3>& starts,
+                            const std::vector<glm::vec3>& ends,
+                            const std::vector<glm::vec4>& colors, float width,
+                            bool hidden, bool overlay) {
     auto& batch = _lineBatches[path];
     batch.vertices.clear();
     batch.vertices.reserve(starts.size() * 2);
-    batch.width = std::max(1.0f, width);
+    batch.width = width;
     batch.hidden = hidden;
     batch.overlay = overlay;
 
@@ -201,32 +163,6 @@ void DebugRenderer::logLines(const std::string& path,
     ensureLineBatchGpu(batch);
 }
 
-void DebugRenderer::logAxes(const std::string& path, const glm::mat4& transform,
-                            float length, float width, bool hidden, bool overlay) {
-    logAxes(path, glm::vec3(transform[3]), glm::vec3(transform[0]),
-            glm::vec3(transform[1]), glm::vec3(transform[2]), length, width,
-            hidden, overlay);
-}
-
-void DebugRenderer::logAxes(const std::string& path, const glm::vec3& origin,
-                            const glm::vec3& xAxis, const glm::vec3& yAxis,
-                            const glm::vec3& zAxis, float length, float width,
-                            bool hidden, bool overlay) {
-    const float safeLength = std::max(0.0f, length);
-    const std::vector<glm::vec3> starts{origin, origin, origin};
-    const std::vector<glm::vec3> ends{
-        origin + glm::normalize(xAxis) * safeLength,
-        origin + glm::normalize(yAxis) * safeLength,
-        origin + glm::normalize(zAxis) * safeLength,
-    };
-    const std::vector<glm::vec4> colors{
-        presetColor(ColorType::RED),
-        presetColor(ColorType::GREEN),
-        presetColor(ColorType::BLUE),
-    };
-    logLines(path, starts, ends, colors, width, hidden, overlay);
-}
-
 void DebugRenderer::clearLines(const std::string& path) {
     auto it = _lineBatches.find(path);
     if (it == _lineBatches.end())
@@ -234,23 +170,18 @@ void DebugRenderer::clearLines(const std::string& path) {
     it->second.vertices.clear();
 }
 
-void DebugRenderer::logPoints(const std::string& path,
-                              const std::vector<glm::vec3>& points,
-                              const std::vector<glm::vec4>& colors, float size,
-                              bool hidden, bool overlay) {
-    if (path.empty())
-        return;
-    validatePointInputs("DebugRenderer::logPoints", points, colors);
-
+void DebugRenderer::setPoints(const std::string& path,
+                             const std::vector<glm::vec3>& points,
+                             const std::vector<glm::vec4>& colors, float size,
+                             bool hidden, bool overlay) {
     auto& batch = _pointBatches[path];
     batch.vertices.clear();
     batch.vertices.reserve(points.size());
     batch.hidden = hidden;
     batch.overlay = overlay;
 
-    const float safeSize = std::max(1.0f, size);
     for (size_t i = 0; i < points.size(); ++i)
-        batch.vertices.push_back({points[i], pickColor(colors, i), safeSize});
+        batch.vertices.push_back({points[i], pickColor(colors, i), size});
 
     ensurePointBatchGpu(batch);
 }

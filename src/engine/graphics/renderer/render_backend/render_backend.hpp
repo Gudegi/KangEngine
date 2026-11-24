@@ -5,6 +5,7 @@
 #include "engine/graphics/renderer/render_backend/render_image.hpp"
 #include "engine/graphics/renderer/render_backend/render_picking.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/graphics/renderer/render_backend/render_debug_draw.hpp"
 #include "utils/types.hpp"
 
 #include <glm/mat4x4.hpp>
@@ -73,6 +74,9 @@ class RenderBackend {
     }
     virtual void setExposure(float) {
         throw std::runtime_error("Render backend does not support exposure");
+    }
+    virtual RenderDebugDraw& debugDraw() {
+        throw std::runtime_error("Render backend does not support debug drawing");
     }
     // Full state or explicit upserts/removals from one resource manager; no
     // Prim access. Unchanged lighting is retained. Camera matrices still come

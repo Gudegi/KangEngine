@@ -436,6 +436,7 @@ class Rasterizer : public RenderPipeline {
                         float size = 6.0f, bool hidden = false,
                         bool overlay = false);
     void clearDebugPoints(const std::string& path);
+    RenderDebugDraw& debugDraw() { return _debugRenderer; }
     void setDebugVisible(const std::string& path, bool visible);
     void removeDebug(const std::string& path);
     void removeAllDebug();

@@ -138,6 +138,17 @@ inline glm::quat quatFromXYZWSequence(const py::sequence& values,
                      values[1].cast<float>(), values[2].cast<float>());
 }
 
+template <glm::length_t N>
+inline py::array_t<float>
+floatArrayFromVecVector(const std::vector<glm::vec<N, float>>& values) {
+    py::array_t<float> result({py::ssize_t(values.size()), py::ssize_t(N)});
+    auto out = result.template mutable_unchecked<2>();
+    for (size_t i = 0; i < values.size(); ++i)
+        for (glm::length_t j = 0; j < N; ++j)
+            out(i, j) = values[i][j];
+    return result;
+}
+
 inline std::array<float, 3> vec3Values(const glm::vec3& value) {
     return {value.x, value.y, value.z};
 }

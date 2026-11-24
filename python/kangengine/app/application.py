@@ -453,7 +453,7 @@ class DebugGeometry:
 
 
 class DebugOverlay:
-    """Persistent debug batches; repeat a draw call at the same path to replace data."""
+    """Persistent Native/OVRTX debug batches; repeat a path to replace its data."""
 
     def __init__(self, app: "App"):
         self._app = app
