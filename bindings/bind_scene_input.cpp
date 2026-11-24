@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <cmath>
 #include <climits>
+#include <cstring>
 
 namespace py = pybind11;
 using namespace KE::Scene;
@@ -45,6 +46,20 @@ py::array geometryArray(const std::shared_ptr<RenderGeometryData>& owner,
         py::dtype::of<float>(), {py::ssize_t(values.size()), py::ssize_t(3)},
         {py::ssize_t(sizeof(glm::vec3)), py::ssize_t(sizeof(float))},
         values.data(), py::cast(owner));
+    result.attr("setflags")(false);
+    return result;
+}
+
+py::array
+colorArray(const std::shared_ptr<const std::vector<glm::vec4>>& values) {
+    auto* source = new std::shared_ptr<const std::vector<glm::vec4>>(values);
+    py::capsule owner(source, [](void* value) {
+        delete static_cast<decltype(source)>(value);
+    });
+    py::array result(
+        py::dtype::of<float>(), {py::ssize_t(values->size()), py::ssize_t(4)},
+        {py::ssize_t(sizeof(glm::vec4)), py::ssize_t(sizeof(float))},
+        values->data(), owner);
     result.attr("setflags")(false);
     return result;
 }
@@ -259,12 +274,18 @@ class PythonRenderBackend final : public KE::RenderBackend,
         if (batch.skin)
             throw std::runtime_error(
                 "Skinned SceneGraph transforms belong to the owner Prim");
-        if (colors && !colors->empty())
-            throw std::runtime_error(
-                "Python render backend does not yet support instance colors");
+        if (colors && !colors->empty() && colors->size() != 1 &&
+            colors->size() != transforms.size())
+            throw std::invalid_argument(
+                "colors must be empty, length 1, or match the instance count");
         batch.transforms =
             std::make_shared<const std::vector<glm::mat4>>(transforms);
         batch.external.reset();
+        if (colors)
+            setRenderableColors(handle, *colors);
+        else if (batch.colors->size() > 1 &&
+                 batch.colors->size() != transforms.size())
+            setRenderableColors(handle, {});
         ++batch.revision;
     }
     void
@@ -273,45 +294,57 @@ class PythonRenderBackend final : public KE::RenderBackend,
         auto& batch = _batches.at(handle);
         const auto& view = desc.view;
         if (batch.skin || desc.format != KE::ExternalBufferFormat::Mat4 ||
-            !view.isCuda() || view.dtype != KE::Sim::SimDType::Float32)
-            throw std::invalid_argument(
-                "Python external buffers require CUDA float32 Mat4 instances");
+            (!view.isCuda() && !view.isCpu()) ||
+            view.dtype != KE::Sim::SimDType::Float32)
+            throw std::invalid_argument("Python external buffers require CPU "
+                                        "or CUDA float32 Mat4 instances");
         const int64_t count =
             desc.count ? desc.count : (view.shape.empty() ? 0 : view.shape[0]);
         if (view.shape.size() != 3 || view.shape[1] != 4 ||
             view.shape[2] != 4 || count < 0 || count > view.shape[0] ||
-            count > INT_MAX || (count && !view.data) || view.deviceId < 0 ||
+            count > INT_MAX || (count && !view.data) ||
+            (view.isCuda() && view.deviceId < 0) ||
             (!view.strides.empty() &&
              view.strides != std::vector<int64_t>{16, 4, 1}) ||
             (desc.strideBytes && desc.strideBytes != sizeof(glm::mat4)))
-            throw std::invalid_argument("CUDA instances require contiguous "
+            throw std::invalid_argument("External instances require contiguous "
                                         "column-major [N,4,4] matrices");
         if (desc.syncPolicy == KE::ExternalSyncPolicy::Fence ||
             (desc.syncPolicy == KE::ExternalSyncPolicy::Event &&
-             !view.readyEventHandle))
-            throw std::invalid_argument("CUDA instances require a valid event "
-                                        "or stream synchronization policy");
+             (!view.isCuda() || !view.readyEventHandle)))
+            throw std::invalid_argument("External instances require CPU-ready "
+                                        "data or a valid CUDA event/stream");
         const bool unchanged =
             batch.external &&
             desc.syncPolicy == KE::ExternalSyncPolicy::Versioned &&
             batch.external->syncPolicy == desc.syncPolicy &&
             batch.external->view.data == view.data &&
+            batch.external->view.memoryType == view.memoryType &&
             batch.external->view.deviceId == view.deviceId &&
             batch.external->view.version == view.version &&
             batch.external->count == count;
         batch.external = desc;
         batch.external->count = static_cast<int>(count);
-        if (!batch.transforms->empty())
+        if (batch.colors->size() > 1 && batch.colors->size() != count)
+            setRenderableColors(handle, {});
+        if (view.isCuda() && !batch.transforms->empty())
             batch.transforms = std::make_shared<const std::vector<glm::mat4>>();
         if (!unchanged)
             ++batch.revision;
     }
     void setRenderableColors(KE::RenderableHandle handle,
                              const std::vector<glm::vec4>& colors) override {
-        _batches.at(handle);
-        if (!colors.empty())
+        auto& batch = _batches.at(handle);
+        if (batch.skin)
             throw std::runtime_error(
-                "Python render backend does not yet support instance colors");
+                "Skinned SceneGraph colors belong to the owner Prim");
+        const size_t count =
+            batch.external ? batch.external->count : batch.transforms->size();
+        if (!colors.empty() && colors.size() != 1 && colors.size() != count)
+            throw std::invalid_argument(
+                "colors must be empty, length 1, or match the instance count");
+        batch.colors = std::make_shared<const std::vector<glm::vec4>>(colors);
+        ++batch.colorRevision;
     }
     void updateRenderableSkinningMatrices(
         KE::RenderableHandle handle,
@@ -583,6 +616,10 @@ class PythonRenderBackend final : public KE::RenderBackend,
         std::shared_ptr<const std::vector<glm::mat4>> transforms =
             std::make_shared<const std::vector<glm::mat4>>();
         uint64_t revision = 0;
+        uint64_t snapshotRevision = 0;
+        std::shared_ptr<const std::vector<glm::vec4>> colors =
+            std::make_shared<const std::vector<glm::vec4>>();
+        uint64_t colorRevision = 0;
         std::shared_ptr<SkinSource> skin;
         std::shared_ptr<const std::vector<glm::mat4>> joints;
         std::shared_ptr<RenderGeometryData> geometry;
@@ -629,9 +666,23 @@ class PythonRenderBackend final : public KE::RenderBackend,
         return source;
     }
 
-    py::list batchesToList() const {
+    py::list batchesToList() {
         py::list result;
-        for (const auto& [handle, batch] : _batches) {
+        for (auto& [handle, batch] : _batches) {
+            const bool cpuExternal =
+                batch.external && batch.external->view.isCpu();
+            if (cpuExternal && (batch.external->syncPolicy !=
+                                    KE::ExternalSyncPolicy::Versioned ||
+                                batch.snapshotRevision != batch.revision)) {
+                // Own the CPU snapshot before passing it to the Python adapter.
+                auto transforms = std::make_shared<std::vector<glm::mat4>>(
+                    batch.external->count);
+                if (!transforms->empty())
+                    std::memcpy(transforms->data(), batch.external->view.data,
+                                transforms->size() * sizeof(glm::mat4));
+                batch.transforms = std::move(transforms);
+                batch.snapshotRevision = ++batch.revision;
+            }
             py::dict item;
             item["id"] = handle;
             item["path"] = "/Batches/b" + std::to_string(handle);
@@ -651,11 +702,14 @@ class PythonRenderBackend final : public KE::RenderBackend,
                               batch.material->textures);
 
             item["transforms"] = matrixArray(batch.transforms);
-            item["external"] =
-                batch.external ? py::cast(*batch.external) : py::none();
+            item["external"] = batch.external && !cpuExternal
+                                   ? py::cast(*batch.external)
+                                   : py::none();
             item["count"] = batch.external ? batch.external->count
                                            : batch.transforms->size();
             item["revision"] = batch.revision;
+            item["colors"] = colorArray(batch.colors);
+            item["color_revision"] = batch.colorRevision;
             item["skin"] = batch.skin;
             if (batch.skin) {
                 item["joints"] = matrixArray(batch.joints);

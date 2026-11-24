@@ -110,7 +110,7 @@ class RigidVisual:
             self.local_scale = np.ones((len(meshes), 3), dtype=np.float32)
             self.base_colors = np.ones((len(meshes), 4), dtype=np.float32)
 
-        # Register each part with its own material and render handle.
+        # Register each part with its own material.
         app.scene.define_prim(path, _ke.scene.PrimType.XFORM)
         rgba = normalize_color_array(color)
         for part_id, mesh in enumerate(meshes):
@@ -140,9 +140,12 @@ class RigidVisual:
                 apply_visual_alpha(view, part_material, display_color)
                 self.views.append(view)
                 self.body_prims.append(view.prim)
-                self.body_handles.append(
-                    int(app.get_scene_render_system()._handle(view.component))
+                handle = app.get_scene_render_system()._handle(
+                    view.component,
+                    required=self._transform_source == render_api.TransformSource.EXTERNAL_BUFFER,
                 )
+                if handle is not None:
+                    self.body_handles.append(int(handle))
             else:
                 prim = app.scene.define_prim(part_path, _ke.scene.PrimType.MESH)
                 component = prim.add_mesh_component()

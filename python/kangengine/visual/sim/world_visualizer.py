@@ -203,7 +203,7 @@ class RigidCPUExternalBackend(_RigidExternalBackend):
 
 
 class RigidGPUExternalBackend(_RigidExternalBackend):
-    """CUDA actor poses -> local part transforms -> mapped OpenGL buffers."""
+    """CUDA rigid poses -> mapped OpenGL transform buffers (native renderer)."""
 
     def __init__(self, app, world, obj_id, env_ids, path, groups):
         import torch
@@ -287,6 +287,72 @@ class RigidGPUExternalBackend(_RigidExternalBackend):
         self._row_tensors.clear()
         self._local_transforms.clear()
         self._rows_ready = None
+        return self
+
+
+class RigidGPUTransformBufferBackend(RigidGPUExternalBackend):
+    """CUDA rigid poses -> CUDA transform buffers -> external renderer."""
+
+    def __init__(self, *args, **kwargs):
+        import torch
+
+        from ...utils import to_external_transform_desc
+
+        super().__init__(*args, **kwargs)
+        self._stream = torch.cuda.current_stream(self.device_id)
+        self._ready = torch.cuda.Event()
+        self._version = 0
+        self._transforms = []
+        self._output_views = []
+        self._descriptors = []
+        for rows, visual in self._groups:
+            transforms = torch.empty(
+                (len(visual.body_handles), len(rows), 4, 4),
+                dtype=torch.float32, device=self.device_id,
+            )
+            descriptors = [to_external_transform_desc(part)[0] for part in transforms]
+            self._transforms.append(transforms)
+            self._descriptors.append(descriptors)
+            self._output_views.append([desc.view for desc in descriptors])
+
+    def sync(self):
+        import torch
+
+        self._require_valid()
+        gpu_system = self.world.gpu_system
+        gpu_system.fetch_rigid_data()
+        state = gpu_system.rigid_data()
+        try:
+            for rows, local, outputs in zip(
+                self._rows, self._local_transforms, self._output_views
+            ):
+                _ke.rigid_state_to_mapped_mat4_cuda(state, rows, local, outputs)
+        finally:
+            self._ready.record(self._stream)
+            # Protect borrowed PhysX rows until every part's transform is written.
+            producer = torch.cuda.ExternalStream(state.stream_handle, device=self.device_id)
+            producer.wait_event(self._ready)
+
+        self._version += 1
+        renderer = self.app.get_renderer()
+        for (_, visual), descriptors in zip(self._groups, self._descriptors):
+            for handle, desc in zip(visual.body_handles, descriptors):
+                view = desc.view
+                view.version = self._version
+                view.ready_event_handle = self._ready.cuda_event
+                desc.view = view
+                renderer.set_renderable_external_buffer(handle, desc)
+        return self
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        self._stream.synchronize()
+        super().release()
+        self._output_views.clear()
+        self._descriptors.clear()
+        self._transforms.clear()
+        self._ready = None
         return self
 
 
@@ -425,7 +491,7 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
 
 
 class ArticulationGPUExternalBackend(_VisualLifetime):
-    """CUDA articulation link poses consumed as renderer instance buffers."""
+    """CUDA articulation poses -> mapped OpenGL transform buffers (native renderer)."""
 
     def __init__(
         self,
@@ -571,6 +637,67 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self.app = None
         self.world = None
         self._mark_released()
+        return self
+
+
+class ArticulationGPUTransformBufferBackend(ArticulationGPUExternalBackend):
+    """CUDA articulation poses -> CUDA transform buffer -> external renderer."""
+
+    def __init__(self, *args, **kwargs):
+        import torch
+
+        from ...utils import to_gpu_array_view, to_external_transform_desc
+
+        super().__init__(*args, **kwargs)
+        self._stream = torch.cuda.ExternalStream(self.stream_handle, device=self.device_id)
+        self._ready = torch.cuda.Event()
+        self._version = 0
+        self._transforms = torch.empty(
+            (len(self.body_handles), self.num_envs, 4, 4),
+            dtype=torch.float32, device=self.device_id,
+        )
+        self._transform_view = to_gpu_array_view(self._transforms)
+        self._descriptors = [
+            to_external_transform_desc(part)[0] for part in self._transforms
+        ]
+
+    def sync(self):
+        import torch
+
+        self._require_valid()
+        if not self.body_handles:
+            return self
+        gpu_system = self.world.gpu_system
+        gpu_system.fetch_articulation_link_pose()
+        link_view = gpu_system.articulation_link_data()
+        _ke.articulation_link_state_to_mat4_cuda(
+            link_view, self._rows, self._link_indices,
+            self._transform_view, len(self.body_handles),
+        )
+        self._ready.record(self._stream)
+        # PhysX must not overwrite borrowed link poses before the gather finishes.
+        producer = torch.cuda.ExternalStream(link_view.stream_handle, device=self.device_id)
+        producer.wait_event(self._ready)
+
+        self._version += 1
+        renderer = self.app.get_renderer()
+        for handle, desc in zip(self.body_handles, self._descriptors):
+            view = desc.view
+            view.version = self._version
+            view.ready_event_handle = self._ready.cuda_event
+            desc.view = view
+            renderer.set_renderable_external_buffer(handle, desc)
+        return self
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        self._stream.synchronize()
+        super().release()
+        self._descriptors.clear()
+        self._transform_view = None
+        self._transforms = None
+        self._ready = None
         return self
 
 
@@ -842,6 +969,13 @@ class SimWorldVisualizer:
                 for prim in collision_prims:
                     self.app.scene.add_renderable(prim, shape_material)
 
+        prim_body_ids = None
+        if not body_handles:
+            prim_body_ids = {
+                prim.get_path(): body_id
+                for prim, body_id in zip(render_prims, render_body_ids)
+            }
+
         record = VisualArticulationSceneGraph(
             key[0],
             key[1],
@@ -853,6 +987,7 @@ class SimWorldVisualizer:
             handle_body_ids,
             base_colors=base_colors,
             owned_paths=(path, collision_path),
+            prim_body_ids=prim_body_ids,
         )
         self.visual_articulation_scene_graphs[key] = record
         return record
@@ -905,7 +1040,12 @@ class SimWorldVisualizer:
             ),
             show_collision,
         )
-        backend = ArticulationGPUExternalBackend(
+        backend_type = (
+            ArticulationGPUExternalBackend
+            if self.app.render_backend == "native"
+            else ArticulationGPUTransformBufferBackend
+        )
+        backend = backend_type(
             self.app,
             self.world,
             obj_id,
@@ -1045,6 +1185,8 @@ class SimWorldVisualizer:
                 )
                 groups.append((tuple(rows), visual))
             backend_type = RigidGPUExternalBackend if use_gpu else RigidCPUExternalBackend
+            if use_gpu and self.app.render_backend != "native":
+                backend_type = RigidGPUTransformBufferBackend
             backend = backend_type(
                 self.app, self.world, obj_id, env_ids, prim_base_path, groups
             )
@@ -1180,6 +1322,13 @@ class SimWorldVisualizer:
             mesh_asset_base_path=mesh_asset_base_path,
         )
 
+        prim_body_ids = None
+        if not body_handles:
+            prim_body_ids = {
+                prim.get_path(): body_id
+                for prim, body_id in zip(render_prims, render_body_ids)
+            }
+
         record = VisualArticulationSceneGraph(
             key[0],
             key[1],
@@ -1191,6 +1340,7 @@ class SimWorldVisualizer:
             handle_body_ids,
             base_colors=base_colors,
             owned_paths=(path,),
+            prim_body_ids=prim_body_ids,
         )
         self.visual_articulation_scene_graphs[key] = record
         return record
@@ -1420,7 +1570,9 @@ class SimWorldVisualizer:
                 color=_ke.Vec4(*display), transform_source=transform_source,
             )
             apply_visual_alpha(view, part_material, base)
-            handles.append(int(self.app.get_scene_render_system()._handle(view.component)))
+            handle = self.app.get_scene_render_system()._handle(view.component, required=external)
+            if handle is not None:
+                handles.append(int(handle))
         return handles, base_colors
 
     def _articulation_visual_asset(

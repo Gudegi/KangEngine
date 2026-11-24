@@ -1,5 +1,7 @@
 """ovstage scene updates and CPU/CUDA output images."""
 
+# TODO: Optimize ovstage scene initialization and CPU/CUDA transform updates.
+
 from contextlib import ExitStack, contextmanager
 from itertools import chain
 import math
@@ -76,6 +78,7 @@ class OvrtxSceneAdapter:
         self._objects = {}
         self._batches = {}
         self._batch_revisions = {}
+        self._batch_color_revisions = {}
         self._skin_layers = {}
         self._skin_revisions = {}
         self._textures = {}
@@ -326,13 +329,15 @@ def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
 }}
 '''
 
-        # USD instances share a prototype; only root transforms vary.
+        # USD instances share geometry and materials; root primvars carry tint.
         instances = "\n".join(f'''
     def Xform "i{idx}" (
         prepend references = </Batch/Prototype>
         instanceable = true
     ) {{
 {transform_attributes}
+        color3f primvars:instanceColor = (1,1,1) (interpolation = "constant")
+        float primvars:instanceOpacity = 1 (interpolation = "constant")
     }}
 ''' for idx in range(instance_count))
         return f'''#usda 1.0
@@ -354,6 +359,7 @@ def Xform "Batch" {{
         color = _base_color_texture(item)
         normal = textures.get("normal_texture", textures.get("normal_map"))
         alpha = textures.get("alpha_map")
+        instanced = "count" in item and item["skin"] is None and not (color or alpha)
         shaders = ''
         if textures:
             shaders = '''
@@ -401,11 +407,28 @@ def Xform "Batch" {{
         connections = ""
         if color:
             connections += f"color3f inputs:{channel}.connect = <{root}/Material/Texture.outputs:rgb>\n"
+        elif instanced:
+            connections += f"color3f inputs:{channel}.connect = <{root}/Material/InstanceColor.outputs:result>\n"
         if normal and not unlit:
             connections += f"normal3f inputs:normal.connect = <{root}/Material/Normal.outputs:rgb>\n"
         if item["alpha_mode"] and (alpha or color):
             source = "Alpha.outputs:r" if alpha else "Texture.outputs:a"
             connections += f"float inputs:opacity.connect = <{root}/Material/{source}>\n"
+        elif instanced and item["alpha_mode"]:
+            connections += f"float inputs:opacity.connect = <{root}/Material/InstanceOpacity.outputs:result>\n"
+        if instanced:
+            for name, dtype, fallback in (
+                ("Color", "float3", "(1,1,1)"),
+                ("Opacity", "float", "1"),
+            ):
+                shaders += f'''
+        def Shader "Instance{name}" {{
+            uniform token info:id = "UsdPrimvarReader_{dtype}"
+            token inputs:varname = "instance{name}"
+            {dtype} inputs:fallback = {fallback}
+            {dtype} outputs:result
+        }}
+'''
         return f'''
     def Material "Material" {{
         token outputs:surface.connect = <{root}/Material/Shader.outputs:surface>
@@ -591,6 +614,40 @@ def SkelRoot "Batch" {{
                 placement=ovstage.Placement.from_dlpack_device(matrices),
             ).wait()
 
+    def _write_batch_colors(self, key, item):
+        revision = item["color_revision"], tuple(item["material"]["base_color"])
+        if self._batch_color_revisions.get(key) == revision:
+            return
+        instance_colors = np.asarray(item["colors"], dtype=np.float32)
+        if len(instance_colors) and not item["alpha_mode"] and np.any(instance_colors[:, 3] < 1):
+            raise ValueError(
+                "ovrtx does not support per-instance alpha blending; use AlphaMode.MASK or Native"
+            )
+        # TODO: Document in the OVRTX guide: base-color/alpha textures require a shared tint.
+        if _base_color_texture(item) is not None or "alpha_map" in item["textures"]:
+            if len(instance_colors) > 1 and not np.all(instance_colors == instance_colors[0]):
+                raise ValueError(
+                    "ovrtx textured ExternalBuffer batches require one shared color; "
+                    "use Native for per-instance texture tints"
+                )
+            self._batch_color_revisions[key] = revision
+            return
+        colors = np.ones((item["count"], 4), dtype=np.float32)
+        if len(instance_colors):
+            colors *= instance_colors
+        colors *= item["material"]["base_color"]
+        values = [("instanceColor", colors[:, :3])]
+        if item["alpha_mode"]:
+            values.append(("instanceOpacity", colors[:, 3]))
+        for name, data in values:
+            self._stage.write_attribute(
+                self._batch_queries[key], "primvars:" + name, ordinal=self._ordinal,
+                tensors=np.ascontiguousarray(data), is_array=False,
+                semantic=(ovstage.AttributeSemantic.COLOR if name == "instanceColor"
+                          else ovstage.AttributeSemantic.NONE),
+            ).wait()
+        self._batch_color_revisions[key] = revision
+
     def _write_material(self, path, item):
         value = item["material"]
         color = np.asarray(value["base_color"]) * item["color"]
@@ -598,11 +655,17 @@ def SkelRoot "Batch" {{
         textured = _base_color_texture(item) is not None
         shader = path + "/Material/Shader"
         unlit = value["unlit"]
-        if textured:
-            self._write(path + "/Material/Texture", "inputs:scale", color)
-        else:
-            self._write(shader, "inputs:emissiveColor" if unlit else "inputs:diffuseColor", color[:3],
-                        semantic=ovstage.AttributeSemantic.COLOR)
+        instanced = "count" in item and item["skin"] is None
+        if instanced and (textured or "alpha_map" in textures):
+            if len(item["colors"]):
+                color *= item["colors"][0]
+            instanced = False
+        if not instanced:
+            if textured:
+                self._write(path + "/Material/Texture", "inputs:scale", color)
+            else:
+                self._write(shader, "inputs:emissiveColor" if unlit else "inputs:diffuseColor", color[:3],
+                            semantic=ovstage.AttributeSemantic.COLOR)
         phong = value["model"] == "phong"
         roughness = math.sqrt(2 / (max(0, value["shininess"]) + 2)) if phong else value["roughness"]
         for attribute, data in (
@@ -618,9 +681,9 @@ def SkelRoot "Batch" {{
         self._write(shader, "inputs:useSpecularWorkflow", int(phong or unlit), dtype=np.int32)
         if not unlit:
             self._write(shader, "inputs:emissiveColor", value["emissive"], semantic=ovstage.AttributeSemantic.COLOR)
-        if not item["alpha_mode"] or not (textured or "alpha_map" in textures):
+        if not instanced and (not item["alpha_mode"] or not (textured or "alpha_map" in textures)):
             self._write(shader, "inputs:opacity", color[3] if item["alpha_mode"] else 1)
-        if "alpha_map" in textures:
+        if not instanced and "alpha_map" in textures:
             self._write(path + "/Material/Alpha", "inputs:scale", [color[3]] * 4)
         self._write(shader, "inputs:opacityThreshold", item["alpha_cutoff"] if item["alpha_mode"] == 1 else 0)
 
@@ -898,6 +961,7 @@ def {schema} "Light"{shaping} {{
             self._values.clear()
             self._deformations.clear()
             self._batch_revisions.clear()
+            self._batch_color_revisions.clear()
             self._skin_revisions.clear()
 
         self._ordinal += 1
@@ -931,6 +995,7 @@ def {schema} "Light"{shaping} {{
         for key, item in batches.items():
             if item["skin"] is None:
                 self._write_batch_transforms(key, item)
+                self._write_batch_colors(key, item)
             else:
                 self._write_skin(key, item)
                 self._matrix(item["path"], item["world"])
@@ -952,7 +1017,12 @@ def {schema} "Light"{shaping} {{
         )
         self._write("/World/Camera", "clippingRange", [camera["near"], camera["far"]])
         self.debug_draw.prepare(camera, structural_change)
-        self._stage.compute_hierarchy(self._ordinal, self._ordinal)
+
+        # Keep derived transforms on the GPU for RTX consumption.
+        self._stage.compute_hierarchy(
+            self._ordinal, self._ordinal,
+            model=ovstage.HierarchyComputationModel.GPU_INCREMENTAL,
+        )
         self._stage.advance_write_floor(self._ordinal, ovstage.Scope.ALL).wait()
 
         # The pinned SDK needs a rebuild when no previous mesh survives.

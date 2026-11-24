@@ -2,19 +2,24 @@
 
 ## Unreleased
 
+### OVRTX
+
+- Support CPU simulation visuals through SceneGraph and ExternalBuffer, with
+  per-instance colors.
+- Support GPU rigid-body and articulation visuals without CPU pose downloads.
+- Support debug points, lines, axes, and arrows, including depth testing,
+  visibility controls, and RGB capture.
+- Add ambient, background color, and standard checker ground controls.
+- Support fixed-topology CPU mesh deformation through `update_geometry()`.
+- Support CPU/CUDA ExternalBuffer instance transforms and independent skinned
+  poses while sharing source meshes.
+- Support viewport picking and selection outlines.
+- Support Color/Phong materials, unlit, alpha masking, normal maps, and textures
+  from pixel arrays.
+
 ### Added
 
-- Support debug points, lines, axes, and arrows on ovrtx, including depth testing,
-  visibility controls, and RGB capture.
-
-- Add `set_exposure()` for Native and ovrtx, plus ovrtx ambient, background color,
-  and standard checker ground controls.
-- Support fixed-topology CPU mesh deformation through `update_geometry()` on ovrtx.
-- Support CPU/CUDA ExternalBuffer instance transforms and independent skinned
-  poses on ovrtx while sharing source meshes.
-- Support viewport picking and selection outlines on ovrtx.
-- Support Color/Phong materials, unlit, alpha masking, normal maps, and textures
-  from pixel arrays on ovrtx.
+- Add `set_exposure()` for Native and ovrtx.
 - Add base-color and normal textures to `ColorMaterial`.
 - Add `Material.clone()` to copy parameters while sharing textures.
 - Add `asset.load_ply()` for ASCII and binary PLY meshes and colored point clouds.

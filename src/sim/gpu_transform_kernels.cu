@@ -370,7 +370,7 @@ void launchRigidStateToMappedMat4CUDA(
     if (mappedTransforms.empty())
         return;
 
-    // Validate metadata before scheduling writes into mapped graphics memory.
+    // Validate metadata before scheduling writes into CUDA-accessible memory.
     if (!rigidState.isCUDA() || rigidState.dtype != SimDType::Float32 ||
         !rigidState.data || rigidState.shape.size() != 2 ||
         rigidState.shape[1] != 13 || rigidState.shape[0] <= 0 ||
@@ -395,9 +395,6 @@ void launchRigidStateToMappedMat4CUDA(
         const auto& output = mappedTransforms[part];
         validateMat4Output(output, count);
         validateContiguous(output, {16, 4, 1}, "mapped rigid output");
-        if (output.memoryType != SimMemoryType::OpenGLBuffer)
-            throw std::runtime_error(
-                "direct rigid output must be a mapped OpenGL buffer");
         if (output.deviceId != rigidState.deviceId ||
             output.streamHandle != streamHandle)
             throw std::runtime_error(

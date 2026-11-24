@@ -75,19 +75,59 @@ def check_delivery():
         assert not adapter.frame["batches"][0]["visible"]
         view.prim.set_active(True)
 
-        for operation in (
-            lambda: system.update_instances(view.component, transforms(), [[1, 0, 0, 1]]),
-            lambda: system.set_instance_colors(view.component, [[1, 0, 0, 1]]),
-            lambda: system.set_external_buffer(view.component, ke.render.ExternalBufferDesc()),
-        ):
-            try:
-                operation()
-            except RuntimeError:
-                pass
-            else:
-                raise AssertionError("Unsupported batch input was accepted")
+        try:
+            system.set_external_buffer(view.component, ke.render.ExternalBufferDesc())
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Invalid external descriptor was accepted")
         app.draw_frame()
         assert adapter.frame["batches"][0]["revision"] == accepted["revision"]
+
+        system.set_instance_colors(view.component, [[1, 0, 0, 1], [0, 1, 0, 1]])
+        app.draw_frame()
+        colored = adapter.frame["batches"][0]
+        np.testing.assert_array_equal(colored["colors"], [[1, 0, 0, 1], [0, 1, 0, 1]])
+        assert not colored["colors"].flags.writeable
+        assert colored["revision"] == accepted["revision"]
+        assert np.shares_memory(colored["transforms"], accepted["transforms"])
+        app.draw_frame()
+        assert np.shares_memory(colored["colors"], adapter.frame["batches"][0]["colors"])
+        system.set_instance_colors(view.component, [])
+        np.testing.assert_array_equal(colored["colors"], [[1, 0, 0, 1], [0, 1, 0, 1]])
+
+        # CPU descriptors retain immutable snapshots and honor producer versions.
+        storage = transforms()
+        source = ke.physics.GpuArrayView()
+        source.ptr = storage.ctypes.data
+        source.memory_type = ke.physics.SimMemoryType.CPU_HOST
+        source.dtype = ke.physics.SimDType.FLOAT32
+        source.shape = list(storage.shape)
+        source.version = 1
+        source.set_owner(storage)
+        descriptor = ke.render.ExternalBufferDesc(view=source, sync_policy=ke.render.ExternalSyncPolicy.VERSIONED)
+        system.set_external_buffer(view.component, descriptor)
+        app.draw_frame()
+        snapshot = adapter.frame["batches"][0]
+        np.testing.assert_array_equal(snapshot["transforms"], expected)
+        storage[0, 3, 0] += 2
+        system.set_external_buffer(view.component, descriptor)
+        app.draw_frame()
+        assert np.shares_memory(snapshot["transforms"], adapter.frame["batches"][0]["transforms"])
+        source.version += 1
+        descriptor.view = source
+        system.set_external_buffer(view.component, descriptor)
+        app.draw_frame()
+        np.testing.assert_array_equal(adapter.frame["batches"][0]["transforms"], storage.swapaxes(1, 2))
+        np.testing.assert_array_equal(snapshot["transforms"], expected)
+        descriptor.sync_policy = ke.render.ExternalSyncPolicy.NONE
+        system.set_external_buffer(view.component, descriptor)
+        storage[1, 3, 1] += 1
+        app.draw_frame()
+        np.testing.assert_array_equal(adapter.frame["batches"][0]["transforms"], storage.swapaxes(1, 2))
+        storage[1, 3, 1] += 1
+        app.draw_frame()
+        np.testing.assert_array_equal(adapter.frame["batches"][0]["transforms"], storage.swapaxes(1, 2))
 
         updated = transforms()
         updated[0, 3, 1] = 0.5
@@ -236,6 +276,54 @@ def check_rendering(backend):
         recolored = capture()
         for region in (slice(None, 64), slice(64, None)):
             assert np.abs(recolored[:, region] - restored[:, region]).mean() > 1
+
+        # Independent tints retain the prototype; textured OVRTX batches use one tint.
+        material.base_color = [1, 1, 1, 1]
+        material.unlit = True
+        system.set_instance_colors(view.component, [[1, 0, 0, 1], [0, 1, 0, 1]])
+        for textured in (False, True):
+            if textured:
+                material.base_color_texture = app.create_texture(
+                    np.full((4, 4, 4), 255, dtype=np.uint8), srgb=False)
+            shared_tint = bool(adapter and textured)
+            if shared_tint:
+                try:
+                    capture()
+                except ValueError as error:
+                    assert "one shared color" in str(error)
+                else:
+                    raise AssertionError("Per-instance texture tints were accepted")
+                system.set_instance_colors(view.component, [[1, 0, 0, 1]])
+            tinted = capture()
+            left, right = tinted[:, :64], tinted[:, 64:]
+            assert np.count_nonzero(left[..., 0] > left[..., 1] + 30) > 10
+            if shared_tint:
+                assert np.count_nonzero(right[..., 0] > right[..., 1] + 30) > 10
+            else:
+                assert np.count_nonzero(right[..., 1] > right[..., 0] + 30) > 10
+            if adapter:
+                roots = ovstage.instancing.get_prototype_roots(adapter._stage)
+                assert len(roots) == 1
+                assert len(ovstage.instancing.get_instance_roots(adapter._stage, roots[0])) == 2
+                system.set_instance_colors(view.component, [[1, 0, 0, 0.5]])
+                try:
+                    capture()
+                except ValueError as error:
+                    assert "alpha blending" in str(error)
+                else:
+                    raise AssertionError("Instance alpha blending was silently ignored")
+            view.set_alpha_mode(ke.render.AlphaMode.MASK)
+            system.set_instance_colors(view.component, [[1, 0, 0, 0]] if shared_tint
+                                       else [[1, 0, 0, 0], [0, 1, 0, 1]])
+            masked = capture()
+            assert np.abs(masked[:, :64] - tinted[:, :64]).mean() > 1
+            if shared_tint:
+                assert np.abs(masked[:, 64:] - tinted[:, 64:]).mean() > 1
+            else:
+                assert np.abs(masked[:, 64:] - tinted[:, 64:]).mean() < 2
+            system.set_instance_colors(view.component, [[1, 0, 0, 1]] if shared_tint
+                                       else [[1, 0, 0, 1], [0, 1, 0, 1]])
+            view.set_alpha_mode(ke.render.AlphaMode.OPAQUE)
         view.remove()
         removed = capture()
         assert np.abs(removed - recolored).mean() > 1

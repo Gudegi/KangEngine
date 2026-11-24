@@ -468,12 +468,12 @@ bool SceneRenderSystem::sharesBatch(const RenderComponent& first,
     return firstIt->second.handle == secondIt->second.handle;
 }
 
-RenderableHandle
-SceneRenderSystem::handle(const RenderComponent& component) const {
+RenderableHandle SceneRenderSystem::handle(const RenderComponent& component,
+                                           bool requireBatch) const {
     auto it = _registrations.find(&component);
     if (it == _registrations.end())
         return InvalidHandle;
-    if (it->second.handle == InvalidHandle)
+    if (requireBatch && it->second.handle == InvalidHandle)
         throw std::runtime_error(
             "Source-only registration has no execution batch handle");
     return it->second.handle;

@@ -89,8 +89,9 @@ class SceneRenderSystem {
                      const RenderComponent& second) const;
     size_t registrationCount() const { return _registrations.size(); }
 
-    // Execution batch handle; absent -> InvalidHandle, source-only -> error.
-    RenderableHandle handle(const RenderComponent& component) const;
+    // Source-only registrations return InvalidHandle when a batch is optional.
+    RenderableHandle handle(const RenderComponent& component,
+                            bool requireBatch = true) const;
 
   private:
     friend class ::KE::App;
