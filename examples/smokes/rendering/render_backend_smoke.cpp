@@ -455,14 +455,14 @@ void checkApp() {
     requireRejected([&] { app.setSkybox(std::string("sky.png")); });
     requireRejected([&] { app.raycast({{0, 0, 1}, {0, 0, -1}}); });
     ColorMaterial material;
-    bool rejectedNative = false;
+    bool rejectedSkinning = false;
     try {
         Bridge::SkinVisualBridge::fromFBX(&app, &material, "unused.fbx");
     } catch (const std::runtime_error& error) {
-        rejectedNative =
-            std::string(error.what()).find("Native") != std::string::npos;
+        rejectedSkinning =
+            std::string(error.what()).find("skinning") != std::string::npos;
     }
-    require(rejectedNative, "legacy FBX GPU importer bypassed Native access");
+    require(rejectedSkinning, "FBX importer bypassed the skinning capability check");
     app.getRenderer().setProfilerEnabled(true);
     calls.clear();
     app.drawFrame();
@@ -744,8 +744,16 @@ void checkAppScene(bool native) {
                 "App changed source identity or parent-relative transforms");
         requireRejected([&] { registry.handle(*component); });
         requireRejected([&] { registry.sharesBatch(*component, *component); });
-        requireRejected(
-            [&] { registry.updateGeometry(*component, mesh->vertices); });
+        auto deformed = mesh->vertices;
+        for (auto& position : deformed)
+            position.y *= 0.5f;
+        registry.updateGeometry(*component, deformed, mesh->normals);
+        app.drawFrame();
+        const auto geometry = recording->snapshot.objects.front().geometry;
+        require(geometry && geometry->positions == deformed &&
+                    geometry->positions != mesh->vertices,
+                "source-only geometry update was lost or changed its source");
+        requireRejected([&] { registry.updateGeometry(*component, {}); });
         requireRejected([&] { registry.setTexture(*component, nullptr, 0); });
         requireRejected([&] { app.addRenderable(&material, prim); });
         requireRejected([&] { app.getLight(); });
@@ -809,7 +817,8 @@ void checkAppScene(bool native) {
     component = registry.addRenderable(*prim, &replacement);
     app.drawFrame();
     if (recording)
-        require(recording->snapshot.objects.front().id != id,
+        require(recording->snapshot.objects.front().id != id &&
+                    !recording->snapshot.objects.front().geometry,
                 "removed registration reused an expired instance identity");
     app.removePrim("/group");
     app.drawFrame();

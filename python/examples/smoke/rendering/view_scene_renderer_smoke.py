@@ -1,4 +1,4 @@
-"""Check scheduled animation and material preservation across environment toggles."""
+"""Check the interactive renderer samples and environment restoration."""
 
 import argparse
 from pathlib import Path
@@ -50,9 +50,50 @@ def main():
             restored = capture()
             error = np.abs(restored - settled).mean()
             assert error < max(2, noise * 3), f"Environment toggle changed the scene: {error=}, {noise=}"
+
+        app.set_camera_view(position=[-7, 4, 3], target=[-7, 1.5, -5])
+        app.angle = 0
+        app.samples_dirty = True
+        before = capture()
+        app.angle = 1.5
+        app.samples_dirty = True
+        after = capture()
+        assert np.abs(after - before).mean() > 1, "Pose phase did not change the visible skins"
+        source = app.skins[0].prims[0].resolve_mesh_data()
+        assert all(skin.prims[0].resolve_mesh_data() is source for skin in app.skins)
+        np.testing.assert_array_equal(app.deform_mesh.vertices, app.deform_positions)
+
+        app.memory_enabled = False
+        app.set_sample_textures()
+        for material in app.sample_materials:
+            material.unlit = True
+        app.normal_material.normal_texture = None
+        app.masked.set_alpha_mode(ke.render.AlphaMode.OPAQUE)
+        capture()
+        app.memory_enabled = True
+        app.set_sample_textures()
+        for material in app.sample_materials:
+            material.unlit = False
+        app.normal_material.normal_texture = app.normal_texture
+        app.masked.set_alpha_mode(ke.render.AlphaMode.MASK)
+        for light in app.local_lights.values():
+            light.set_visible(True)
+        capture()
+
+        if args.backend == "ovrtx":
+            app.set_camera_view(position=[8, 5, 13], target=[8, 0.5, 5])
+            before = capture()
+            app.set_cuda_enabled(True)
+            assert app.cuda_enabled, app.cuda_status
+            after = capture()
+            assert np.abs(after - before).mean() > 1, "CUDA instances were not visible"
+            app.set_cuda_enabled(False)
+            capture()
+            app.set_cuda_enabled(True)
+            capture()
     finally:
         app.close()
-    print(f"PASS: {args.backend} scheduled animation, pause, and environment toggle restoration")
+    print(f"PASS: {args.backend} animation, shared skins, source mesh, material/light toggles, and CUDA when ovrtx")
 
 
 if __name__ == "__main__":

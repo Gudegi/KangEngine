@@ -85,7 +85,8 @@ RayPickResult SceneRenderSystem::buildPrimSelection(Prim& prim) const {
 RayPickResult SceneRenderSystem::resolvePick(const RenderPickHit& hit) const {
     if (!_renderer || !hit.hit)
         return {};
-    if (_renderer->capabilities().sceneBatches || _renderer->rasterizer())
+    if (hit.handle != InvalidHandle || _renderer->capabilities().sceneBatches ||
+        _renderer->rasterizer())
         return _renderer->resolvePick(hit);
     const auto component = _collector.resolve(hit.sceneInstanceId);
     if (!component || !component->isAttached() || !isRegistered(*component))
@@ -176,7 +177,10 @@ bool SceneRenderSystem::registerRenderable(
     validateRegistration(component);
     registerResources(*component, material);
     RenderableHandle handle = InvalidHandle;
-    if (_renderer->capabilities().sceneBatches || _renderer->rasterizer()) {
+    const auto caps = _renderer->capabilities();
+    if (caps.sceneBatches || _renderer->rasterizer() ||
+        (caps.cpuInstanceTransformsInput &&
+         component->transformSource() == TransformSource::ExternalBuffer)) {
         handle = _renderer->addRenderable(material, component->owner(),
                                           component->transformSource());
         if (handle == InvalidHandle)
@@ -226,8 +230,14 @@ SceneRenderSystem::requireBatch(const RenderComponent& component) const {
 
 void SceneRenderSystem::syncState(RenderComponent& component) {
     auto& registration = _registrations.at(&component);
-    if (registration.handle == InvalidHandle)
+    if (registration.handle == InvalidHandle) {
+        const auto mesh = component.resolveMeshData();
+        if (mesh.get() != registration.mesh) {
+            registration.geometry.reset();
+            registration.mesh = mesh.get();
+        }
         return;
+    }
 
     const auto mesh = component.resolveMeshData();
     auto* material = registration.prim->getMaterial();
@@ -397,9 +407,36 @@ void SceneRenderSystem::updateInstances(
 void SceneRenderSystem::updateGeometry(RenderComponent& component,
                                        const std::vector<glm::vec3>& positions,
                                        const std::vector<glm::vec3>& normals) {
-    const auto& registration = requireBatch(component);
-    _renderer->updateRenderableGeometry(registration.handle, positions,
-                                        normals);
+    const auto& registration = requireRegistration(component);
+    if (registration.handle != InvalidHandle) {
+        _renderer->updateRenderableGeometry(registration.handle, positions,
+                                            normals);
+        return;
+    }
+
+    const auto mesh = component.resolveMeshData();
+    if (!mesh || positions.size() != mesh->vertices.size())
+        throw std::invalid_argument(
+            "Dynamic geometry vertex count must match the source mesh");
+    if (!normals.empty() && normals.size() != positions.size())
+        throw std::invalid_argument(
+            "Dynamic geometry normals must match the source mesh");
+
+    // Accepted frames retain immutable arrays; later updates cannot alter them.
+    auto geometry = std::make_shared<RenderGeometryData>();
+    geometry->positions = positions;
+    if (!normals.empty())
+        geometry->normals = normals;
+    else if (registration.geometry)
+        geometry->normals = registration.geometry->normals;
+    else
+        geometry->normals = mesh->normals;
+    _registrations.at(&component).geometry = std::move(geometry);
+}
+
+std::shared_ptr<const RenderGeometryData>
+SceneRenderSystem::geometry(const RenderComponent& component) const {
+    return requireRegistration(component).geometry;
 }
 
 void SceneRenderSystem::updateSkinning(
@@ -413,6 +450,11 @@ bool SceneRenderSystem::isRegistered(const RenderComponent& component) const {
     return _registrations.count(&component) != 0;
 }
 
+bool SceneRenderSystem::hasBatch(const RenderComponent& component) const {
+    auto it = _registrations.find(&component);
+    return it != _registrations.end() && it->second.handle != InvalidHandle;
+}
+
 bool SceneRenderSystem::sharesBatch(const RenderComponent& first,
                                     const RenderComponent& second) const {
     const auto firstIt = _registrations.find(&first);
@@ -422,7 +464,7 @@ bool SceneRenderSystem::sharesBatch(const RenderComponent& first,
     if (firstIt->second.handle == InvalidHandle ||
         secondIt->second.handle == InvalidHandle)
         throw std::runtime_error(
-            "Batch sharing requires Native renderer registrations");
+            "Batch sharing requires renderer batch registrations");
     return firstIt->second.handle == secondIt->second.handle;
 }
 
@@ -433,7 +475,7 @@ SceneRenderSystem::handle(const RenderComponent& component) const {
         return InvalidHandle;
     if (it->second.handle == InvalidHandle)
         throw std::runtime_error(
-            "Source-only registration has no Native batch handle");
+            "Source-only registration has no execution batch handle");
     return it->second.handle;
 }
 

@@ -291,7 +291,7 @@ class Renderer {
     addSceneRenderable(Material& material, Scene::Prim& prim,
                        TransformSource source,
                        const Scene::SkinnedMeshData* skinnedMesh);
-    void releaseEmptySkinnedBatch(RenderableHandle handle);
+    void releaseEmptyBatch(RenderableHandle handle);
     void syncSceneInstances();
 };
 

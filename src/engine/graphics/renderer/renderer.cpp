@@ -216,6 +216,9 @@ RayPickResult Renderer::resolvePick(const RenderPickHit& hit) const {
         return {};
     RayPickResult result;
     static_cast<RenderPickHit&>(result) = hit;
+    const auto& bridge = found->second->bridge;
+    if (!bridge.instances().ids.empty())
+        result.prim = bridge.resolve(bridge.instances().ids.front());
     return result;
 }
 
@@ -421,7 +424,9 @@ void Renderer::renderSceneToFramebuffer(const glm::mat4& view,
 
 RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,
                                          TransformSource transformSource) {
-    if (capabilities().sceneBatches) {
+    if (capabilities().sceneBatches ||
+        (capabilities().cpuInstanceTransformsInput &&
+         transformSource == TransformSource::ExternalBuffer)) {
         if (!prim || !material)
             return InvalidHandle;
         return addSceneRenderable(*material, *prim, transformSource, nullptr);
@@ -511,9 +516,14 @@ Renderer::addSceneRenderable(Material& material, Scene::Prim& prim,
                 native->bindLegacyMaterial(batch->materialSource, nullptr);
             return InvalidHandle;
         }
+        try {
+            renderBackend().setSceneBatchState(batch->handle, state);
+        } catch (...) {
+            renderBackend().removeSceneBatch(batch->handle);
+            throw;
+        }
         it = _sceneBatches.emplace(key, std::move(batch));
         _sceneBatchHandles.emplace(it->second->handle, it->second.get());
-        renderBackend().setSceneBatchState(it->second->handle, state);
     }
 
     auto& batch = *it->second;
@@ -529,7 +539,7 @@ RenderableHandle
 Renderer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
                                const Scene::SkinnedMeshData& skinnedMesh,
                                TransformSource transformSource) {
-    if (capabilities().sceneBatches) {
+    if (capabilities().sceneBatches || capabilities().skinning) {
         if (!prim || !material)
             return InvalidHandle;
         return addSceneRenderable(*material, *prim, transformSource,
@@ -543,17 +553,26 @@ Renderer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
                        : InvalidHandle;
 }
 
-void Renderer::releaseEmptySkinnedBatch(RenderableHandle handle) {
+void Renderer::releaseEmptyBatch(RenderableHandle handle) {
     const auto found = _sceneBatchHandles.find(handle);
     if (found == _sceneBatchHandles.end())
         return;
     const auto& batch = *found->second;
-    if (std::get<3>(batch.key) == 0 || !batch.bridge.empty())
+    // External adapters release instance arrays with their last owner.
+    const bool external = !_rasterizer && std::get<2>(batch.key) ==
+                                              TransformSource::ExternalBuffer;
+    if (!batch.bridge.empty() || (std::get<3>(batch.key) == 0 && !external))
         return;
     const auto key = batch.key;
     renderBackend().removeSceneBatch(handle);
     _sceneBatchHandles.erase(found);
-    _sceneBatches.erase(key);
+    const auto [first, last] = _sceneBatches.equal_range(key);
+    for (auto it = first; it != last; ++it) {
+        if (it->second->handle == handle) {
+            _sceneBatches.erase(it);
+            break;
+        }
+    }
 }
 
 void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
@@ -565,7 +584,7 @@ void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
         if (it != _sceneBatchHandles.end())
             it->second->bridge.remove(*prim);
     }
-    releaseEmptySkinnedBatch(handle);
+    releaseEmptyBatch(handle);
 }
 
 void Renderer::removePrim(Scene::Prim* prim) {
@@ -579,7 +598,7 @@ void Renderer::removePrim(Scene::Prim* prim) {
     for (auto it = _sceneBatchHandles.begin();
          it != _sceneBatchHandles.end();) {
         const auto handle = it++->first;
-        releaseEmptySkinnedBatch(handle);
+        releaseEmptyBatch(handle);
     }
 }
 

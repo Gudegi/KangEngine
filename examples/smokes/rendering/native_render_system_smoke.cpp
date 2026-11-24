@@ -384,6 +384,28 @@ void checkSceneData(Backend::GraphicsDevice& device) {
     require(submit().bufferAllocations == 0,
             "shared mesh/material created another GPU batch");
     require(draw().pixels != initial.pixels, "second instance was not drawn");
+
+    const auto shared = draw();
+    auto geometry = std::make_shared<Scene::RenderGeometryData>();
+    geometry->positions = cube.mesh.mesh->vertices;
+    geometry->normals = cube.mesh.mesh->normals;
+    for (auto& position : geometry->positions)
+        position.y *= 0.2f;
+    scene.objects.front().geometry = geometry;
+    submit();
+    const auto deformed = draw();
+    require(deformed.pixels != shared.pixels,
+            "scene deformation was not applied");
+    const auto retained = submit();
+    require(retained.bufferUploadBytes == 0 && retained.bufferAllocations == 0,
+            "unchanged deformation was uploaded again");
+    require(cube.mesh.mesh->vertices != geometry->positions,
+            "scene deformation changed the source mesh");
+    scene.objects.front().geometry.reset();
+    submit();
+    require(draw().pixels == shared.pixels,
+            "clearing deformation did not restore source geometry");
+
     scene.objects.pop_back();
     submit();
     require(draw().pixels == initial.pixels,

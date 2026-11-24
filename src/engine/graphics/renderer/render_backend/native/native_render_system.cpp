@@ -327,14 +327,25 @@ void NativeRenderSystem::syncSceneSnapshot(
             throw std::invalid_argument(
                 "Static scene requires registered triangle meshes");
         const auto& material = object.material;
-        if (material.shadingModel != MaterialShadingModel::PBR ||
+        if (object.alphaMode != AlphaMode::Opaque ||
+            material.shadingModel != MaterialShadingModel::PBR ||
             material.unlit || material.hasNativeTextures ||
             material.baseColor.a != 1.0f || object.color.a != 1.0f ||
             !object.mesh.mesh->colors.empty())
             throw std::invalid_argument(
                 "Static scene requires opaque lit PBR and source textures");
         const SceneBatchKey key{object.mesh.resource, object.materialResource,
-                                object.doubleSided};
+                                object.doubleSided,
+                                object.geometry ? object.id : 0};
+        if (object.geometry) {
+            const auto& geometry = *object.geometry;
+            if (geometry.positions.size() !=
+                    object.mesh.mesh->vertices.size() ||
+                (!geometry.normals.empty() &&
+                 geometry.normals.size() != geometry.positions.size()))
+                throw std::invalid_argument(
+                    "Dynamic geometry must match the source vertex count");
+        }
         auto existing = _sceneBatches.find(key);
         if (existing != _sceneBatches.end() &&
             existing->second->mesh.mesh != object.mesh.mesh)
@@ -380,7 +391,8 @@ void NativeRenderSystem::syncSceneSnapshot(
     std::set<SceneBatchKey> liveBatches;
     for (const auto& object : scene.objects) {
         const SceneBatchKey key{object.mesh.resource, object.materialResource,
-                                object.doubleSided};
+                                object.doubleSided,
+                                object.geometry ? object.id : 0};
         liveBatches.insert(key);
         auto& entry = _sceneBatches[key];
         if (!entry) {
@@ -414,6 +426,15 @@ void NativeRenderSystem::syncSceneSnapshot(
                     "Failed to register static scene batch");
             setSceneBatchState(batch.handle, {object.doubleSided, true,
                                               AlphaMode::Opaque, 0.5f});
+        }
+        if (object.geometry != batch.geometry) {
+            updateRenderableGeometry(
+                batch.handle,
+                object.geometry ? object.geometry->positions
+                                : object.mesh.mesh->vertices,
+                object.geometry ? object.geometry->normals
+                                : object.mesh.mesh->normals);
+            batch.geometry = object.geometry;
         }
         if (object.visible) {
             batch.instances.transforms.push_back(object.world);

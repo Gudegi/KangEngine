@@ -628,6 +628,7 @@ void bind_scene(py::module& m) {
              "backend.")
         .def("bind_scene", &KE::Scene::SceneResourceManager::bindScene,
              py::arg("scene"), "Bind the scene used for Resource prim mirrors.")
+        // TODO: Use explicit file/pixel names for texture source registration.
         .def(
             "register_texture_source",
             [](KE::Scene::SceneResourceManager& resources,

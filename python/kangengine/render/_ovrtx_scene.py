@@ -1,6 +1,7 @@
-"""ovstage resources and CPU/CUDA images for static scene inputs."""
+"""ovstage scene updates and CPU/CUDA output images."""
 
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+from itertools import chain
 import math
 import os
 from pathlib import Path
@@ -39,6 +40,20 @@ def _texture_key(source):
     )
 
 
+def _material_key(item):
+    return (item["material"]["model"], item["material"]["style"],
+            item["material"]["unlit"], item["alpha_mode"],
+            tuple((slot, _texture_key(source)) for slot, source in item["textures"].items()))
+
+
+def _base_color_texture(item):
+    material = item["material"]
+    # Untextured ColorMaterial ignores this texture unless unlit.
+    if material["model"] == "color" and material["style"] != 1 and not material["unlit"]:
+        return None
+    return item["textures"].get("base_color_texture", item["textures"].get("diffuse_map"))
+
+
 class OvrtxSceneAdapter:
     def __init__(self, width, height):
         self._resolution = (width, height)
@@ -46,14 +61,28 @@ class OvrtxSceneAdapter:
         self._renderer = ovrtx.Renderer(
             config=ovrtx.RendererConfig(keep_system_alive=False)
         )
+        self._renderer.set_selection_group_styles({
+            1: ovrtx.SelectionGroupStyle(outline_color=(1, 0.6, 0, 1), fill_color=(0, 0, 0, 0)),
+        })
         self._stage = None
         self._attached = False
         self._references = {}
         self._objects = {}
+        self._batches = {}
+        self._batch_revisions = {}
+        self._skin_layers = {}
+        self._skin_revisions = {}
+        self._textures = {}
+        self._texture_pixels = {}
+        self.pick_result = None
+        self._selection_paths = set()
+        self._batch_queries = {}
+        self._batch_query_stack = ExitStack()
         self._light_values = []
         self._lights = {}
         self._warned_ranges = set()
         self._geometry = {}
+        self._deformations = {}
         self._values = {}
         self._ordinal = 1
         self._output = None
@@ -89,6 +118,7 @@ def Scope "Render" {{
     def RenderProduct "Camera" {{
         rel camera = </World/Camera>
         int2 resolution = ({width}, {height})
+        uint[] deviceIds = [0]
         token omni:rtx:rendermode = "RealTimePathTracing" # "PathTracing" # "Minimal"
         rel orderedVars = </Render/Camera/LdrColor>
         def RenderVar "LdrColor" {{
@@ -106,7 +136,9 @@ def Scope "Render" {{
     @contextmanager
     def _query(self, path):
         with ovstage.PathDictionary(self._stage) as paths:
-            path_list = paths.create_path_list_from_strings([path])
+            path_list = paths.create_path_list_from_strings(
+                [path] if isinstance(path, str) else path
+            )
             try:
                 with self._stage.query_from_path_list(path_list) as query:
                     yield query
@@ -146,7 +178,28 @@ def Scope "Render" {{
             semantic=ovstage.AttributeSemantic.MATRIX,
         )
 
-    def _mesh_layer(self, item):
+    def _write_geometry(self, path, geometry):
+        if self._deformations.get(path) is geometry:
+            return
+        with self._query(path) as query:
+            for attribute, values, semantic in (
+                ("points", geometry.positions, ovstage.AttributeSemantic.POINT),
+                ("normals", geometry.normals, ovstage.AttributeSemantic.NORMAL),
+            ):
+                if not len(values):
+                    continue
+                # Array attributes require explicit three-lane element types.
+                tensor = ovstage.make_dltensor(
+                    values, shape=[len(values)],
+                    dtype=ovstage.DLDataType(ovstage.DLDataTypeCode.kDLFloat, 32, 3),
+                )
+                self._stage.write_attribute(
+                    query, attribute, ordinal=self._ordinal,
+                    tensors=tensor, is_array=True, semantic=semantic,
+                ).wait()
+        self._deformations[path] = geometry
+
+    def _mesh_layer(self, item, *, instance_count=None):
         mesh_id = item["mesh_id"]
         if mesh_id not in self._geometry:
             mesh = item["mesh"]
@@ -157,55 +210,396 @@ def Scope "Render" {{
     int[] faceVertexCounts = {[3] * (len(mesh.indices) // 3)}
     int[] faceVertexIndices = {list(mesh.indices)}
 """
-        texture = item["textures"].get("base_color_texture")
-        color_input = "color3f inputs:diffuseColor = (1,1,1)"
-        texture_shader = ""
-        if texture:
-            path = texture["path"]
-            wraps = {0: "repeat", 1: "clamp", 2: "mirror"}
-            sampler = texture["sampler"]
-            color_input = "color3f inputs:diffuseColor.connect = </Mesh/Material/Texture.outputs:rgb>"
-            texture_shader = f'''
-        def Shader "UV" {{
-            uniform token info:id = "UsdPrimvarReader_float2"
-            token inputs:varname = "st"
-            float2 outputs:result
-        }}
-        def Shader "Texture" {{
-            uniform token info:id = "UsdUVTexture"
-            asset inputs:file = @{path}@
-            token inputs:sourceColorSpace = "{"sRGB" if texture["srgb"] else "raw"}"
-            token inputs:wrapS = "{wraps[int(sampler.wrap_u)]}"
-            token inputs:wrapT = "{wraps[int(sampler.wrap_v)]}"
-            float2 inputs:st.connect = </Mesh/Material/UV.outputs:result>
-            float4 inputs:scale = (1,1,1,1)
-            float3 outputs:rgb
-        }}
-'''
-        return f"""#usda 1.0
-(defaultPrim = "Mesh")
-def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
+        skin = item.get("skin")
+        root = "/Mesh" if instance_count is None and skin is None else "/Batch"
+        material_layer = self._material_layer(item, root)
+        mesh_attributes = f"""
 {self._geometry[mesh_id]}
     uniform token subdivisionScheme = "none"
     uniform bool doubleSided = {"true" if item["double_sided"] else "false"}
-    token visibility = "inherited"
+    rel material:binding = <{root}/Material>
+"""
+        transform_attributes = """
     matrix4d xformOp:transform = ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1))
     uniform token[] xformOpOrder = ["xformOp:transform"]
-    rel material:binding = </Mesh/Material>
+"""
+        if skin is not None:
+            return self._skin_layer(skin, mesh_attributes, transform_attributes, material_layer)
+        if instance_count is None:
+            return f'''#usda 1.0
+(defaultPrim = "Mesh")
+def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
+{mesh_attributes}
+{transform_attributes}
+    token visibility = "inherited"
+{material_layer}
+}}
+'''
+
+        # USD instances share a prototype; only root transforms vary.
+        instances = "\n".join(f'''
+    def Xform "i{idx}" (
+        prepend references = </Batch/Prototype>
+        instanceable = true
+    ) {{
+{transform_attributes}
+    }}
+''' for idx in range(instance_count))
+        return f'''#usda 1.0
+(defaultPrim = "Batch")
+def Xform "Batch" {{
+    token visibility = "inherited"
+{material_layer}
+    class Xform "Prototype" {{
+        def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI"]) {{
+{mesh_attributes}
+        }}
+    }}
+{instances}
+}}
+'''
+
+    def _material_layer(self, item, root):
+        textures = item["textures"]
+        color = _base_color_texture(item)
+        normal = textures.get("normal_texture", textures.get("normal_map"))
+        alpha = textures.get("alpha_map")
+        shaders = ''
+        if textures:
+            shaders = '''
+        def Shader "UV" {
+            uniform token info:id = "UsdPrimvarReader_float2"
+            token inputs:varname = "st"
+            float2 outputs:result
+        }
+'''
+        for name, source in (("Texture", color), ("Normal", normal), ("Alpha", alpha)):
+            if source is None:
+                continue
+            path = source["path"] if source["pixels"] is None else f'dynamic://kangengine/t{source["id"]}'
+            wraps = {0: "repeat", 1: "clamp", 2: "mirror"}
+            sampler = source["sampler"]
+            shaders += f'''
+        def Shader "{name}" {{
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @{path}@
+            token inputs:sourceColorSpace = "{"sRGB" if source["srgb"] else "raw"}"
+            token inputs:wrapS = "{wraps[int(sampler.wrap_u)]}"
+            token inputs:wrapT = "{wraps[int(sampler.wrap_v)]}"
+            float2 inputs:st.connect = <{root}/Material/UV.outputs:result>
+            float4 inputs:scale = {"(2,2,2,1)" if name == "Normal" else "(1,1,1,1)"}
+            float4 inputs:bias = {"(-1,-1,-1,0)" if name == "Normal" else "(0,0,0,0)"}
+            float3 outputs:rgb
+            float outputs:r
+            float outputs:a
+        }}
+'''
+        unlit = item["material"]["unlit"]
+        channel = "emissiveColor" if unlit else "diffuseColor"
+        connections = ""
+        if color:
+            connections += f"color3f inputs:{channel}.connect = <{root}/Material/Texture.outputs:rgb>\n"
+        if normal and not unlit:
+            connections += f"normal3f inputs:normal.connect = <{root}/Material/Normal.outputs:rgb>\n"
+        if item["alpha_mode"] and (alpha or color):
+            source = "Alpha.outputs:r" if alpha else "Texture.outputs:a"
+            connections += f"float inputs:opacity.connect = <{root}/Material/{source}>\n"
+        return f'''
     def Material "Material" {{
-        token outputs:surface.connect = </Mesh/Material/Shader.outputs:surface>
+        token outputs:surface.connect = <{root}/Material/Shader.outputs:surface>
         def Shader "Shader" {{
             uniform token info:id = "UsdPreviewSurface"
-            {color_input}
+            color3f inputs:diffuseColor = (0,0,0)
+            color3f inputs:emissiveColor = (0,0,0)
             float inputs:metallic = 0
             float inputs:roughness = 0.5
-            color3f inputs:emissiveColor = (0,0,0)
+            int inputs:useSpecularWorkflow = 0
+            color3f inputs:specularColor = (0,0,0)
+            float inputs:opacity = 1
+            float inputs:opacityThreshold = 0
+            {connections}
             token outputs:surface
         }}
-{texture_shader}
+{shaders}
+    }}
+'''
+
+    def _sync_textures(self, items):
+        sources = {source["id"]: source for item in items
+                   for source in item["textures"].values() if source["pixels"] is not None}
+        removed = self._textures.keys() - sources.keys()
+        added = sources.keys() - self._textures.keys()
+        for key in removed:
+            ovstage.population.remove_usd(self._stage, self._textures.pop(key))
+            self._texture_pixels.pop(key, None)
+        for key in added:
+            source = sources[key]
+            pixels = source["pixels"]
+            height, width, channels = pixels.shape
+            # Runtime textures use RGBA; scene resources retain the original pixels.
+            rgba = np.full((height, width, 4), 255, dtype=np.uint8)
+            rgba[..., :3] = pixels[..., :3] if channels >= 3 else pixels[..., :1]
+            if channels in (2, 4):
+                rgba[..., 3] = pixels[..., -1]
+            # Runtime-image rows follow file-image order in OVRTX.
+            self._texture_pixels[key] = np.ascontiguousarray(rgba if source["flip"] else rgba[::-1])
+            layer = f'''#usda 1.0
+(defaultPrim = "Texture")
+def OmniRuntimeTexture "Texture" {{
+    string texture:uri = "dynamic://kangengine/t{key}"
+    token texture:dimension = "2d"
+    int3 texture:extent = ({width}, {height}, 1)
+    token texture:format = "rgba8unorm"
+    token texture:colorSpace = "{"sRGB" if source["srgb"] else "linear"}"
+    uchar[] texture:data = []
+}}
+'''
+            self._textures[key] = ovstage.population.add_usd_reference_from_string(
+                self._stage, layer, f"/Textures/t{key}",
+            )
+        return bool(removed or added)
+
+    def _skin_layer(self, skin, mesh_attributes, transform_attributes, material_layer):
+        if skin not in self._skin_layers:
+            ids = np.asarray(skin.indices)
+            weights = np.where(ids >= 0, skin.weights, 0).copy()
+            ids = np.where(ids >= 0, ids, skin.bone_count).copy()
+            unweighted = weights.sum(axis=1) == 0
+            ids[unweighted, 0] = skin.bone_count
+            weights[unweighted, 0] = 1
+            self._skin_layers[skin] = f'''
+        int[] primvars:skel:jointIndices = {ids.ravel().tolist()} (elementSize = 4
+            interpolation = "vertex")
+        float[] primvars:skel:jointWeights = {weights.ravel().tolist()} (elementSize = 4
+            interpolation = "vertex")
+'''
+        # Independent root joints consume final skin matrices, with identity binds.
+        identity = "((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1))"
+        count = skin.bone_count + 1
+        joints = ", ".join(f'"j{idx}"' for idx in range(count))
+        matrices = ", ".join([identity] * count)
+        return f'''#usda 1.0
+(defaultPrim = "Batch")
+def SkelRoot "Batch" {{
+{transform_attributes}
+    token visibility = "inherited"
+{material_layer}
+    def Skeleton "Skeleton" {{
+        uniform token[] joints = [{joints}]
+        uniform matrix4d[] bindTransforms = [{matrices}]
+        uniform matrix4d[] restTransforms = [{matrices}]
+    }}
+    def Mesh "Mesh" (prepend apiSchemas = ["MaterialBindingAPI", "SkelBindingAPI"]) {{
+{mesh_attributes}
+        rel skel:skeleton = </Batch/Skeleton>
+        matrix4d primvars:skel:geomBindTransform = {identity}
+{self._skin_layers[skin]}
     }}
 }}
-"""
+'''
+
+    def _write_skin(self, key, item):
+        path = item["path"]
+        if item["geometry"] is not None:
+            self._write_geometry(path + "/Mesh", item["geometry"])
+        if self._skin_revisions.get(key) == item["skin_revision"]:
+            return
+        matrices = np.empty((len(item["joints"]) + 1, 4, 4), dtype=np.float64)
+        matrices[:-1] = item["joints"].swapaxes(1, 2)
+        matrices[-1] = np.eye(4)
+        tensor = ovstage.make_dltensor(
+            matrices, shape=[len(matrices)],
+            dtype=ovstage.DLDataType(ovstage.DLDataTypeCode.kDLFloat, 64, 16),
+        )
+        with self._query(path + "/Skeleton") as query:
+            self._stage.write_attribute(
+                query, "restTransforms", ordinal=self._ordinal, tensors=tensor,
+                is_array=True, semantic=ovstage.AttributeSemantic.MATRIX,
+            ).wait()
+        self._skin_revisions[key] = item["skin_revision"]
+
+    def _sync_batches(self, batches):
+        signatures = {
+            key: (item["mesh_id"], item["double_sided"], item["count"], item["skin"],
+                  _material_key(item))
+            for key, item in batches.items()
+        }
+        replacements = {
+            key for key, signature in signatures.items()
+            if key not in self._batches or self._batches[key][1] != signature
+        }
+        removed = self._batches.keys() - batches.keys()
+        surviving = len(self._batches.keys() - removed - replacements)
+        for key in removed | replacements:
+            if key in self._batches:
+                handle, _ = self._batches.pop(key)
+                ovstage.population.remove_usd(self._stage, handle)
+        for key in replacements:
+            item = batches[key]
+            layer = self._mesh_layer(item, instance_count=item["count"])
+            handle = ovstage.population.add_usd_reference_from_string(
+                self._stage, layer, item["path"],
+            )
+            self._batches[key] = handle, signatures[key]
+        return bool(removed or replacements), surviving
+
+    def _write_batch_transforms(self, key, item):
+        external = item["external"]
+        versioned = external is None or external.sync_policy == _ke.ExternalSyncPolicy.VERSIONED
+        if versioned and self._batch_revisions.get(key) == item["revision"]:
+            return
+        if key not in self._batch_queries:
+            paths = [f'{item["path"]}/i{idx}' for idx in range(item["count"])]
+            self._batch_queries[key] = self._batch_query_stack.enter_context(self._query(paths))
+
+        if external is not None:
+            self._write_cuda_transforms(self._batch_queries[key], external)
+            self._batch_revisions[key] = item["revision"]
+            return
+
+        # Preserve complete matrices, including shear; USD uses row vectors.
+        matrices = np.ascontiguousarray(item["transforms"].swapaxes(1, 2), dtype=np.float64)
+        self._stage.write_attribute(
+            self._batch_queries[key], "omni:xform", ordinal=self._ordinal,
+            tensors=matrices, is_array=False, semantic=ovstage.AttributeSemantic.MATRIX,
+        ).wait()
+        self._batch_revisions[key] = item["revision"]
+
+    def _write_cuda_transforms(self, query, external):
+        import torch
+        from cuda.bindings import runtime
+
+        view = external.view
+        with torch.cuda.device(view.device_id):
+            stream = torch.cuda.current_stream()
+            if view.ready_event_handle:
+                status, = runtime.cudaStreamWaitEvent(stream.cuda_stream, view.ready_event_handle, 0)
+                if status != runtime.cudaError_t.cudaSuccess:
+                    raise RuntimeError(f"CUDA transform readiness failed: {status}")
+            else:
+                stream.wait_stream(torch.cuda.ExternalStream(view.stream_handle, device=view.device_id))
+            # Column-major GLM bytes already match USD row-vector matrices.
+            # Conversion stays on the GPU; ovstage owns a copy after wait().
+            matrices = view.torch()[:external.count].to(dtype=torch.float64)
+            self._stage.write_attribute(
+                query, "omni:xform", ordinal=self._ordinal,
+                tensors=ovstage.make_dltensor(matrices), is_array=False,
+                semantic=ovstage.AttributeSemantic.MATRIX,
+                cuda_stream=stream.cuda_stream,
+                placement=ovstage.Placement.from_dlpack_device(matrices),
+            ).wait()
+
+    def _write_material(self, path, item):
+        value = item["material"]
+        color = np.asarray(value["base_color"]) * item["color"]
+        textures = item["textures"]
+        textured = _base_color_texture(item) is not None
+        shader = path + "/Material/Shader"
+        unlit = value["unlit"]
+        if textured:
+            self._write(path + "/Material/Texture", "inputs:scale", color)
+        else:
+            self._write(shader, "inputs:emissiveColor" if unlit else "inputs:diffuseColor", color[:3],
+                        semantic=ovstage.AttributeSemantic.COLOR)
+        phong = value["model"] == "phong"
+        roughness = math.sqrt(2 / (max(0, value["shininess"]) + 2)) if phong else value["roughness"]
+        for attribute, data in (
+            ("metallic", 0 if unlit else value["metallic"]),
+            ("roughness", roughness),
+            ("specularColor", [0, 0, 0] if unlit else value["specular"]),
+        ):
+            self._write(
+                shader, "inputs:" + attribute, data,
+                semantic=(ovstage.AttributeSemantic.COLOR if attribute == "specularColor"
+                          else ovstage.AttributeSemantic.NONE),
+            )
+        self._write(shader, "inputs:useSpecularWorkflow", int(phong or unlit), dtype=np.int32)
+        if not unlit:
+            self._write(shader, "inputs:emissiveColor", value["emissive"], semantic=ovstage.AttributeSemantic.COLOR)
+        if not item["alpha_mode"] or not (textured or "alpha_map" in textures):
+            self._write(shader, "inputs:opacity", color[3] if item["alpha_mode"] else 1)
+        if "alpha_map" in textures:
+            self._write(path + "/Material/Alpha", "inputs:scale", [color[3]] * 4)
+        self._write(shader, "inputs:opacityThreshold", item["alpha_cutoff"] if item["alpha_mode"] == 1 else 0)
+
+    def _write_visibility(self, path, visible):
+        with ovstage.PathDictionary(self._stage) as paths:
+            token = paths.intern_token("inherited" if visible else "invisible")
+            self._write(path, "visibility", token.raw_id, dtype=np.uint64,
+                        semantic=ovstage.AttributeSemantic.TOKEN_ID)
+
+    def _prepare_interaction(self, frame, objects, batches, structural_change):
+        selection = frame.get("selection")
+        selected = set()
+        if selection and selection["hit"]:
+            batch = batches.get(selection["handle"])
+            if batch is not None:
+                if batch["skin"] is not None:
+                    selected.add(batch["path"] + "/Mesh")
+                elif 0 <= selection["instance"] < batch["count"]:
+                    selected.add(f'{batch["path"]}/i{selection["instance"]}/Mesh')
+            elif selection["id"] in objects:
+                selected.add(f'/World/i{selection["id"]}')
+        if selected != self._selection_paths or structural_change:
+            if self._selection_paths:
+                self._renderer.set_selection_outline_group_strings(sorted(self._selection_paths), 0)
+            if selected:
+                self._renderer.set_selection_outline_group_strings(sorted(selected), 1)
+            self._selection_paths = selected
+
+        self.pick_result = None
+        pick = frame.get("pick")
+        if pick is None:
+            return
+        paths, allowed = [], []
+        for key, item in objects.items():
+            paths.append(f"/World/i{key}")
+            allowed.append(item["pickable"] and item["visible"])
+        for item in batches.values():
+            mesh_paths = ([item["path"] + "/Mesh"] if item["skin"] is not None else
+                          [f'{item["path"]}/i{idx}/Mesh' for idx in range(item["count"])])
+            paths.extend(mesh_paths)
+            allowed.extend([item["pickable"] and item["visible"]] * len(mesh_paths))
+        if paths:
+            self._renderer.set_pickable_strings(paths, allowed)
+        width, height = self._resolution
+        x = min(width - 1, max(0, int((pick["ndc"][0] + 1) * 0.5 * width)))
+        y = min(height - 1, max(0, int((1 - pick["ndc"][1]) * 0.5 * height)))
+        self._renderer.enqueue_pick_query(
+            "/Render/Camera", x / width, y / height, (x + 1) / width, (y + 1) / height,
+            flags=ovrtx.OVRTX_PICK_FLAG_INCLUDE_TRACKED_INFO,
+        )
+
+    def _read_pick(self, product, objects, batches):
+        output = product.render_vars.get(ovrtx.OVRTX_RENDER_VAR_PICK_HIT)
+        if output is None:
+            raise RuntimeError("ovrtx returned no result for the queued pick")
+        with output.map(device=ovrtx.Device.CPU) as mapped:
+            magic = int(np.from_dlpack(mapped.params["magic"]))
+            version = int(np.from_dlpack(mapped.params["version"]))
+            if magic != ovrtx.OVRTX_PICK_HIT_MAGIC or version != ovrtx.OVRTX_PICK_HIT_VERSION:
+                raise RuntimeError("Unsupported ovrtx pick result schema")
+            if not int(np.from_dlpack(mapped.params["hitCount"])):
+                return
+            path_id = int(np.from_dlpack(mapped["primPath"]).reshape(-1)[0])
+            path = self._renderer.resolve_prim_path_id(ovrtx.PrimPath(path_id))
+            position = np.from_dlpack(mapped["worldPositionM"]).reshape(-1, 3)[0].tolist()
+        parts = path.strip("/").split("/")
+        if len(parts) >= 2 and parts[0] == "World" and parts[1].startswith("i"):
+            key = int(parts[1][1:])
+            item = objects.get(key)
+            if item is not None and item["pickable"] and item["visible"]:
+                self.pick_result = dict(handle=0xFFFFFFFF, id=key, instance=0,
+                                        external=False, position=position)
+        elif len(parts) >= 3 and parts[0] == "Batches" and parts[1].startswith("b"):
+            key = int(parts[1][1:])
+            item = batches.get(key)
+            if item is None or not item["pickable"] or not item["visible"]:
+                return
+            skinned = item["skin"] is not None
+            instance = 0 if skinned else int(parts[2][1:])
+            self.pick_result = dict(handle=key, id=item["instance_ids"][0] if skinned else 0,
+                                    instance=instance, external=not skinned, position=position)
 
     def _light_layer(self, item):
         kind, light = item["type"], item["light"]
@@ -329,11 +723,9 @@ def {schema} "Light"{shaping} {{
     def _render_output(self, frame):
         self._release_output()
         # Validate all asset paths before changing stage registrations.
-        for item in frame["objects"]:
+        for item in chain(frame["objects"], frame.get("batches", ())):
             for texture in item["textures"].values():
-                if texture["pixels"] is not None:
-                    raise ValueError("ovrtx does not yet support memory-image textures")
-                if not texture["flip"]:
+                if texture["pixels"] is None and not texture["flip"]:
                     raise ValueError(
                         "ovrtx currently requires flip=True texture sources"
                     )
@@ -351,6 +743,8 @@ def {schema} "Light"{shaping} {{
                     )
 
         self._ordinal += 1
+        batches = {item["id"]: item for item in frame.get("batches", ())
+                   if item["skin"] is not None or item["count"]}
         lights = frame["lights"] if frame["lights"] is not None else self._light_values
         lights_changed = self._sync_lights(lights) if frame["lights"] is not None else False
         updates = {item["id"]: item for item in frame["objects"]}
@@ -363,17 +757,22 @@ def {schema} "Light"{shaping} {{
         for key in frame["removed_objects"]:
             objects.pop(key, None)
         objects.update(updates)
+        batches_changed, surviving_batches = self._sync_batches(batches)
+        textures_changed = False
+        if updates or frame["removed_objects"] or batches_changed or not frame["incremental"]:
+            textures_changed = self._sync_textures(chain(objects.values(), batches.values()))
         replacements = {}
         for key, item in updates.items():
             signature = (
                 item["mesh_id"], item["double_sided"],
-                tuple((slot, _texture_key(source)) for slot, source in item["textures"].items()),
+                _material_key(item),
             )
             if key not in self._references or self._references[key][1] != signature:
                 replacements[key] = signature
         surviving_count = len(self._references) - len(removed | (replacements.keys() & self._references.keys()))
         changed = bool(removed or replacements)
         for key in removed | replacements.keys():
+            self._deformations.pop(f"/World/i{key}", None)
             if key in self._references:
                 handle, _ = self._references.pop(key)
                 ovstage.population.remove_usd(self._stage, handle)
@@ -382,56 +781,43 @@ def {schema} "Light"{shaping} {{
                 self._stage, self._mesh_layer(objects[key]), f"/World/i{key}",
             )
             self._references[key] = handle, signature
-        if changed or lights_changed:
+        structural_change = changed or lights_changed or batches_changed or textures_changed
+        if structural_change:
+            self._batch_query_stack.close()
+            self._batch_queries.clear()
             ovstage.population.apply_usd_changes(self._stage, ordinal=self._ordinal)
             # Population can restore USD defaults on surviving objects too.
             self._values.clear()
+            self._deformations.clear()
+            self._batch_revisions.clear()
+            self._skin_revisions.clear()
 
         self._ordinal += 1
-        structural_change = changed or lights_changed
+        if structural_change:
+            for key, pixels in self._texture_pixels.items():
+                with self._query(f"/Textures/t{key}") as query:
+                    self._stage.write_attribute(
+                        query, "texture:data", ordinal=self._ordinal,
+                        tensors=pixels.reshape(-1), is_array=True,
+                    ).wait()
         if structural_change or frame["lights"] is not None:
             for item in lights:
                 self._write_light(item)
         for key, item in (objects if structural_change else updates).items():
             path = f"/World/i{key}"
+            if item["geometry"] is not None:
+                self._write_geometry(path, item["geometry"])
             self._matrix(path, item["world"])
-            with ovstage.PathDictionary(self._stage) as paths:
-                token = paths.intern_token(
-                    "inherited" if item["visible"] else "invisible"
-                )
-                self._write(
-                    path,
-                    "visibility",
-                    token.raw_id,
-                    dtype=np.uint64,
-                    semantic=ovstage.AttributeSemantic.TOKEN_ID,
-                )
-            value = item["material"]
-            color = np.asarray(value["base_color"]) * item["color"]
-            if item["textures"]:
-                self._write(path + "/Material/Texture", "inputs:scale", color)
+            self._write_visibility(path, item["visible"])
+            self._write_material(path, item)
+        for key, item in batches.items():
+            if item["skin"] is None:
+                self._write_batch_transforms(key, item)
             else:
-                self._write(
-                    path + "/Material/Shader",
-                    "inputs:diffuseColor",
-                    color[:3],
-                    semantic=ovstage.AttributeSemantic.COLOR,
-                )
-            for attribute, data in (
-                ("metallic", value["metallic"]),
-                ("roughness", value["roughness"]),
-                ("emissiveColor", value["emissive"]),
-            ):
-                self._write(
-                    path + "/Material/Shader",
-                    "inputs:" + attribute,
-                    data,
-                    semantic=(
-                        ovstage.AttributeSemantic.COLOR
-                        if attribute == "emissiveColor"
-                        else ovstage.AttributeSemantic.NONE
-                    ),
-                )
+                self._write_skin(key, item)
+                self._matrix(item["path"], item["world"])
+            self._write_visibility(item["path"], item["visible"])
+            self._write_material(item["path"], item)
 
         camera = frame["camera"]
         self._write("/Render/Camera", "resolution", self._resolution, dtype=np.int32)
@@ -451,22 +837,28 @@ def {schema} "Light"{shaping} {{
         self._stage.advance_write_floor(self._ordinal, ovstage.Scope.ALL).wait()
 
         # The pinned SDK needs a rebuild when no previous mesh survives.
-        if self._ordinal > 3 and objects and not surviving_count:
+        if (self._ordinal > 3 and (objects or batches)
+                and not (surviving_count or surviving_batches)):
             self._attached = False
             self._renderer.detach_ovstage()
             self._renderer.attach_ovstage(self._stage)
             self._attached = True
+        self._prepare_interaction(frame, objects, batches, structural_change)
         # The result set owns the native output handles until presentation ends.
         self._products = self._renderer.step(
             render_products={"/Render/Camera"}, delta_time=1 / 60, ordinal=self._ordinal
         )
-        frame = self._products["/Render/Camera"].frames[-1]
-        self._output = frame.render_vars["/Render/Camera/LdrColor"]
+        product = self._products["/Render/Camera"].frames[-1]
+        self._output = product.render_vars["/Render/Camera/LdrColor"]
+        if frame.get("pick") is not None:
+            self._read_pick(product, objects, batches)
         self._objects = objects
         self._light_values = lights
-        if changed:
-            live_meshes = {item["mesh_id"] for item in objects.values()}
+        if changed or batches_changed:
+            live_meshes = {item["mesh_id"] for item in chain(objects.values(), batches.values())}
             self._geometry = {key: value for key, value in self._geometry.items() if key in live_meshes}
+            live_skins = {item["skin"] for item in batches.values()}
+            self._skin_layers = {key: value for key, value in self._skin_layers.items() if key in live_skins}
 
     def render(self, frame):
         self._render_output(frame)
@@ -503,6 +895,7 @@ def {schema} "Light"{shaping} {{
 
     def close(self):
         try:
+            self._batch_query_stack.close()
             self._release_output()
             if self._attached:
                 self._attached = False

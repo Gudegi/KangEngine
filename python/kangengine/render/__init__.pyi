@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Any, Callable, overload
 
 class SceneRenderer:
-    """Synchronous static PBR scene rendering through Native or optional ovrtx."""
+    """Synchronous scene image rendering through Native or optional ovrtx."""
     def __init__(self, scene: Any, resources: Any, *, camera_path: str,
                  backend: str = "native", width: int = 512, height: int = 512) -> None: ...
     def render(self) -> Any:
@@ -582,8 +582,12 @@ class Renderer:
     @property
     def capabilities(self) -> dict[str, bool]:
         """Frame support: screen_presentation, selection_outline, wireframe,
-        static_scene, scene_batches, memory_textures, screen_picking, cuda_images, and
-        native_extensions.
+        static_scene, scene_batches, skinning, screen_picking, native_extensions.
+
+        Input/output support:
+        - texture_pixels_input: create textures from CPU pixel arrays.
+        - cpu_instance_transforms_input: submit CPU instance transform arrays.
+        - cuda_image_output: return rendered images through CUDA handles.
         """
         ...
     def set_profiler_enabled(self, enabled: bool) -> None:
@@ -637,7 +641,7 @@ class Renderer:
         """Synchronize renderer lights from scene light prims."""
         ...
     def update_renderable_transforms(self, handle: int, transforms: Any, colors: Any | None = None) -> None:
-        """Replace instance transforms and optional colors."""
+        """Replace column-major CPU world matrices; ovrtx does not support colors."""
         ...
     def set_renderable_colors(self, handle: int, colors: Any) -> None:
         """Set per-instance colors."""

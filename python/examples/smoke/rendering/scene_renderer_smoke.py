@@ -140,14 +140,16 @@ def main():
         cube.get_mesh_component().resource_handle = resources.register_mesh("Small", small_mesh)
         capture("mesh_replaced")
 
-        # Unsupported state must fail explicitly before updating either backend.
         material.unlit = True
-        try:
-            renderer.render()
-        except ValueError:
-            pass
+        if args.backend == "native":
+            try:
+                renderer.render()
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("unsupported Native snapshot material was accepted")
         else:
-            raise AssertionError("unlit input was silently accepted")
+            capture("unlit")
         material.unlit = False
         capture("after_rejection")
         np.testing.assert_array_equal(initial, saved_initial)

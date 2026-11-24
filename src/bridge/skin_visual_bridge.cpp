@@ -90,8 +90,8 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     if (!material)
         throw std::runtime_error(
             "SkinVisualBridge::fromFBX requires Material");
-    // Skinning uploads currently require Native.
-    app->getRenderer().native();
+    if (!app->getRenderer().capabilities().skinning)
+        throw std::runtime_error("Render backend does not support skinning");
 
     SkinVisualBridge bridge;
     bridge._app = app;
@@ -168,10 +168,11 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
             const auto found = texturedMaterials.find(key);
             if (found == texturedMaterials.end()) {
                 auto copy = material->clone();
-                auto* diffuse = texturePath.empty()
+                const bool native = app->getRenderer().device() != nullptr;
+                auto* diffuse = texturePath.empty() || !native
                                     ? nullptr
                                     : app->loadTexture(texturePath);
-                auto* normal = normalTexturePath.empty()
+                auto* normal = normalTexturePath.empty() || !native
                                    ? nullptr
                                    : app->loadTexture(normalTexturePath);
 
@@ -211,6 +212,24 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
                         app->getSceneResourceManager().textureHandle(
                             slot.second);
                     copy->texturePaths.erase(slot.first);
+                }
+                if (!native) {
+                    for (const auto& slot :
+                         {std::make_pair(diffuseSlot, texturePath),
+                          std::make_pair(normalSlot, normalTexturePath)}) {
+                        if (slot.second.empty())
+                            continue;
+                        Scene::TextureSourceResource source;
+                        source.path = slot.second;
+                        copy->textureResources[slot.first] =
+                            app->getSceneResourceManager()
+                                .registerTextureSource(
+                                    std::filesystem::path(slot.second)
+                                        .filename()
+                                        .string(),
+                                    source);
+                        copy->texturePaths.erase(slot.first);
+                    }
                 }
 
                 partMaterial = app->rememberMaterial(std::move(copy));
@@ -313,13 +332,10 @@ SkinVisualBridge::applyState(const Animation::SkeletonState& state) {
 }
 
 void SkinVisualBridge::setVisible(bool visible) {
-    const float alpha = visible ? 1.0f : 0.0f;
     for (MeshBinding& mesh : _meshes) {
         if (!mesh.prim)
             continue;
-        glm::vec4 color = mesh.baseColor;
-        color.a = alpha;
-        mesh.prim->setDisplayColorAlpha(color);
+        mesh.prim->setVisible(visible);
     }
 }
 

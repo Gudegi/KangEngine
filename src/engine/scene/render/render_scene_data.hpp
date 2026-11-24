@@ -3,6 +3,7 @@
 // Shared batch and scene inputs consumed by render backends.
 
 #include "geometry/mesh_data.hpp"
+#include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/render/render_light_data.hpp"
 #include "engine/scene/render/render_material_data.hpp"
@@ -35,11 +36,18 @@ struct RenderMeshData {
     ResourceHandle resource = InvalidResourceHandle;
 };
 
+// Owned mesh-local deformation; topology and source MeshData stay unchanged.
+struct RenderGeometryData {
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+};
+
 // One object's source resources and evaluated world state.
 struct RenderObjectSource {
     RenderInstanceId id = InvalidRenderInstance;
     std::string path;
     RenderMeshData mesh;
+    std::shared_ptr<const RenderGeometryData> geometry;
     RenderMaterialData material;
     ResourceHandle materialResource = InvalidResourceHandle;
     RenderTextureSources textures;
@@ -48,6 +56,8 @@ struct RenderObjectSource {
     bool visible = true;
     bool pickable = true;
     bool doubleSided = false;
+    AlphaMode alphaMode = AlphaMode::Opaque;
+    float alphaCutoff = 0.5f;
 };
 
 struct RenderCameraSource {

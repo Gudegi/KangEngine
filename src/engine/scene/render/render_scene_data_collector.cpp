@@ -93,11 +93,12 @@ bool sameObject(const RenderObjectSource& a, const RenderObjectSource& b) {
     const auto& x = a.material;
     const auto& y = b.material;
     return a.path == b.path && a.mesh.mesh == b.mesh.mesh &&
-           a.mesh.resource == b.mesh.resource &&
+           a.mesh.resource == b.mesh.resource && a.geometry == b.geometry &&
            a.materialResource == b.materialResource &&
            a.textures == b.textures && a.world == b.world &&
            a.color == b.color && a.visible == b.visible &&
            a.pickable == b.pickable && a.doubleSided == b.doubleSided &&
+           a.alphaMode == b.alphaMode && a.alphaCutoff == b.alphaCutoff &&
            x.shadingModel == y.shadingModel && x.colorStyle == y.colorStyle &&
            x.unlit == y.unlit && x.hasNativeTextures == y.hasNativeTextures &&
            x.baseColor == y.baseColor && x.ambient == y.ambient &&
@@ -264,11 +265,14 @@ RenderSceneDataCollector::collectScene(SceneBackend& scene,
         if (!component ||
             (registrations && !registrations->isRegistered(*component)))
             continue;
+        // Registered skinning and external instances travel through the batch
+        // API.
+        if (registrations && registrations->hasBatch(*component))
+            continue;
         if (component->transformSource() != TransformSource::SceneGraph ||
-            component->alphaMode() != AlphaMode::Opaque ||
             !component->castsShadow())
             throw std::invalid_argument(
-                "SceneRenderer supports opaque, shadow-casting SceneGraph "
+                "SceneRenderer supports shadow-casting SceneGraph "
                 "meshes only");
         auto* material = prim->getMaterial();
         if (!material)
@@ -284,6 +288,8 @@ RenderSceneDataCollector::collectScene(SceneBackend& scene,
         }
         object.id = identity.id;
         object.mesh = SceneRenderBridge::meshData(*prim);
+        if (registrations)
+            object.geometry = registrations->geometry(*component);
         if (!object.mesh.mesh ||
             resources.mesh(object.mesh.resource) != object.mesh.mesh)
             throw std::invalid_argument(
@@ -310,6 +316,8 @@ RenderSceneDataCollector::collectScene(SceneBackend& scene,
         const auto selection = prim->getSelectionComponent();
         object.pickable = !selection || selection->isPickable();
         object.doubleSided = component->isDoubleSided();
+        object.alphaMode = component->alphaMode();
+        object.alphaCutoff = component->alphaCutoff();
         frame.objects.push_back(std::move(object));
     }
 

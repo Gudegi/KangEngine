@@ -30,10 +30,14 @@ struct RenderBackendCapabilities {
     bool wireframe = false;
     bool staticScene = false;
     bool sceneBatches = false;
-    bool memoryTextures = false;
+    // Texture creation from CPU pixel arrays.
+    bool texturePixelsInput = false;
     bool screenPicking = false;
     // External GPU image output, currently used by ovrtx presentation.
-    bool cudaImages = false;
+    bool cudaImageOutput = false;
+    // CPU transform arrays through the ExternalBuffer batch API.
+    bool cpuInstanceTransformsInput = false;
+    bool skinning = false;
 };
 
 struct SceneBatchState {

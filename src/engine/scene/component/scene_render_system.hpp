@@ -28,7 +28,7 @@ class RenderComponent;
 class DebugDraw;
 
 // Registers, updates, and unregisters RenderComponents with the render backend.
-// Tracks registered Prims and Native batch handles; the backend owns GPU resources.
+// Tracks registered Prims and execution batches; the backend owns GPU resources.
 class SceneRenderSystem {
   public:
     SceneRenderSystem() = default;
@@ -78,15 +78,18 @@ class SceneRenderSystem {
     void updateGeometry(RenderComponent& component,
                         const std::vector<glm::vec3>& positions,
                         const std::vector<glm::vec3>& normals = {});
+    std::shared_ptr<const RenderGeometryData>
+    geometry(const RenderComponent& component) const;
     void updateSkinning(RenderComponent& component,
                         const std::vector<glm::mat4>& boneMatrices);
 
     bool isRegistered(const RenderComponent& component) const;
+    bool hasBatch(const RenderComponent& component) const;
     bool sharesBatch(const RenderComponent& first,
                      const RenderComponent& second) const;
     size_t registrationCount() const { return _registrations.size(); }
 
-    // Native batch handle; absent -> InvalidHandle, source-only -> error.
+    // Execution batch handle; absent -> InvalidHandle, source-only -> error.
     RenderableHandle handle(const RenderComponent& component) const;
 
   private:
@@ -96,9 +99,10 @@ class SceneRenderSystem {
     struct Registration {
         std::weak_ptr<RenderComponent> component;
         Prim* prim = nullptr;
-        // Source-only registrations have no Native batch handle.
+        // Source-only registrations have no execution batch handle.
         RenderableHandle handle = InvalidHandle;
         const MeshData* mesh = nullptr;
+        std::shared_ptr<const RenderGeometryData> geometry;
         Material* material = nullptr;
         SceneBatchState state;
         std::optional<SkinnedMeshData> skinnedMesh;

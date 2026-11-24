@@ -140,8 +140,10 @@ def main():
         app.initialize(width=128, height=96, hide_ui=True, headless=True, render_backend=args.backend)
         assert app.get_renderer().capabilities["native_extensions"] == (args.backend == "native")
         assert app.get_renderer().capabilities["static_scene"]
-        assert app.get_renderer().capabilities["memory_textures"] == (args.backend == "native")
-        assert app.get_renderer().capabilities["screen_picking"] == (args.backend == "native")
+        assert app.get_renderer().capabilities["texture_pixels_input"]
+        assert app.get_renderer().capabilities["cpu_instance_transforms_input"]
+        assert not app.get_renderer().capabilities["cuda_image_output"]
+        assert app.get_renderer().capabilities["screen_picking"]
         parent, surface, material = build_scene(app)
         app.get_renderer().set_profiler_enabled(True)
         app.draw_frame()
@@ -212,20 +214,12 @@ def main():
             memory = app.create_texture(np.full((4, 4, 3), 200, dtype=np.uint8), srgb=True)
             assert isinstance(memory, ke.render.TextureSource) and memory.path is None
             material.base_color_texture = memory
-            try:
-                app.draw_frame()
-            except ValueError as error:
-                assert "memory-image" in str(error), error
-            else:
-                raise AssertionError("unsupported memory image was silently accepted")
+            app.draw_frame()
+            assert app.read_rgb_pixels()[48, 64].min() > 20
             material.base_color_texture = None
             material.unlit = True
-            try:
-                app.draw_frame()
-            except ValueError:
-                pass
-            else:
-                raise AssertionError("unsupported unlit material was accepted")
+            app.draw_frame()
+            assert app.read_rgb_pixels()[48, 64].min() > 200
             material.unlit = False
             app.draw_frame()
         check_animation_physics(app, parent)

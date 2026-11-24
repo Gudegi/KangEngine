@@ -26,7 +26,7 @@ void bind_scene_render(py::module& m) {
              "Return whether a render component is registered with this system.")
         .def("_handle", &KE::Scene::SceneRenderSystem::handle,
              py::arg("component"),
-             "Return the Native batch handle for internal bridges; "
+             "Return the execution batch handle for internal bridges; "
              "unregistered components return InvalidHandle.")
         .def("shares_batch", &KE::Scene::SceneRenderSystem::sharesBatch,
              py::arg("first"), py::arg("second"),
@@ -100,8 +100,8 @@ void bind_scene_render(py::module& m) {
             },
             py::arg("component"), py::arg("transforms"),
             py::arg("colors") = py::none(),
-            "Update instanced transforms and optional colors through "
-            "component registration.")
+            "Update CPU world matrices in column-major order and optional "
+            "colors. ovrtx currently supports transforms only.")
         .def(
             "update_geometry",
             [](KE::Scene::SceneRenderSystem& self,

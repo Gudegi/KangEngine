@@ -169,6 +169,7 @@ NativeVertexColorMaterial = NativeColorMaterial
 VertexColorMaterial = ColorMaterial
 
 
+# TODO: Unify *_map and *_texture names across materials.
 class PhongMaterial(Material):
     """Phong material wrapper with optional preset initialization."""
 

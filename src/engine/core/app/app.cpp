@@ -292,7 +292,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     const bool customBackend = static_cast<bool>(renderBackend);
     if (customBackend && (!headless || !hideUI) &&
         !renderBackend->capabilities().screenPresentation &&
-        !renderBackend->capabilities().cudaImages)
+        !renderBackend->capabilities().cudaImageOutput)
         throw std::invalid_argument(
             "Windowed render backend requires screen presentation or CUDA images");
     _width = width;
@@ -884,7 +884,7 @@ void App::executeFrame(bool update) {
     if (selection.hit && selection.prim &&
         selection.transformSource == TransformSource::SceneGraph &&
         selection.prim->hasRenderComponent() &&
-        (_renderer.capabilities().sceneBatches || getRasterizer()) &&
+        selection.handle != InvalidHandle &&
         _renderer.resolvePick(selection).prim != selection.prim) {
         RayPickResult current;
         if (_renderer.buildPrimSelection(*selection.prim, current))

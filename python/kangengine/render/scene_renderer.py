@@ -1,5 +1,6 @@
-"""Static scene rendering through Native or optional ovrtx adapters."""
+"""Scene image rendering through Native or optional ovrtx adapters."""
 
+from itertools import chain
 from pathlib import Path
 import threading
 
@@ -7,18 +8,20 @@ from .._core import _ke
 
 
 def _validate_frame(frame, texture_paths, validated_meshes):
-    for item in frame["objects"]:
+    for item in chain(frame["objects"], frame.get("batches", ())):
         material = item["material"]
-        if (material["model"] != "pbr" or material["unlit"] or
-                material["has_native_textures"] or material["base_color"][3] != 1 or
-                item["color"][3] != 1):
-            raise ValueError(f'{item["path"]}: use opaque lit PBR and texture_resources')
+        if material["model"] not in ("color", "phong", "pbr") or material["has_native_textures"]:
+            raise ValueError(f'{item["path"]}: use built-in materials and texture_resources')
+        if material["model"] == "color" and material["style"] in (2, 3):
+            raise ValueError("Scene renderer does not yet support checker materials")
+        if item["alpha_mode"] == 2 or (item["alpha_mode"] == 0 and item["color"][3] < 1):
+            raise ValueError("Scene renderer does not support AlphaMode.BLEND; USD opacity is transmission, not alpha blending")
         if item["mesh_id"] not in validated_meshes:
             if item["mesh"].colors:
                 raise ValueError("Scene renderer does not yet support vertex colors")
             validated_meshes.add(item["mesh_id"])
         for slot, texture in item["textures"].items():
-            if slot != "base_color_texture":
+            if slot not in ("base_color_texture", "diffuse_map", "normal_texture", "normal_map", "alpha_map"):
                 raise ValueError(f"Scene renderer does not yet support texture slot {slot}")
             if texture["pixels"] is not None:
                 continue
@@ -31,11 +34,12 @@ def _validate_frame(frame, texture_paths, validated_meshes):
 class SceneRenderer:
     """Render a scene to RGB images without changing its authoring code.
 
-    Supports opaque, lit PBR triangle meshes, base-color file textures, scene
-    lights and a perspective camera. Sources stay
-    immutable after registration; register a new resource to replace geometry
-    or an image.
-    Native also accepts memory images; ovrtx currently requires file sources.
+    Both backends accept opaque lit PBR triangle meshes, base-color textures
+    from files or pixel arrays, scene lights, and a perspective camera. OVRTX
+    also accepts Color/Phong materials, unlit, alpha masking, and normal maps.
+    Alpha blending and checker materials are unsupported. Register a new source
+    resource to replace source geometry or an image. App owns runtime skinning
+    and instances.
     The session retains its scene and resource manager. Use on its creating
     thread and close to release backend resources.
     """

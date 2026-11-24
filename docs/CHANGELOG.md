@@ -4,6 +4,12 @@
 
 ### Added
 
+- Support fixed-topology CPU mesh deformation through `update_geometry()` on ovrtx.
+- Support CPU/CUDA ExternalBuffer instance transforms and independent skinned
+  poses on ovrtx while sharing source meshes.
+- Support viewport picking and selection outlines on ovrtx.
+- Support Color/Phong materials, unlit, alpha masking, normal maps, and textures
+  from pixel arrays on ovrtx.
 - Add base-color and normal textures to `ColorMaterial`.
 - Add `Material.clone()` to copy parameters while sharing textures.
 - Add `asset.load_ply()` for ASCII and binary PLY meshes and colored point clouds.

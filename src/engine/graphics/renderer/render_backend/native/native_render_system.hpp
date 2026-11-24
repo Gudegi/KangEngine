@@ -22,7 +22,7 @@ class NativeRenderSystem final : public RenderBackend {
     NativeRenderSystem& operator=(const NativeRenderSystem&) = delete;
 
     RenderBackendCapabilities capabilities() const override {
-        return {true, true, true, true, true, true, true};
+        return {true, true, true, true, true, true, true, false, true, true};
     }
     void initialize(int width, int height) override;
     void resize(int width, int height) override;
@@ -93,13 +93,15 @@ class NativeRenderSystem final : public RenderBackend {
     Renderer& _renderer;
     struct SceneBatch {
         Scene::RenderMeshData mesh;
+        std::shared_ptr<const Scene::RenderGeometryData> geometry;
         PBRMaterial material;
         Scene::RenderMaterialSource materialSource;
         Scene::RenderInstanceData instances;
         RenderableHandle handle = InvalidHandle;
     };
     using SceneBatchKey =
-        std::tuple<Scene::ResourceHandle, Scene::ResourceHandle, bool>;
+        std::tuple<Scene::ResourceHandle, Scene::ResourceHandle, bool,
+                   Scene::RenderInstanceId>;
     // Rasterizer borrows these arrays/materials and is destroyed first.
     std::map<SceneBatchKey, std::unique_ptr<SceneBatch>> _sceneBatches;
     std::map<Scene::RenderInstanceId, Scene::RenderObjectSource> _sceneObjects;

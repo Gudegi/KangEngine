@@ -278,7 +278,12 @@ class RenderablePrimView:
         return self
 
     def update_geometry(self, positions, normals=None):
-        """Update dynamic vertex positions and optional normals."""
+        """Update mesh-local CPU positions and optional normals, shaped [N, 3].
+
+        Vertex count and topology stay fixed; omitted normals retain their values.
+        Native updates the shared batch; ovrtx updates this object. Source
+        MeshData is unchanged.
+        """
         self._render_system.update_geometry(self.component, positions, normals)
         return self
 
@@ -1879,11 +1884,12 @@ class App(_NativeApp):
     ):
         """Initialize Native rendering or the optional ovrtx backend.
 
-        ovrtx supports opaque lit PBR meshes, scene lights, and perspective
-        cameras. Directional ambient must be zero. Its window uses CUDA–OpenGL
-        image copies on the same GPU and requires a CUDA interop build. Viewport
-        picking is not supported. Use ``headless=True, hide_ui=True`` to render
-        without a window.
+        ovrtx supports skinning, CPU deformation, CPU/CUDA instances, picking,
+        and built-in Color/Phong/PBR materials with unlit and alpha masking.
+        Alpha blending and checker materials are unsupported. Directional
+        ambient must be zero. Its window requires CUDA–OpenGL interop on the
+        same GPU. Use ``headless=True, hide_ui=True`` for CPU image output
+        without a window. CUDA instance inputs also require ``cuda-bindings``.
         Unsupported scene features raise when submitted.
         """
         if render_backend not in ("native", "ovrtx"):
