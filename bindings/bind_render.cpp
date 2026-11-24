@@ -495,6 +495,9 @@ void bind_render(py::module& m) {
                 return result;
             },
             "Return supported frame features and availability of Native extensions.")
+        .def("set_exposure", &Renderer::setExposure, py::arg("exposure"),
+             "Set a linear brightness multiplier before tone mapping; "
+             "1 is unchanged.")
         .def(
             "_sync_scene",
             [](Renderer& renderer, py::dict frame) {

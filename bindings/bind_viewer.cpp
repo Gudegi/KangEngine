@@ -1393,9 +1393,7 @@ void bind_viewer(py::module& m) {
         .def(
             "set_background_color",
             [](App& self, const glm::vec4& color) {
-                self.getRenderer().native();
-                self.getRenderer().settings().background.backgroundColor =
-                    color;
+                self.getRenderer().setBackgroundColor(color);
             },
             py::arg("color"), "Set the renderer clear/background color.")
         .def(
@@ -1404,8 +1402,7 @@ void bind_viewer(py::module& m) {
                const glm::vec4& gridColor, bool showGrid, bool usePbr,
                float metallic, float roughness, float gridScale,
                float lineWidth, float gridEmission) {
-                self.getRenderer().native();
-                auto& background = self.getRenderer().settings().background;
+                auto background = self.getRenderer().settings().background;
                 background.checkerColor1 = checkerA;
                 background.checkerColor2 = checkerB;
                 background.gridColor = gridColor;
@@ -1419,6 +1416,7 @@ void bind_viewer(py::module& m) {
                 background.gridLineWidth =
                     std::clamp(lineWidth, 0.0001f, 0.49f);
                 background.gridEmission = std::max(gridEmission, 0.0f);
+                self.getRenderer().setGroundStyle(background);
             },
             py::arg("checker_a"), py::arg("checker_b"), py::arg("grid_color"),
             py::arg("show_grid") = true, py::arg("use_pbr") = false,
@@ -1426,6 +1424,13 @@ void bind_viewer(py::module& m) {
             py::arg("grid_scale") = 1.0f, py::arg("line_width") = 0.005f,
             py::arg("grid_emission") = 0.0f,
             "Configure the standard ground shading and procedural grid.")
+        .def("set_exposure",
+             [](App& self, float exposure) {
+                 self.getRenderer().setExposure(exposure);
+             },
+             py::arg("exposure"),
+             "Set a linear brightness multiplier before tone mapping; "
+             "1 is unchanged.")
         .def(
             "set_gamma",
             [](App& self, float gamma) {

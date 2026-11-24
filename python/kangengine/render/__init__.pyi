@@ -579,6 +579,9 @@ class ProfileSummary:
 
 class Renderer:
     """Facade for custom pipelines and renderable resource updates."""
+    def set_exposure(self, exposure: float) -> None:
+        """Set a nonnegative linear brightness multiplier; 1 is unchanged."""
+        ...
     @property
     def capabilities(self) -> dict[str, bool]:
         """Frame support: screen_presentation, selection_outline, wireframe,

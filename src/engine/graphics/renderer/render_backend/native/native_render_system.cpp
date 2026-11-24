@@ -9,6 +9,7 @@
 #include <filesystem>
 
 namespace KE {
+
 namespace {
 
 RenderImage readFramebuffer(Backend::Framebuffer* framebuffer, bool flipY) {
@@ -26,6 +27,20 @@ NativeRenderSystem::NativeRenderSystem(Backend::GraphicsDevice& device,
     : _device(device), _renderer(renderer) {}
 
 NativeRenderSystem::~NativeRenderSystem() = default;
+
+void NativeRenderSystem::setBackgroundColor(const glm::vec4& color) {
+    _renderer.settings().background.backgroundColor = color;
+}
+
+void NativeRenderSystem::setGroundStyle(const BackgroundSettings& settings) {
+    const auto color = _renderer.settings().background.backgroundColor;
+    _renderer.settings().background = settings;
+    _renderer.settings().background.backgroundColor = color;
+}
+
+void NativeRenderSystem::setExposure(float exposure) {
+    _renderer.settings().exposure = exposure;
+}
 
 void NativeRenderSystem::initialize(int width, int height) {
     _width = width;
@@ -529,7 +544,8 @@ void NativeRenderSystem::endFrame(const RenderPickHit& selection,
     auto postScope = _device.profileContext()->cpuScope("render/post");
     const auto& settings = _renderer.settings();
     _postProcessor->process(finalSource, settings.gamma, settings.toneMapMode,
-                            settings.toneMapExposure, settings.bloom);
+                            settings.toneMapExposure, settings.bloom,
+                            settings.exposure);
     _output = _postProcessor->getOutputFramebuffer();
     if (presentToScreen)
         present();
@@ -567,7 +583,8 @@ Backend::Texture* NativeRenderSystem::renderCameraPreview(
     }
     _previewPostProcessor->process(_previewFramebuffer->getColorTexture(),
                                    settings.gamma, settings.toneMapMode,
-                                   settings.toneMapExposure, settings.bloom);
+                                   settings.toneMapExposure, settings.bloom,
+                                   settings.exposure);
     _device.setViewport(0, 0, _width, _height);
     return _previewPostProcessor->getResult();
 }

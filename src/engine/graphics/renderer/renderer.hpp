@@ -49,6 +49,7 @@ class BindGroup;
 } // namespace Backend
 
 struct RendererSettings {
+    float exposure = 1.0f;
     float gamma = 2.2f;
     ToneMapMode toneMapMode = ToneMapMode::None;
     float toneMapExposure = 1.0f;
@@ -91,6 +92,9 @@ class Renderer {
                     int height);
     RenderBackendCapabilities capabilities() const;
     void resizeFrame(int width, int height);
+    void setBackgroundColor(const glm::vec4& color);
+    void setGroundStyle(const BackgroundSettings& settings);
+    void setExposure(float exposure);
     void syncScene(const Scene::RenderSceneFrame& scene);
     void syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
                    const glm::mat4& projection);

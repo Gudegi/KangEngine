@@ -26,6 +26,10 @@ class SceneRendererApp(ke.App):
         self.cuda_status = "CUDA instances are off."
         self.last_pick = "Click an object to inspect its surface hit."
         self.sample_groups = {}
+        self.ambient_intensity = 0.0
+        self.exposure = 1.0
+        self.checker_enabled = False
+        self.checker_ground = None
         self.set_fixed_update_hz(update_hz=60)
         self.set_ui_layout_mode(mode=ke.UILayoutMode.EDITOR)
         self.set_camera_view(position=[18, 16, 24], target=[0, 1, 0])
@@ -59,6 +63,7 @@ class SceneRendererApp(ke.App):
         floor = self.scene.add_mesh(path="/room/floor", mesh_data=cube, material=floor_material)
         floor.set_local_scale(ke.Vec3(24, 0.2, 20))
         floor.set_local_translation(ke.Vec3(0, -0.1, 0))
+        self.floor = floor
         wall = self.scene.add_mesh(path="/room/back", mesh_data=cube, material=wall_material)
         wall.set_local_scale(ke.Vec3(24, 4, 0.2))
         wall.set_local_translation(ke.Vec3(0, 2, -8.5))
@@ -377,6 +382,17 @@ class SceneRendererApp(ke.App):
 
     def draw_light_controls(self):
         if ke.imgui.collapsing_header("Lighting"):
+            changed, self.ambient_intensity = ke.imgui.slider_float("Ambient", self.ambient_intensity, 0, 0.5)
+            if changed:
+                self.set_light_ambient(ambient=[self.ambient_intensity] * 3)
+            changed, self.exposure = ke.imgui.slider_float("Exposure", self.exposure, 0, 2)
+            if changed:
+                self.set_exposure(exposure=self.exposure)
+            if ke.imgui.button("Gray background"):
+                self.set_background_color(color=rgba(ke.ColorType.LIGHT_GRAY))
+            changed, self.checker_enabled = ke.imgui.checkbox("Checker ground", self.checker_enabled)
+            if changed:
+                self.set_checker_ground(self.checker_enabled)
             directional = self.scene.get_prim_at_path("/lights/default_directional")
             changed, enabled = ke.imgui.checkbox("Directional", directional.is_visible())
             if changed:
@@ -399,6 +415,17 @@ class SceneRendererApp(ke.App):
             if ke.imgui.button("Focus local lights"):
                 self.set_camera_view(position=[0, 7, 1], target=[0, 0, -6])
             ke.imgui.text_wrapped("Turn off Directional and Environment to isolate local lights.")
+
+    def set_checker_ground(self, enabled):
+        if enabled and self.checker_ground is None:
+            self.set_ground_style(
+                checker_a=rgba(ke.ColorType.WHITE), checker_b=rgba(ke.ColorType.LIGHT_GRAY),
+                grid_color=rgba(ke.ColorType.BLACK), use_pbr=True,
+            )
+            self.checker_ground = self.scene.add_ground(path="/room/checker", scale=24)
+        if self.checker_ground is not None:
+            self.checker_ground.set_visible(visible=enabled)
+        self.floor.set_visible(visible=not enabled)
 
 
 def main():

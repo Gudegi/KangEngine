@@ -21,6 +21,9 @@ import ovrtx
 import ovstage
 from .._core import _ke
 
+# Calibrated against linear HDR on a white rough PBR surface in OVRTX 0.7.
+_AMBIENT_INTENSITY_SCALE = 1 / 2500
+
 
 def _tuples(values):
     return ", ".join(
@@ -37,6 +40,7 @@ def _texture_key(source):
         source["flip"],
         int(sampler.wrap_u),
         int(sampler.wrap_v),
+        source.get("uv_scale", 1.0),
     )
 
 
@@ -84,6 +88,15 @@ class OvrtxSceneAdapter:
         self._geometry = {}
         self._deformations = {}
         self._values = {}
+        self._background_color = None
+        self._exposure = 1.0
+        self._display_changed = True
+        self._ambient = (0.0, 0.0, 0.0)
+        self._history_changed = False
+        self._ground = None
+        self._ground_changed = False
+        self._ground_revision = 0
+        self._ground_texture = None
         self._ordinal = 1
         self._output = None
         self._products = None
@@ -168,6 +181,79 @@ def Scope "Render" {{
                 semantic=semantic,
             ).wait()
         self._values[key] = values
+
+    def _write_token(self, path, attribute, value):
+        with ovstage.PathDictionary(self._stage) as paths:
+            token = paths.intern_token(value)
+            self._write(path, attribute, token.raw_id, dtype=np.uint64,
+                        semantic=ovstage.AttributeSemantic.TOKEN_ID)
+
+    def set_background_color(self, color):
+        if not np.isfinite(color).all() or min(color[:3]) < 0 or color[3] != 1:
+            raise ValueError("ovrtx background requires finite nonnegative RGB and alpha=1")
+        color = tuple(color[:3])
+        if color != self._background_color:
+            self._background_color = color
+            self._display_changed = True
+            self._history_changed = True
+
+    def set_exposure(self, exposure):
+        if exposure != self._exposure:
+            self._exposure = exposure
+            self._display_changed = True
+            self._history_changed = True
+
+    def set_ground_style(self, ground):
+        if not ground["use_pbr"] or ground["grid_emission"] != 0:
+            raise ValueError("ovrtx ground requires use_pbr=True and grid_emission=0")
+        for key in ("checker_a", "checker_b", "grid_color"):
+            color = ground[key]
+            if not np.isfinite(color).all() or min(color) < 0 or max(color) > 1 or color[3] != 1:
+                raise ValueError("ovrtx ground colors require RGB in [0, 1] and alpha=1")
+        if not all(math.isfinite(ground[key]) for key in ("metallic", "roughness", "grid_scale", "line_width")):
+            raise ValueError("Ground style values must be finite")
+        if ground != self._ground:
+            self._ground = ground
+            self._ground_revision += 1
+            self._ground_changed = True
+            self._ground_texture = None
+            self._history_changed = True
+
+    def _ground_item(self, item):
+        material = item["material"]
+        if not item.get("_ground") and not (material["model"] == "color" and material["style"] == 2):
+            return item
+        if self._ground is None:
+            raise ValueError("Set ground style before submitting checker materials")
+        ground = self._ground
+        if self._ground_texture is None:
+            # One 512px tile covers two cells; filtering replaces Native's analytic AA.
+            coordinates = (np.arange(512) + 0.5) / 256
+            x, y = np.meshgrid(coordinates, coordinates)
+            checker = (np.floor(x).astype(int) + np.floor(y).astype(int)) % 2
+            a, b, grid = (np.asarray(ground[key]) for key in ("checker_a", "checker_b", "grid_color"))
+            pixels = np.where(checker[..., None], b, a)
+            if ground["show_grid"]:
+                distance = np.minimum(np.minimum(x % 1, 1 - x % 1),
+                                      np.minimum(y % 1, 1 - y % 1))
+                coverage = np.clip((ground["line_width"] - distance) * 256 + 0.5, 0, 1)[..., None]
+                pixels = pixels * (1 - coverage) + grid * coverage
+            self._ground_texture = dict(
+                id=f"ground_{self._ground_revision}", path="", srgb=False, flip=True,
+                sampler=_ke.SamplerDesc(), pixels=np.rint(pixels * 255).astype(np.uint8),
+                uv_scale=ground["grid_scale"] / 2,
+            )
+        return dict(item, _ground=True,
+                    material=dict(material, model="pbr", metallic=ground["metallic"],
+                                  roughness=ground["roughness"]),
+                    textures={"base_color_texture": self._ground_texture})
+
+    def _write_display(self):
+        if self._background_color is not None:
+            self._write_token("/Render/Camera", "omni:rtx:background:source:type", "color")
+            self._write("/Render/Camera", "omni:rtx:background:source:color", self._background_color,
+                        semantic=ovstage.AttributeSemantic.COLOR)
+        self._write("/World/Camera", "exposure:time", self._exposure)
 
     def _matrix(self, path, matrix):
         self._write(
@@ -273,6 +359,18 @@ def Xform "Batch" {{
             float2 outputs:result
         }
 '''
+        uv_path = root + "/Material/UV.outputs:result"
+        if color and "uv_scale" in color:
+            scale = color["uv_scale"]
+            shaders += f'''
+        def Shader "UVScale" {{
+            uniform token info:id = "UsdTransform2d"
+            float2 inputs:in.connect = <{uv_path}>
+            float2 inputs:scale = ({scale}, {scale})
+            float2 outputs:result
+        }}
+'''
+            uv_path = root + "/Material/UVScale.outputs:result"
         for name, source in (("Texture", color), ("Normal", normal), ("Alpha", alpha)):
             if source is None:
                 continue
@@ -286,7 +384,7 @@ def Xform "Batch" {{
             token inputs:sourceColorSpace = "{"sRGB" if source["srgb"] else "raw"}"
             token inputs:wrapS = "{wraps[int(sampler.wrap_u)]}"
             token inputs:wrapT = "{wraps[int(sampler.wrap_v)]}"
-            float2 inputs:st.connect = <{root}/Material/UV.outputs:result>
+            float2 inputs:st.connect = <{uv_path}>
             float4 inputs:scale = {"(2,2,2,1)" if name == "Normal" else "(1,1,1,1)"}
             float4 inputs:bias = {"(-1,-1,-1,0)" if name == "Normal" else "(0,0,0,0)"}
             float3 outputs:rgb
@@ -655,8 +753,10 @@ def {schema} "Light"{shaping} {{
         layers = {}
         for path, item in sources.items():
             kind, light = item["type"], item["light"]
-            if kind == "directional" and any((light.ambient.x, light.ambient.y, light.ambient.z)):
-                raise ValueError("ovrtx requires directional ambient=[0, 0, 0]; use a DomeLight")
+            if kind == "directional":
+                ambient = (light.ambient.x, light.ambient.y, light.ambient.z)
+                if not np.isfinite(ambient).all() or min(ambient) < 0:
+                    raise ValueError("Directional ambient must be finite and nonnegative")
             if kind in ("point", "spot") and kind not in self._warned_ranges:
                 warnings.warn(
                     f"ovrtx {kind} lights use inverse-square falloff; Native range cutoff is not supported",
@@ -743,11 +843,15 @@ def {schema} "Light"{shaping} {{
                     )
 
         self._ordinal += 1
-        batches = {item["id"]: item for item in frame.get("batches", ())
+        batches = {item["id"]: self._ground_item(item) for item in frame.get("batches", ())
                    if item["skin"] is not None or item["count"]}
         lights = frame["lights"] if frame["lights"] is not None else self._light_values
         lights_changed = self._sync_lights(lights) if frame["lights"] is not None else False
-        updates = {item["id"]: item for item in frame["objects"]}
+        updates = {item["id"]: self._ground_item(item) for item in frame["objects"]}
+        if self._ground_changed and frame["incremental"]:
+            for key, item in self._objects.items():
+                if item.get("_ground") and key not in updates and key not in frame["removed_objects"]:
+                    updates[key] = self._ground_item(item)
         if frame["incremental"]:
             objects = self._objects.copy() if updates or frame["removed_objects"] else self._objects
             removed = self._references.keys() & set(frame["removed_objects"])
@@ -793,6 +897,8 @@ def {schema} "Light"{shaping} {{
             self._skin_revisions.clear()
 
         self._ordinal += 1
+        if structural_change or self._display_changed:
+            self._write_display()
         if structural_change:
             for key, pixels in self._texture_pixels.items():
                 with self._query(f"/Textures/t{key}") as query:
@@ -803,6 +909,14 @@ def {schema} "Light"{shaping} {{
         if structural_change or frame["lights"] is not None:
             for item in lights:
                 self._write_light(item)
+            ambient = next(((light["light"].ambient.x, light["light"].ambient.y, light["light"].ambient.z)
+                            for light in lights if light["type"] == "directional"), (0.0, 0.0, 0.0))
+            if ambient != self._ambient:
+                self._history_changed = True
+            self._write("/Render/Camera", "omni:rtx:rt:ambientLight:color", ambient,
+                        semantic=ovstage.AttributeSemantic.COLOR)
+            self._write("/Render/Camera", "omni:rtx:rt:ambientLight:intensity", _AMBIENT_INTENSITY_SCALE)
+            self._ambient = ambient
         for key, item in (objects if structural_change else updates).items():
             path = f"/World/i{key}"
             if item["geometry"] is not None:
@@ -844,6 +958,8 @@ def {schema} "Light"{shaping} {{
             self._renderer.attach_ovstage(self._stage)
             self._attached = True
         self._prepare_interaction(frame, objects, batches, structural_change)
+        if self._history_changed:
+            self._renderer.clear_history(render_products={"/Render/Camera"})
         # The result set owns the native output handles until presentation ends.
         self._products = self._renderer.step(
             render_products={"/Render/Camera"}, delta_time=1 / 60, ordinal=self._ordinal
@@ -854,6 +970,9 @@ def {schema} "Light"{shaping} {{
             self._read_pick(product, objects, batches)
         self._objects = objects
         self._light_values = lights
+        self._display_changed = False
+        self._ground_changed = False
+        self._history_changed = False
         if changed or batches_changed:
             live_meshes = {item["mesh_id"] for item in chain(objects.values(), batches.values())}
             self._geometry = {key: value for key, value in self._geometry.items() if key in live_meshes}

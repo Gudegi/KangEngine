@@ -197,6 +197,8 @@ class PythonRenderBackend final : public KE::RenderBackend {
         py::gil_scoped_acquire gil;
         _adapter = _factory(width, height);
         _picking = py::hasattr(_adapter, "pick_result");
+        if (py::hasattr(_adapter, "set_ground_style"))
+            setGroundStyle(KE::BackgroundSettings{});
         _width = width;
         _height = height;
     }
@@ -357,6 +359,30 @@ class PythonRenderBackend final : public KE::RenderBackend {
         _scene.camera.verticalFov = camera.getFoV();
         _scene.camera.nearPlane = camera.getNearPlane();
         _scene.camera.farPlane = camera.getFarPlane();
+    }
+    void setBackgroundColor(const glm::vec4& color) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("set_background_color")(vec4Values(color));
+    }
+    void setGroundStyle(const KE::BackgroundSettings& settings) override {
+        py::gil_scoped_acquire gil;
+        py::dict ground;
+        ground["checker_a"] = vec4Values(settings.checkerColor1);
+        ground["checker_b"] = vec4Values(settings.checkerColor2);
+        ground["grid_color"] = vec4Values(settings.gridColor);
+        ground["show_grid"] = settings.showGrid;
+        ground["use_pbr"] =
+            settings.groundShadingModel == KE::GroundShadingModel::Pbr;
+        ground["metallic"] = settings.groundMetallic;
+        ground["roughness"] = settings.groundRoughness;
+        ground["grid_scale"] = settings.gridScale;
+        ground["line_width"] = settings.gridLineWidth;
+        ground["grid_emission"] = settings.gridEmission;
+        _adapter.attr("set_ground_style")(ground);
+    }
+    void setExposure(float exposure) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("set_exposure")(exposure);
     }
     void beginFrame() override {
         _pending = {};

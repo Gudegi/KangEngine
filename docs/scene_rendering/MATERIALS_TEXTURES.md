@@ -36,6 +36,10 @@ from this collection:
 ground = self.scene.add_ground()
 ```
 
+On ovrtx, standard checker ground uses a shared texture. `set_ground_style()`
+supports `use_pbr=True` and `grid_emission=0`, with opaque colors in `[0, 1]`.
+Filtering may differ from Native's procedural grid. DebugChecker is unsupported.
+
 Get the collection directly when you want to reuse one of its materials or
 replace the ground material explicitly:
 

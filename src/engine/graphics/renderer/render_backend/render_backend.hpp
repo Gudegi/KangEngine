@@ -63,6 +63,17 @@ class RenderBackend {
     virtual RenderBackendCapabilities capabilities() const = 0;
     virtual void initialize(int width, int height) = 0;
     virtual void resize(int width, int height) = 0;
+    virtual void setBackgroundColor(const glm::vec4&) {
+        throw std::runtime_error(
+            "Render backend does not support background color");
+    }
+    virtual void setGroundStyle(const BackgroundSettings&) {
+        throw std::runtime_error(
+            "Render backend does not support ground styling");
+    }
+    virtual void setExposure(float) {
+        throw std::runtime_error("Render backend does not support exposure");
+    }
     // Full state or explicit upserts/removals from one resource manager; no
     // Prim access. Unchanged lighting is retained. Camera matrices still come
     // from frame calls.

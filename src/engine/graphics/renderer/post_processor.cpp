@@ -68,7 +68,7 @@ void main() {
     int toneMapMode = int(uToneMapParams.y);
     float exposure = uToneMapParams.z;
 
-    vec3 mapped = color.rgb;
+    vec3 mapped = color.rgb * uToneMapParams.w;
     if (toneMapMode == 1) {
         mapped = mapped * exposure;
         mapped = mapped / (mapped + vec3(1.0));
@@ -552,7 +552,7 @@ void PostProcessor::ensureBloomCompositeBindings(Backend::Texture* scene,
 
 void PostProcessor::process(Backend::Texture* src, float gamma,
                             ToneMapMode toneMapMode, float tonemapExposure,
-                            const BloomConfig& bloom) {
+                            const BloomConfig& bloom, float exposure) {
     if (!src || _width <= 0 || _height <= 0)
         return;
 
@@ -568,7 +568,7 @@ void PostProcessor::process(Backend::Texture* src, float gamma,
         HDRSource = _bloomCompositeFBO->getColorTexture();
     }
 
-    renderToneMapPass(HDRSource, gamma, toneMapMode, tonemapExposure);
+    renderToneMapPass(HDRSource, gamma, toneMapMode, tonemapExposure, exposure);
 }
 
 void PostProcessor::ensureBloomBuffers(const BloomConfig& bloom) {
@@ -714,7 +714,7 @@ void PostProcessor::renderBloomCompositePass(Backend::Texture* scene,
 
 void PostProcessor::renderToneMapPass(Backend::Texture* src, float gamma,
                                       ToneMapMode toneMapMode,
-                                      float tonemapExposure) {
+                                      float tonemapExposure, float exposure) {
     if (!src || !_toneMapOutputTarget || _width <= 0 || _height <= 0)
         return;
     ensureToneMapBindings(src);
@@ -722,7 +722,7 @@ void PostProcessor::renderToneMapPass(Backend::Texture* src, float gamma,
     ToneMapParams params;
     params.values =
         glm::vec4(gamma < 0.01f ? 1.0f : gamma,
-                  static_cast<float>(toneMapMode), tonemapExposure, 0.0f);
+                  static_cast<float>(toneMapMode), tonemapExposure, exposure);
     _toneMapParamsBuffer->setData(&params, sizeof(params));
 
     auto encoder = _device->createCommandEncoder();

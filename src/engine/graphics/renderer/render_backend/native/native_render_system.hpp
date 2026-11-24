@@ -25,6 +25,9 @@ class NativeRenderSystem final : public RenderBackend {
         return {true, true, true, true, true, true, true, false, true, true};
     }
     void initialize(int width, int height) override;
+    void setBackgroundColor(const glm::vec4& color) override;
+    void setGroundStyle(const BackgroundSettings& settings) override;
+    void setExposure(float exposure) override;
     void resize(int width, int height) override;
     void syncScene(const Scene::RenderSceneFrame& scene) override;
     void syncLights(const Scene::RenderLightData& lights) override;

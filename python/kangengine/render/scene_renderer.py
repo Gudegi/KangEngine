@@ -12,8 +12,8 @@ def _validate_frame(frame, texture_paths, validated_meshes):
         material = item["material"]
         if material["model"] not in ("color", "phong", "pbr") or material["has_native_textures"]:
             raise ValueError(f'{item["path"]}: use built-in materials and texture_resources')
-        if material["model"] == "color" and material["style"] in (2, 3):
-            raise ValueError("Scene renderer does not yet support checker materials")
+        if material["model"] == "color" and material["style"] == 3:
+            raise ValueError("Scene renderer does not support DebugChecker materials")
         if item["alpha_mode"] == 2 or (item["alpha_mode"] == 0 and item["color"][3] < 1):
             raise ValueError("Scene renderer does not support AlphaMode.BLEND; USD opacity is transmission, not alpha blending")
         if item["mesh_id"] not in validated_meshes:

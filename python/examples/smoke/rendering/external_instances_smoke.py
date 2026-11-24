@@ -167,13 +167,13 @@ def check_rendering(backend):
         system.update_instances(view.component, values)
         if adapter:
             # A rejected scene must not leave a batch marked as populated.
-            light.ambient = ke.Vec3(1, 1, 1)
+            light.ambient = ke.Vec3(float("nan"), 0, 0)
             light_prim = app.scene.get_prim_at_path("/lights/default_directional")
             light_prim.set_directional_light(light)
             try:
                 app.draw_frame()
             except ValueError as error:
-                assert "directional ambient" in str(error)
+                assert "ambient" in str(error)
             else:
                 raise AssertionError("Unsupported light was accepted")
             light.ambient = ke.Vec3(0, 0, 0)

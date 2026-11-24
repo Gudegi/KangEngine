@@ -36,7 +36,8 @@ class PostProcessor {
   public:
     void init(Backend::GraphicsDevice* device, int width, int height);
     void process(Backend::Texture* src, float gamma, ToneMapMode toneMapMode,
-                 float tonemapExposure, const BloomConfig& bloom);
+                 float tonemapExposure, const BloomConfig& bloom,
+                 float exposure = 1.0f);
     Backend::Texture* getResult();
     Backend::Framebuffer* getOutputFramebuffer();
     void blitToScreen(int width, int height);
@@ -44,8 +45,8 @@ class PostProcessor {
 
   private:
     struct alignas(16) ToneMapParams {
-        // x: gamma, y: tone-map mode, z: exposure
-        glm::vec4 values{1.0f, 0.0f, 1.0f, 0.0f};
+        // x: gamma, y: tone-map mode, z: tone-map exposure, w: linear exposure
+        glm::vec4 values{1.0f, 0.0f, 1.0f, 1.0f};
     };
     struct alignas(16) BrightExtractParams {
         glm::vec4 values{1.0f, 0.0f, 0.0f, 0.0f};
@@ -155,7 +156,8 @@ class PostProcessor {
 
     // Converts final HDR source into the LDR output framebuffer.
     void renderToneMapPass(Backend::Texture* src, float gamma,
-                           ToneMapMode toneMapMode, float tonemapExposure);
+                           ToneMapMode toneMapMode, float tonemapExposure,
+                           float exposure);
 };
 
 } // namespace KE

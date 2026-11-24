@@ -93,6 +93,20 @@ void Renderer::resizeFrame(int width, int height) {
     _pickView.height = height;
 }
 
+void Renderer::setBackgroundColor(const glm::vec4& color) {
+    renderBackend().setBackgroundColor(color);
+}
+
+void Renderer::setGroundStyle(const BackgroundSettings& settings) {
+    renderBackend().setGroundStyle(settings);
+}
+
+void Renderer::setExposure(float exposure) {
+    if (!std::isfinite(exposure) || exposure < 0)
+        throw std::invalid_argument("Exposure must be finite and nonnegative");
+    renderBackend().setExposure(exposure);
+}
+
 void Renderer::syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
                          const glm::mat4& projection) {
     if (_pickView.view != view || _pickView.projection != projection)
