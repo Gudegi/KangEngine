@@ -9,6 +9,7 @@ kp in code for active pose holding.
 import os
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, keys, visual
 
 
@@ -195,6 +196,7 @@ if __name__ == "__main__":
             f"This example requires KangEngine to be built with PhysX bindings. Missing: {', '.join(missing)}"
         )
 
+    args = render_example_parser(description=__doc__).parse_args()
     app = RagdollApp()
-    app.initialize(1920, 1080, False, ke.UpAxis.Z)
+    app.initialize(1920, 1080, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()

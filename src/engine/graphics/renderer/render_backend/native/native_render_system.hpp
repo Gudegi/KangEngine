@@ -29,6 +29,10 @@ class NativeRenderSystem final : public RenderBackend {
     void setGroundStyle(const BackgroundSettings& settings) override;
     void setExposure(float exposure) override;
     RenderDebugDraw& debugDraw() override;
+    RenderTextDraw& textDraw() override;
+    RenderPickHit
+    raycast(const Geometry::Ray& ray,
+            const std::function<bool(uint64_t)>& filter) const override;
     void resize(int width, int height) override;
     void syncScene(const Scene::RenderSceneFrame& scene) override;
     void syncLights(const Scene::RenderLightData& lights) override;
@@ -104,7 +108,7 @@ class NativeRenderSystem final : public RenderBackend {
         RenderableHandle handle = InvalidHandle;
     };
     using SceneBatchKey =
-        std::tuple<Scene::ResourceHandle, Scene::ResourceHandle, bool,
+        std::tuple<Scene::ResourceHandle, Scene::ResourceHandle, bool, bool,
                    Scene::RenderInstanceId>;
     // Rasterizer borrows these arrays/materials and is destroyed first.
     std::map<SceneBatchKey, std::unique_ptr<SceneBatch>> _sceneBatches;

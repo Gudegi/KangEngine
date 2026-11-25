@@ -6,9 +6,11 @@
 #include "engine/graphics/renderer/render_backend/render_picking.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/render_backend/render_debug_draw.hpp"
+#include "engine/graphics/renderer/render_backend/render_text_draw.hpp"
 #include "utils/types.hpp"
 
 #include <glm/mat4x4.hpp>
+#include <functional>
 #include <stdexcept>
 #include <optional>
 #include <vector>
@@ -77,6 +79,16 @@ class RenderBackend {
     }
     virtual RenderDebugDraw& debugDraw() {
         throw std::runtime_error("Render backend does not support debug drawing");
+    }
+    virtual RenderTextDraw& textDraw() {
+        throw std::runtime_error(
+            "Render backend does not support text drawing");
+    }
+    // Query CPU-visible geometry; the scene filters snapshot identities at query time.
+    virtual RenderPickHit raycast(
+        const Geometry::Ray&,
+        const std::function<bool(uint64_t)>& = {}) const {
+        throw std::runtime_error("Render backend does not support mesh raycast");
     }
     // Full state or explicit upserts/removals from one resource manager; no
     // Prim access. Unchanged lighting is retained. Camera matrices still come

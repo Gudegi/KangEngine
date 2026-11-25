@@ -104,7 +104,7 @@ class GamepadVisualizer:
             / "gamepad"
             / "gemini-xbox_gamepad.png"
         )
-        self._texture = app.load_texture(asset, flip=True)
+        self._texture = app.load_ui_texture(asset, flip=True)
         self._window_name = f"Gamepad Visualizer##{id(self)}"
         self._window_flags = (
             _ke.imgui.WindowFlags_NoTitleBar

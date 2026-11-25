@@ -543,11 +543,20 @@ RayPickResult Rasterizer::pickScreen(glm::vec2 ndc, const glm::mat4& view,
 }
 
 RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
+    const auto hit = raycastHit(ray);
+    RayPickResult result;
+    static_cast<RenderPickHit&>(result) = hit;
+    if (hit.hit && hit.transformSource == TransformSource::SceneGraph)
+        result = resolvePick(hit);
+    return result;
+}
+
+RenderPickHit Rasterizer::raycastHit(const Geometry::Ray& ray) const {
     if (!std::isfinite(glm::dot(ray.origin, ray.origin)) ||
         !std::isfinite(glm::dot(ray.direction, ray.direction)) ||
         glm::dot(ray.direction, ray.direction) == 0.0f)
         throw std::invalid_argument("raycast requires a finite, nonzero ray");
-    RayPickResult best;
+    RenderPickHit best;
     best.distance = std::numeric_limits<float>::infinity();
     for (const auto& [instancer, input] : _sceneBridges)
         input->refreshSelection();
@@ -560,25 +569,17 @@ RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
         int instanceIndex = -1;
         float distance = 0.0f;
         Geometry::AABB bounds;
-        Scene::Prim* prim = nullptr;
         if (!inst->findRayIntersection(ray, mesh->second, instanceIndex,
-                                       distance, &bounds, &prim))
+                                       distance, &bounds))
             continue;
         if (distance >= best.distance)
             continue;
-
-        const auto input = _sceneBridges.find(inst);
-        if (input != _sceneBridges.end())
-            prim = input->second->resolve(inst->sceneInstanceId(instanceIndex));
 
         best.hit = true;
         best.sceneInstanceId = inst->sceneInstanceId(instanceIndex);
         best.handle = static_cast<RenderableHandle>(handle);
         best.instanceIndex = instanceIndex;
         best.transformSource = inst->transformSource();
-        best.prim = best.transformSource == TransformSource::SceneGraph
-                        ? prim
-                        : nullptr;
         best.distance = distance;
         best.position = ray.getPoint(distance);
         best.bounds = bounds;
@@ -1190,7 +1191,8 @@ RayPickResult Rasterizer::resolvePick(const RenderPickHit& hit) const {
         if (bridge == _sceneBridges.end())
             return {};
         result.prim = bridge->second->resolve(hit.sceneInstanceId);
-        result.instanceIndex = bridge->second->instanceIndex(hit.sceneInstanceId);
+        result.instanceIndex =
+            bridge->second->instanceIndex(hit.sceneInstanceId, hit.instanceIndex);
         if (!result.prim || result.instanceIndex < 0)
             return {};
     } else {

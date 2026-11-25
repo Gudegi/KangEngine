@@ -371,8 +371,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
         }
         _panelManager.addPanel(std::make_unique<ScenePanel>(this));
         _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
-        if (!customBackend)
-            _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
+        _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
         _panelManager.addPanel(std::make_unique<InspectorPanel>(this));
 
         _graphicsDevice->setDepthTest(true);
@@ -1820,52 +1819,50 @@ void App::removeDebug(const std::string& path) {
 void App::removeAllDebug() { _renderer.debugDraw().removeAll(); }
 
 void App::setWorldText(const std::string& path, const WorldTextDesc& desc) {
-    _renderer.native().rasterizer().setWorldText(path, desc);
+    _renderer.textDraw().setWorldText(path, desc);
 }
 
 void App::setWorldTextString(const std::string& path, std::string text) {
-    _renderer.native().rasterizer().setWorldTextString(path, std::move(text));
+    _renderer.textDraw().setWorldString(path, std::move(text));
 }
 
 void App::setWorldTextPosition(const std::string& path,
                                const glm::vec3& position) {
-    _renderer.native().rasterizer().setWorldTextPosition(path, position);
+    _renderer.textDraw().setWorldPosition(path, position);
 }
 
 void App::setWorldTextHidden(const std::string& path, bool hidden) {
-    _renderer.native().rasterizer().setWorldTextHidden(path, hidden);
+    _renderer.textDraw().setWorldHidden(path, hidden);
 }
 
 void App::removeWorldText(const std::string& path) {
-    _renderer.native().rasterizer().removeWorldText(path);
+    _renderer.textDraw().removeWorldText(path);
 }
 
-void App::clearWorldText() { _renderer.native().rasterizer().clearWorldText(); }
+void App::clearWorldText() { _renderer.textDraw().clearWorldText(); }
 
 void App::setScreenText(const std::string& path, const ScreenTextDesc& desc) {
-    _renderer.native().rasterizer().setScreenText(path, desc);
+    _renderer.textDraw().setScreenText(path, desc);
 }
 
 void App::setScreenTextString(const std::string& path, std::string text) {
-    _renderer.native().rasterizer().setScreenTextString(path, std::move(text));
+    _renderer.textDraw().setScreenString(path, std::move(text));
 }
 
 void App::setScreenTextPosition(const std::string& path,
                                 const glm::vec2& position) {
-    _renderer.native().rasterizer().setScreenTextPosition(path, position);
+    _renderer.textDraw().setScreenPosition(path, position);
 }
 
 void App::setScreenTextHidden(const std::string& path, bool hidden) {
-    _renderer.native().rasterizer().setScreenTextHidden(path, hidden);
+    _renderer.textDraw().setScreenHidden(path, hidden);
 }
 
 void App::removeScreenText(const std::string& path) {
-    _renderer.native().rasterizer().removeScreenText(path);
+    _renderer.textDraw().removeScreenText(path);
 }
 
-void App::clearScreenText() {
-    _renderer.native().rasterizer().clearScreenText();
-}
+void App::clearScreenText() { _renderer.textDraw().clearScreenText(); }
 
 void App::setSkybox(const std::string& path) {
     _renderer.native().rasterizer().setSkybox(path, _upAxis);
@@ -2344,7 +2341,7 @@ Geometry::Ray App::getMouseRay() {
 }
 
 RayPickResult App::raycast(const Geometry::Ray& ray) const {
-    RayPickResult result = _renderer.native().rasterizer().raycast(ray);
+    RayPickResult result = _sceneRenderSystem.raycast(ray);
     if (result.hit && result.prim && !isPickablePrim(result.prim))
         return RayPickResult{};
     return result;

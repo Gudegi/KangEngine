@@ -96,6 +96,10 @@ class Renderer {
     void setGroundStyle(const BackgroundSettings& settings);
     void setExposure(float exposure);
     RenderDebugDraw& debugDraw();
+    RenderTextDraw& textDraw();
+    RenderPickHit
+    raycast(const Geometry::Ray& ray,
+            const std::function<bool(uint64_t)>& filter = {}) const;
     void syncScene(const Scene::RenderSceneFrame& scene);
     void syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
                    const glm::mat4& projection);

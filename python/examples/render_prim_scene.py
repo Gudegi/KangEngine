@@ -6,6 +6,7 @@ Demonstrates the material-first Prim scene graph.
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 
 
 class MyApp(ke.App):
@@ -86,6 +87,7 @@ class MyApp(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = MyApp()
-    app.initialize(1920, 1080, False, ke.UpAxis.Y)
+    app.initialize(1920, 1080, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()

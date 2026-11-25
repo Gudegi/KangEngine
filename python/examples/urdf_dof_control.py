@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from mjcf_dof_control import MjcfDofControlApp, package_asset_path
 
 
@@ -85,7 +85,7 @@ class UrdfDofControlApp(MjcfDofControlApp):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument(
         "urdf_path",
         nargs="?",
@@ -107,7 +107,7 @@ def main():
         order = args.order
 
     app = CliUrdfDofControlApp(args.urdf_path)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

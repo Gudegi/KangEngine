@@ -16,7 +16,7 @@ from static_scene_renderer import build_scene
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -32,7 +32,7 @@ def main():
     images = {}
 
     with ke.render.SceneRenderer(scene, resources, camera_path="/camera",
-                                 backend=args.backend, width=256, height=256) as renderer:
+                                 renderer=args.renderer, width=256, height=256) as renderer:
         def capture(name):
             pixels = renderer.render()
             assert pixels.shape == (256, 256, 3), pixels.shape
@@ -43,7 +43,7 @@ def main():
 
         initial = capture("initial")
         saved_initial = initial.copy()
-        if args.backend == "native":
+        if args.renderer == "native":
             app = renderer._adapter._app
             assert app.get_scene_render_system().registration_count == 0
             assert app.get_scene().get_prim_at_path("/instances") is None
@@ -65,7 +65,7 @@ def main():
                 os.chdir(cwd)
                 material.texture_resources = textures
                 parent.set_visible(True)
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             # Rejected asset paths must leave the live stage registrations intact.
             valid_textures = material.texture_resources
             adapter = renderer._adapter
@@ -122,6 +122,25 @@ def main():
         material.texture_resources = {}
         capture("untextured")
 
+        material.emissive_color = ke.Vec3(1, 1, 1)
+        material.emissive_strength = 1
+        material.texture_resources = {"emissive_texture": resources.register_texture_source(
+            "Emissive", str(texture_path), srgb=True)}
+        if args.renderer == "native":
+            try:
+                renderer.render()
+            except ValueError as error:
+                assert "base-color texture sources only" in str(error), error
+            else:
+                raise AssertionError("unsupported Native snapshot texture was accepted")
+        else:
+            for _ in range(16):
+                renderer.render()
+            emissive = capture("emissive")
+            assert np.abs(emissive.astype(float) - images["untextured"]).mean() > 1
+        material.texture_resources = {}
+        material.emissive_strength = 0
+
         light_prim = scene.get_prim_at_path("/light")
         light = light_prim.get_directional_light()
         light.color = ke.Vec3(0.1, 0.1, 1)
@@ -141,7 +160,7 @@ def main():
         capture("mesh_replaced")
 
         material.unlit = True
-        if args.backend == "native":
+        if args.renderer == "native":
             try:
                 renderer.render()
             except ValueError:
@@ -154,6 +173,27 @@ def main():
         capture("after_rejection")
         np.testing.assert_array_equal(initial, saved_initial)
 
+        # Snapshot adapters also honor shadow policy changes without an App registration.
+        receiver = scene.define_prim("/receiver", ke.scene.PrimType.MESH)
+        plane = ke.geometry.create_plane_data(8, ke.UpAxis.Z)
+        receiver.set_mesh_data(plane)
+        receiver.get_mesh_component().resource_handle = resources.register_mesh("Receiver", plane)
+        receiver.set_material(material.native)
+        receiver.add_render_component()
+        receiver.set_local_translation(ke.Vec3(0, 0, -1))
+        light.direction = ke.Vec3(0.6, 0, -1)
+        light_prim.set_directional_light(light)
+        shadow_images = []
+        for enabled in (False, True, False):
+            cube.get_render_component().casts_shadow = enabled
+            for _ in range(24 if args.renderer == "ovrtx" else 2):
+                pixels = renderer.render()
+            shadow_images.append(pixels.astype(float))
+        shadow = (shadow_images[0] - shadow_images[1]).mean(axis=2)
+        noise = np.abs(shadow_images[0] - shadow_images[2]).mean()
+        assert np.count_nonzero(shadow > 10) > 20
+        assert shadow.mean() > noise, (shadow.mean(), noise)
+
     background = images["removed"].astype(np.int16)
     for name in ("hidden", "inactive"):
         assert np.abs(images[name].astype(np.int16) - background).max() <= 3, name
@@ -164,7 +204,7 @@ def main():
         assert len(xs) > 100, name
         centers[name] = float(xs.mean())
     assert centers["moved"] > centers["initial"] + 15, centers
-    if args.backend == "ovrtx":
+    if args.renderer == "ovrtx":
         assert abs(centers["after_path_rejection"] - centers["initial"]) < 5, centers
     assert abs(centers["recreated_moved"] - centers["initial"]) < 5, centers
     assert abs(centers["replaced"] - centers["moved"]) < 5, centers
@@ -175,7 +215,7 @@ def main():
         assert np.abs(images[first].astype(float) - images[second]).mean() > 1, (first, second)
     np.testing.assert_array_equal(initial, saved_initial)
     assert scene.get_prim_at_path("/group/cube") is not None
-    print(f"PASS: {args.backend} scene renderer, {len(images)} saved frames; centers={centers}")
+    print(f"PASS: {args.renderer} scene renderer, {len(images)} saved frames; centers={centers}")
 
 
 if __name__ == "__main__":

@@ -14,11 +14,11 @@ from view_scene_renderer import SceneRendererApp
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     app = SceneRendererApp()
     try:
-        app.initialize(width=960, height=640, up_axis=ke.UpAxis.Y, render_backend=args.backend)
+        app.initialize(width=960, height=640, up_axis=ke.UpAxis.Y, renderer=args.renderer)
         app.setup()
         app.set_vsync(enabled=False)
         app.update_and_draw()
@@ -89,7 +89,7 @@ def main():
             light.set_visible(True)
         capture()
 
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             app.set_camera_view(position=[8, 5, 13], target=[8, 0.5, 5])
             before = capture()
             app.set_cuda_enabled(True)
@@ -112,7 +112,7 @@ def main():
         capture()
     finally:
         app.close()
-    print(f"PASS: {args.backend} animation, shared skins, source mesh, material/light toggles, and CUDA when ovrtx")
+    print(f"PASS: {args.renderer} animation, shared skins, source mesh, material/light toggles, and CUDA when ovrtx")
 
 
 if __name__ == "__main__":

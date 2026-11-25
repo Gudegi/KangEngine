@@ -1,9 +1,17 @@
 # Changelog
 
-## Unreleased
+<details open>
+<summary><strong>Unreleased</strong></summary>
 
-### OVRTX
+**OVRTX**
 
+- Enable Renderer Debug controls for background, ground, lighting, and exposure.
+- Support `app.raycast()` for undeformed meshes with CPU transforms.
+- Support world and screen text through the existing debug text API.
+- Support shadow exclusion for scene meshes, instances, and skinned surfaces.
+- Support mesh debug geometry and skeletal visuals, including visibility toggles.
+- Add renderer selection to examples and the Newton/MimicKit adapters;
+  Native-only features remain explicit limitations.
 - Support CPU simulation visuals through SceneGraph and ExternalBuffer, with
   per-instance colors.
 - Support GPU rigid-body and articulation visuals without CPU pose downloads.
@@ -16,9 +24,11 @@
 - Support viewport picking and selection outlines.
 - Support Color/Phong materials, unlit, alpha masking, normal maps, and textures
   from pixel arrays.
+- Support PBR emissive textures, including color and strength updates.
 
-### Added
+**Added**
 
+- Add `App.load_ui_texture()` for ImGui images with either scene renderer.
 - Add `set_exposure()` for Native and ovrtx.
 - Add base-color and normal textures to `ColorMaterial`.
 - Add `Material.clone()` to copy parameters while sharing textures.
@@ -27,7 +37,7 @@
   with vertex colors supported on static and skinned meshes.
 - Add `unlit` rendering to ColorMaterial, PhongMaterial, and PBRMaterial.
 
-### Changed
+**Changed**
 
 - Apply imported FBX textures to material copies, preserving the supplied material.
 - Rename `set_texture()` to `set_batch_texture()` to clarify its batch-wide scope;
@@ -45,7 +55,7 @@
   `app.create_vertex_color_material()` to `ColorMaterial`, `ColorStyle`, and
   `app.create_color_material()`. Previous names remain available as aliases.
 
-### Fixed
+**Fixed**
 
 - Release skinned GPU buffers when their surfaces are removed.
 - Improve registration time for large numbers of static objects.
@@ -60,9 +70,12 @@
 - Apply instance alpha to alpha-masked shadows.
 - Fix Python callbacks in `Prim.traverse()`.
 
-## 0.3.0
+</details>
 
-### Added
+<details>
+<summary><strong>0.3.0</strong></summary>
+
+**Added**
 
 - Generic CPU/CUDA `BatchFSM` with per-environment states and prioritized transitions.
   See [Batch State Machine](utils/BATCH_FSM.md).
@@ -82,7 +95,7 @@
 - Contact snapshots and expanded collision comparison visualization.
   See [Contact Sensors](simulation/CONTACT_SENSORS.md).
 
-### Changed
+**Changed**
 
 - Motion adapters prepare engine coordinates once; sampling and FK use batched
   tensor operations. Body kinematics are now precomputed by default.
@@ -93,7 +106,7 @@
   quaternion fields use SLERP. Scalar angles are not wrapped to the shortest path.
   See [Interpolation](animation/ARTICULATION_MOTION.md#interpolation).
 
-### Upgrade notes
+**Upgrade notes**
 
 Update motion-library calls from the **0.2.0 API**:
 
@@ -117,9 +130,12 @@ for robot targets and `source_buffers()` for original skeleton tracks.
 `MotionMatchingIndex` is renamed to `MotionMatchingSearch`. C++ callers should
 include `animation/motion_matching_search.hpp`.
 
-## 0.2.0
+</details>
 
-### Added
+<details>
+<summary><strong>0.2.0</strong></summary>
+
+**Added**
 
 - Motion matching databases and playback controllers, pose-history queries,
   and kinematic foot-contact detection.
@@ -137,14 +153,14 @@ include `animation/motion_matching_search.hpp`.
 - Local MCP inspection, scene editing, frame capture, recording, and profiling.
 - Motion conversion/viewing tools and isolated wheel validation for Linux and macOS.
 
-### Changed
+**Changed**
 
 - Improved MJCF/URDF import, fixed articulation frames, and visualization of
   attachments and links without meshes.
 - Updated macOS ARM64 PhysX support to 5.8 and corrected lighting/selection guides.
 
 (upgrade-notes-0-2-0)=
-### Upgrade notes
+**Upgrade notes**
 
 **Behavior changes (no error, different result)**
 
@@ -169,6 +185,11 @@ include `animation/motion_matching_search.hpp`.
 - MJCF import rejects unsupported joint types, including `slide`.
   Supported types are `hinge`, `ball`, and `free`.
 
-## 0.1.0
+</details>
+
+<details>
+<summary><strong>0.1.0</strong></summary>
 
 Initial release.
+
+</details>

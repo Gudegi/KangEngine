@@ -25,7 +25,7 @@ def write_environment(path, reverse=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     scene, resources, material, _ = build_scene(
         Path(ke.__file__).parent / "assets/textures/awesomeface.png",
@@ -40,7 +40,7 @@ def main():
     dome.set_dome_light(light)
 
     with tempfile.TemporaryDirectory() as directory, ke.render.SceneRenderer(
-        scene, resources, camera_path="/camera", backend=args.backend, width=128, height=128,
+        scene, resources, camera_path="/camera", renderer=args.renderer, width=128, height=128,
     ) as renderer:
         def capture():
             for _ in range(16):
@@ -82,7 +82,7 @@ def main():
         assert combined[50:78, 50:78].mean() > restored[50:78, 50:78].mean() + 5
         scene.remove_prim("/environment/fill")
 
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             texture = Path(directory) / "environment.hdr"
             replacement = Path(directory) / "replacement.hdr"
             write_environment(texture)
@@ -110,8 +110,8 @@ def main():
             dome.set_dome_light(light)
             capture()
 
-    print(f"PASS: {args.backend} dome emission, hierarchy, and removal")
-    if args.backend == "ovrtx":
+    print(f"PASS: {args.renderer} dome emission, hierarchy, and removal")
+    if args.renderer == "ovrtx":
         print("PASS: HDRI loading, rotation, replacement, and error recovery")
 
 

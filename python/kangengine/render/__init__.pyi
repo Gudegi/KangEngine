@@ -8,7 +8,9 @@ from typing import Any, Callable, overload
 class SceneRenderer:
     """Synchronous scene image rendering through Native or optional ovrtx."""
     def __init__(self, scene: Any, resources: Any, *, camera_path: str,
-                 backend: str = "native", width: int = 512, height: int = 512) -> None: ...
+                 renderer: str | None = None, width: int = 512, height: int = 512,
+                 # TODO: Remove the legacy backend keyword.
+                 backend: str | None = None) -> None: ...
     def render(self) -> Any:
         """Return an owned top-down uint8 RGB [height, width, 3] image."""
         ...

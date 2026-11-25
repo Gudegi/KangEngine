@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 import numpy as np
 from kangengine import imgui, keys
 from kangengine.utils.math import quat_xyzw_conjugate, quat_xyzw_rotate
@@ -522,7 +523,7 @@ class ConvexCollisionViewer(ke.App):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("input_obj", type=Path)
     parser.add_argument("--backend", default="coacd")
     parser.add_argument(
@@ -601,7 +602,7 @@ def main() -> None:
         native_parts,
         metadata,
     )
-    app.initialize(width=args.width, height=args.window_height)
+    app.initialize(width=args.width, height=args.window_height, renderer=args.renderer)
     app.start()
 
 

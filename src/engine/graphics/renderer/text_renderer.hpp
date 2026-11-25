@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "render_backend/render_text_draw.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -17,100 +18,13 @@ namespace KE {
 
 class ShaderLibrary;
 
-enum class TextAlignment {
-    Left,
-    Center,
-    Right,
-};
-
-enum class TextDepthMode {
-    DepthTested,
-    Overlay,
-};
-
-enum class ScreenAnchor {
-    TopLeft,
-    TopCenter,
-    TopRight,
-    CenterLeft,
-    Center,
-    CenterRight,
-    BottomLeft,
-    BottomCenter,
-    BottomRight,
-};
-
-struct GlyphInfo {
-    glm::vec2 uvMin{0.0f};
-    glm::vec2 uvMax{0.0f};
-    glm::vec2 size{0.0f};
-    glm::vec2 bearing{0.0f};
-    float advance = 0.0f;
-};
-
-// Backend-independent bitmap and metrics. The GPU texture is owned by
-// TextRenderer so the same atlas data can later be uploaded by another backend.
-class FontAtlasData {
-  public:
-    static constexpr char32_t FirstCodepoint = 32;
-    static constexpr char32_t LastCodepoint = 126;
-    static constexpr std::size_t GlyphCount =
-        LastCodepoint - FirstCodepoint + 1;
-
-  private:
-    int _width = 0;
-    int _height = 0;
-    float _rasterSize = 0.0f;
-    std::vector<uint8_t> _pixels;
-    std::array<GlyphInfo, GlyphCount> _glyphs{};
-
-  public:
-    static FontAtlasData loadAscii(const std::string& fontPath,
-                                   float rasterSize = 48.0f,
-                                   int atlasWidth = 512, int atlasHeight = 512);
-
-    const GlyphInfo* findGlyph(char32_t codepoint) const;
-    int width() const { return _width; }
-    int height() const { return _height; }
-    float rasterSize() const { return _rasterSize; }
-    const std::vector<uint8_t>& pixels() const { return _pixels; }
-};
-
-struct WorldTextDesc {
-    std::string text;
-    glm::vec3 position{0.0f};
-    glm::vec4 color{1.0f};
-    float pixelSize = 18.0f;
-    TextAlignment alignment = TextAlignment::Center;
-    TextDepthMode depthMode = TextDepthMode::DepthTested;
-    bool hidden = false;
-};
-
-struct ScreenTextDesc {
-    std::string text;
-    glm::vec2 position{0.0f};
-    glm::vec4 color{1.0f};
-    float pixelSize = 18.0f;
-    TextAlignment alignment = TextAlignment::Left;
-    ScreenAnchor anchor = ScreenAnchor::TopLeft;
-    bool hidden = false;
-};
-
 // Text pass owner. prepare() updates dirty glyph instances on the render
 // thread; record() only emits commands into its caller's overlay render pass.
-class TextRenderer {
+class TextRenderer : public RenderTextDraw {
   private:
     struct QuadVertex {
         glm::vec2 position;
         glm::vec2 uv;
-    };
-
-    struct GlyphInstance {
-        glm::vec3 origin;
-        glm::vec2 offset;
-        glm::vec2 size;
-        glm::vec4 uvRect;
-        glm::vec4 color;
     };
 
     struct WorldTextEntry {
@@ -160,11 +74,6 @@ class TextRenderer {
 
     void createGPUResources();
     void ensureBatchCapacity(InstanceBatch& batch, std::size_t count);
-    void appendWorldEntry(const WorldTextDesc& desc,
-                          std::vector<GlyphInstance>& instances) const;
-    void appendScreenEntry(const ScreenTextDesc& desc, int viewportWidth,
-                           int viewportHeight,
-                           std::vector<GlyphInstance>& instances) const;
     void rebuildDirtyInstances(int viewportWidth, int viewportHeight);
 
   public:
@@ -178,18 +87,22 @@ class TextRenderer {
               Backend::BindGroupLayout* frameGroupLayout = nullptr,
               Backend::BindGroup* frameBindGroup = nullptr,
               ShaderLibrary* shaderLibrary = nullptr);
-    void setWorldText(const std::string& path, const WorldTextDesc& desc);
-    void setWorldString(const std::string& path, std::string text);
-    void setWorldPosition(const std::string& path, const glm::vec3& position);
-    void setWorldHidden(const std::string& path, bool hidden);
-    void removeWorldText(const std::string& path);
-    void clearWorldText();
-    void setScreenText(const std::string& path, const ScreenTextDesc& desc);
-    void setScreenString(const std::string& path, std::string text);
-    void setScreenPosition(const std::string& path, const glm::vec2& position);
-    void setScreenHidden(const std::string& path, bool hidden);
-    void removeScreenText(const std::string& path);
-    void clearScreenText();
+    void setWorldText(const std::string& path,
+                      const WorldTextDesc& desc) override;
+    void setWorldString(const std::string& path, std::string text) override;
+    void setWorldPosition(const std::string& path,
+                          const glm::vec3& position) override;
+    void setWorldHidden(const std::string& path, bool hidden) override;
+    void removeWorldText(const std::string& path) override;
+    void clearWorldText() override;
+    void setScreenText(const std::string& path,
+                       const ScreenTextDesc& desc) override;
+    void setScreenString(const std::string& path, std::string text) override;
+    void setScreenPosition(const std::string& path,
+                           const glm::vec2& position) override;
+    void setScreenHidden(const std::string& path, bool hidden) override;
+    void removeScreenText(const std::string& path) override;
+    void clearScreenText() override;
     void prepare(int viewportWidth, int viewportHeight);
     bool hasDraws() const;
     void record(Backend::RenderPassEncoder& pass) const;

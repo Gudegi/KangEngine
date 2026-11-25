@@ -132,13 +132,13 @@ def check_python_readback():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     check_python_readback()
     app = BackendSmokeApp()
     try:
-        app.initialize(width=128, height=96, hide_ui=True, headless=True, render_backend=args.backend)
-        assert app.get_renderer().capabilities["native_extensions"] == (args.backend == "native")
+        app.initialize(width=128, height=96, hide_ui=True, headless=True, renderer=args.renderer)
+        assert app.get_renderer().capabilities["native_extensions"] == (args.renderer == "native")
         assert app.get_renderer().capabilities["static_scene"]
         assert app.get_renderer().capabilities["texture_pixels_input"]
         assert app.get_renderer().capabilities["cpu_instance_transforms_input"]
@@ -180,7 +180,7 @@ def main():
             app.draw_frame()
             assert not np.array_equal(app.read_rgb_pixels(), red)
 
-            if args.backend == "ovrtx":
+            if args.renderer == "ovrtx":
                 other_resources = ke.scene.SceneResourceManager()
                 handle = other_resources.register_texture_source("Red", str(path), srgb=True)
                 foreign = ke.render.TextureSource(str(path), True, True, handle, other_resources)
@@ -192,17 +192,16 @@ def main():
                     raise AssertionError("foreign scene-local texture handle was accepted")
                 assert material.base_color_texture is None
 
-        if args.backend == "ovrtx":
-            for operation in (
-                lambda: app.set_gamma(2.2),
-                lambda: app.raycast([0, 0, 1], [0, 0, -1]),
-            ):
-                try:
-                    operation()
-                except RuntimeError as error:
-                    assert "Native" in str(error), error
-                else:
-                    raise AssertionError("Native-only operation was silently accepted")
+        hit = app.raycast(origin=ke.Vec3(0, 0, 4), direction=ke.Vec3(0, 0, -1))
+        assert hit.hit and hit.prim.get_path() == "/group/cube"
+
+        if args.renderer == "ovrtx":
+            try:
+                app.set_gamma(2.2)
+            except RuntimeError as error:
+                assert "Native" in str(error), error
+            else:
+                raise AssertionError("Native-only operation was silently accepted")
             assert app.get_renderer().device() is None
             assert app.get_renderer().latest_frame_profile().backend is None
             assert not app.is_key_pressed(32)
@@ -230,7 +229,7 @@ def main():
     finally:
         app.close()
     assert saved.shape == (96, 128, 3)
-    print(f"PASS: {args.backend} App scene, animation/physics poses, callbacks, capture, and teardown")
+    print(f"PASS: {args.renderer} App scene, animation/physics poses, callbacks, capture, and teardown")
 
 
 if __name__ == "__main__":

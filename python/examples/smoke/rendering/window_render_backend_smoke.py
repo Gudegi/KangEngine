@@ -114,11 +114,11 @@ def check_textures(app, material):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     maps = []
     progress = []
-    if args.backend == "ovrtx":
+    if args.renderer == "ovrtx":
         import ovrtx
 
         original_map = ovrtx.RenderVarOutput.map
@@ -145,17 +145,17 @@ def main():
                                      ctypes.POINTER(ctypes.c_int)]
     app = WindowApp()
     try:
-        app.initialize(width=257, height=193, hide_ui=True, render_backend=args.backend)
+        app.initialize(width=257, height=193, hide_ui=True, renderer=args.renderer)
         app.set_vsync(enabled=False)
         build_scene(app)
         app.draw_frame()
         first = app.window_pixels.copy()
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             assert maps and all(device == ovrtx.Device.CUDA_ARRAY for device in maps), maps
         captured = app.read_rgb_pixels()
         np.testing.assert_allclose(first.astype(int), captured.astype(int), atol=1)
         assert first[..., 1].max() > 100
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             assert maps.count(ovrtx.Device.CPU) == 1
             app.read_rgb_pixels()
             assert maps.count(ovrtx.Device.CPU) == 1, "readback was not cached"
@@ -172,7 +172,7 @@ def main():
         for width, height in ((311, 217), (640, 360), (257, 193), (311, 217)):
             map_count = len(maps)
             resize_window(app, glfw, width, height)
-            if args.backend == "ovrtx":
+            if args.renderer == "ovrtx":
                 assert all(device == ovrtx.Device.CUDA_ARRAY for device in maps[map_count:])
             resized = app.read_rgb_pixels()
             assert resized.shape == (height, width, 3), resized.shape
@@ -191,7 +191,8 @@ def main():
         app.close()
 
         app = WindowApp()
-        app.initialize(width=800, height=600, render_backend=args.backend)
+        app.initialize(width=800, height=600, renderer=args.renderer)
+        app.set_vsync(False)
         app.set_ui_layout_mode(mode=ke.UILayoutMode.EDITOR)
         build_scene(app)
         map_count = len(maps)
@@ -199,7 +200,7 @@ def main():
             app.process_events()
             app.draw_frame()
         assert app.window_pixels.max() > 100
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             assert all(device == ovrtx.Device.CUDA_ARRAY for device in maps[map_count:])
         for mode, size in ((ke.UILayoutMode.EDITOR, (960, 640)),
                            (ke.UILayoutMode.VIEWER, (640, 480)),
@@ -208,31 +209,46 @@ def main():
             resize_window(app, glfw, *size)
             for _ in range(3):
                 app.draw_frame()
-            check_render_size(app, glfw, args.backend)
+            check_render_size(app, glfw, args.renderer)
 
         original_size = app.get_render_width(), app.get_render_height()
         app.split_viewport = True
         for _ in range(4):
             app.draw_frame()
         assert not app.split_viewport
-        check_render_size(app, glfw, args.backend)
+        check_render_size(app, glfw, args.renderer)
         assert (app.get_width(), app.get_height()) == (800, 600)
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             assert app.get_render_height() < original_size[1]
         assert app.read_rgb_pixels_resized(width=160, height=120).shape == (120, 160, 3)
 
+        # UI images use the window device even when scene textures are sources.
+        keyboard = ke.input.KeyboardVisualizer(app, width=300)
+        gamepad = ke.input.GamepadVisualizer(app, width=200)
+        assert isinstance(keyboard._texture, ke.render.Texture)
+        assert isinstance(gamepad._texture, ke.render.Texture)
+
+        def draw_inputs():
+            keyboard.draw()
+            gamepad.draw()
+
+        app.render = draw_inputs
+        for _ in range(3):
+            app.draw_frame()
+
         app.close()
         app = WindowApp()
-        app.initialize(width=257, height=193, hide_ui=True, render_backend=args.backend)
+        app.initialize(width=257, height=193, hide_ui=True, renderer=args.renderer)
+        app.set_vsync(False)
         _, _, material = build_scene(app)
         check_textures(app, material)
     finally:
         app.close()
         app.close()
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             ovrtx.RenderVarOutput.map = original_map
             ovrtx.Renderer.step = original_step
-    print(f"PASS: {args.backend} window, camera, resize, textures, readback, and close")
+    print(f"PASS: {args.renderer} window, camera, resize, textures, readback, and close")
 
 
 if __name__ == "__main__":

@@ -34,18 +34,6 @@ Updates or removals through either entry point affect the same data.
 
 ## Debug overlay
 
-OVRTX overlays use [SPG (Sensor Processing Graphs)](https://nvidia-omniverse.github.io/ovrtx/spg/overview.html).
-
-```text
-OVRTX color + depth -> SPG debug overlay -> Output image
-```
-
-Native and OVRTX support the same overlay calls, including depth testing and
-`overlay=True` to draw through objects. OVRTX includes overlays in window output
-and headless RGB captures. Its debug colors are composited after tone mapping,
-so exposure does not affect them; line ends and edge smoothing may differ from
-Native. World and screen text remain Native-only.
-
 Use `debug.overlay` for lightweight lines, points, axes, and arrows that do not
 create SceneGraph Prims:
 

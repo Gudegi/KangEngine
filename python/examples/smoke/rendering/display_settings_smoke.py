@@ -9,12 +9,12 @@ import kangengine as ke
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     app = ke.App()
     adapter = None
     try:
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             from kangengine.render._ovrtx_scene import OvrtxAppAdapter
 
             adapter = OvrtxAppAdapter(320, 240)
@@ -126,7 +126,7 @@ def main():
         capture()
         if adapter:
             assert not adapter._textures
-        print(f"PASS: {args.backend} background, exposure, ambient visibility, and checker ground")
+        print(f"PASS: {args.renderer} background, exposure, ambient visibility, and checker ground")
     finally:
         app.close()
 

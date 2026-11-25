@@ -337,8 +337,8 @@ def check_rendering(backend):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("recording", "native", "ovrtx"), default="recording")
-    backend = parser.parse_args().backend
+    parser.add_argument("--renderer", choices=("recording", "native", "ovrtx"), default="recording")
+    backend = parser.parse_args().renderer
     if backend == "recording":
         check_delivery()
     else:

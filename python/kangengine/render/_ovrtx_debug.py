@@ -7,10 +7,13 @@ from pathlib import Path
 import numpy as np
 import ovstage
 
+from ._ovrtx_text import OvrtxTextDraw
+
 
 class OvrtxDebugDraw:
     def __init__(self, adapter):
         self._adapter = adapter
+        self.text = OvrtxTextDraw(self)
         self._batches = {}
         self._dirty = False
         self._camera = None
@@ -36,6 +39,8 @@ class OvrtxDebugDraw:
             float4[] inputs:primitives = []
             int[] inputs:offsets = []
             int[] inputs:ids = []
+            float4[] inputs:glyphs = []
+            uint[] inputs:font = [1, 1, 0]
             opaque inputs:Image.connect = <../LdrColor.omni:rtx:aov>
             opaque inputs:Depth.connect = <../DebugDepth.omni:rtx:aov>
             opaque outputs:Color
@@ -87,6 +92,7 @@ class OvrtxDebugDraw:
             self._dirty = True
 
     def close(self):
+        self.text.close()
         self._batches.clear()
         self._arrays.clear()
         self._adapter = None
@@ -106,7 +112,8 @@ class OvrtxDebugDraw:
         self._arrays[name] = values
 
     def prepare(self, camera, structural_change):
-        active = any(len(batch["starts"]) and not batch["hidden"] for batch in self._batches.values())
+        active = (self.text.active or
+                  any(len(batch["starts"]) and not batch["hidden"] for batch in self._batches.values()))
         if active != self._active or (active and structural_change):
             names = ["LdrColor", "DebugDepth", "DebugColor"] if active else ["LdrColor"]
             with ovstage.PathDictionary(self._adapter._stage) as paths:
@@ -123,6 +130,7 @@ class OvrtxDebugDraw:
         if not active:
             if self._dirty:
                 self._write_array("primitives", np.empty((0, 4), dtype=np.float32), 4)
+                self._write_array("glyphs", np.empty((0, 4), dtype=np.float32), 4)
                 self._write_array("offsets", np.empty(0, dtype=np.int32))
                 self._write_array("ids", np.empty(0, dtype=np.int32))
                 self._dirty = False
@@ -187,6 +195,39 @@ class OvrtxDebugDraw:
                         for x in range(left, right + 1):
                             tiles.setdefault(y * columns + x, []).append(primitive_idx)
 
+        # Glyph offsets are shared with Native; SPG uses top-down pixel rectangles.
+        glyphs = []
+        for kind, overlay, batch in self.text.batches(width, height):
+            origins = batch[:, :3]
+            if kind == "world":
+                origins = origins @ view[:3, :3].T + view[:3, 3]
+            for glyph, origin in zip(batch, origins):
+                glyph_width, glyph_height = glyph[5:7]
+                if kind == "world":
+                    z = -origin[2]
+                    if not camera["near"] <= z <= camera["far"]:
+                        continue
+                    x = origin[0] / z * scale + width / 2 + glyph[3]
+                    y = -origin[1] / z * scale + height / 2 - glyph[4] - glyph_height
+                else:
+                    x, y = origin[:2] + glyph[3:5]
+                    z = 0
+                if not all(math.isfinite(value) for value in (x, y, glyph_width, glyph_height)):
+                    raise ValueError("Text projection and pixel size must be finite")
+                left = max(math.floor(x / 16), 0)
+                top = max(math.floor(y / 16), 0)
+                right = min(math.floor((x + glyph_width) / 16), columns - 1)
+                bottom = min(math.floor((y + glyph_height) / 16), rows - 1)
+                if left > right or top > bottom:
+                    continue
+                # Negative tile IDs distinguish glyphs from line/point primitives.
+                glyph_id = -(len(glyphs) // 4 + 1)
+                glyphs.extend(([x, y, glyph_width, glyph_height],
+                               glyph[7:11], glyph[11:15], [z, int(overlay), 0, 0]))
+                for tile_y in range(top, bottom + 1):
+                    for tile_x in range(left, right + 1):
+                        tiles.setdefault(tile_y * columns + tile_x, []).append(glyph_id)
+
         # Allocate lists only for occupied tiles; the shader still uses a dense offset table.
         offsets = np.zeros(columns * rows + 1, dtype=np.int32)
         ids = []
@@ -195,6 +236,9 @@ class OvrtxDebugDraw:
             ids.extend(entries)
         np.cumsum(offsets, out=offsets)
         self._write_array("primitives", np.asarray(primitives, dtype=np.float32).reshape(-1, 4), 4)
+        self._write_array("glyphs", np.asarray(glyphs, dtype=np.float32).reshape(-1, 4), 4)
+        if structural_change or self._arrays.get("font") is not self.text.font:
+            self._write_array("font", self.text.font)
         self._write_array("offsets", offsets)
         self._write_array("ids", np.asarray(ids, dtype=np.int32))
         self._camera = signature

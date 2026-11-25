@@ -9,13 +9,13 @@ import kangengine as ke
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     parser.add_argument("--window", action="store_true")
     args = parser.parse_args()
     app = ke.App()
     adapter = None
     try:
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             from kangengine.render._ovrtx_scene import OvrtxAppAdapter
             original_init = OvrtxAppAdapter.__init__
 
@@ -26,7 +26,7 @@ def main():
 
             with patch.object(OvrtxAppAdapter, "__init__", remember):
                 app.initialize(width=320, height=240, hide_ui=True,
-                               headless=not args.window, render_backend=args.backend)
+                               headless=not args.window, renderer=args.renderer)
         else:
             app.initialize(width=320, height=240, hide_ui=True, headless=not args.window)
         app.set_camera_view(position=[0, 0, 4], target=[0, 0, 0])
@@ -119,7 +119,7 @@ def main():
                 capture()
                 assert not any(str(call.args[1]).startswith("inputs:") for call in writes.call_args_list)
             debug.remove_all()
-        print(f"PASS: {args.backend} debug batches, depth, clear, capture, source ownership")
+        print(f"PASS: {args.renderer} debug batches, depth, clear, capture, source ownership")
     finally:
         app.close()
 

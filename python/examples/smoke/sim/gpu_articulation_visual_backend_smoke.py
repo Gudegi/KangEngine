@@ -23,14 +23,14 @@ MODEL = '''<mujoco><worldbody><body name="base" pos="0 0 1">
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     app = ke.App()
     world = ke.sim.KangSimWorld(num_envs=3, sim_device="cuda:0", add_ground=False)
     visualizer = None
     try:
         app.initialize(width=320, height=240, hide_ui=True, headless=True,
-                       up_axis=ke.UpAxis.Z, render_backend=args.backend)
+                       up_axis=ke.UpAxis.Z, renderer=args.renderer)
         app.set_camera_view(position=(5, -8, 5), target=(0, 0, 1))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "robot.xml"
@@ -56,7 +56,7 @@ def main():
                 batch = visualizer.add(robots, path="/robots")
             backend = batch._backend
             assert batch.body_handles
-            if args.backend == "ovrtx":
+            if args.renderer == "ovrtx":
                 pointer = backend._transforms.data_ptr()
 
             before = capture()
@@ -72,7 +72,7 @@ def main():
                     visualizer.sync()
             torch.cuda.synchronize()
 
-            if args.backend == "ovrtx":
+            if args.renderer == "ovrtx":
                 assert pointer == backend._transforms.data_ptr()
                 state = world.gpu_system.articulation_link_data().torch()
                 rows = [world.articulation_gpu_row(i, 0) for i in batch.env_ids]
@@ -110,7 +110,7 @@ def main():
             robots.set_dof_state(env_ids=None, positions=torch.zeros_like(targets),
                                  velocities=torch.zeros_like(targets))
             world.apply_resets()
-        print(f"PASS: {args.backend} GPU articulation poses, streams, reset, visibility, and recreation")
+        print(f"PASS: {args.renderer} GPU articulation poses, streams, reset, visibility, and recreation")
     finally:
         if visualizer is not None:
             visualizer.release()

@@ -212,9 +212,13 @@ int SceneRenderBridge::instanceIndex(const Prim& prim) const {
                : static_cast<int>(found - _instancePrims.begin());
 }
 
-int SceneRenderBridge::instanceIndex(RenderInstanceId id) const {
+int SceneRenderBridge::instanceIndex(RenderInstanceId id, int hint) const {
     if (id == InvalidRenderInstance)
         return -1;
+    // Synchronous queries already know the index; delayed picks may need a search.
+    if (hint >= 0 && static_cast<size_t>(hint) < _instances.ids.size() &&
+        _instances.ids[hint] == id)
+        return hint;
     const auto found =
         std::find(_instances.ids.begin(), _instances.ids.end(), id);
     return found == _instances.ids.end()

@@ -95,19 +95,39 @@ void Renderer::resizeFrame(int width, int height) {
 
 void Renderer::setBackgroundColor(const glm::vec4& color) {
     renderBackend().setBackgroundColor(color);
+    _settings.background.backgroundColor = color;
 }
 
 void Renderer::setGroundStyle(const BackgroundSettings& settings) {
+    const auto color = _settings.background.backgroundColor;
     renderBackend().setGroundStyle(settings);
+    _settings.background = settings;
+    _settings.background.backgroundColor = color;
 }
 
 void Renderer::setExposure(float exposure) {
     if (!std::isfinite(exposure) || exposure < 0)
         throw std::invalid_argument("Exposure must be finite and nonnegative");
     renderBackend().setExposure(exposure);
+    _settings.exposure = exposure;
 }
 
 RenderDebugDraw& Renderer::debugDraw() { return renderBackend().debugDraw(); }
+
+RenderTextDraw& Renderer::textDraw() { return renderBackend().textDraw(); }
+
+RenderPickHit Renderer::raycast(
+    const Geometry::Ray& ray, const std::function<bool(uint64_t)>& filter) const {
+    if (!_renderBackend && _rasterizer)
+        return _rasterizer->raycastHit(ray);
+    if (!_renderBackend)
+        throw std::runtime_error("Initialize the renderer before raycast");
+    // Native refreshes its bridges inside Rasterizer.
+    if (!_rasterizer)
+        for (const auto& [key, batch] : _sceneBatches)
+            batch->bridge.refreshSelection();
+    return _renderBackend->raycast(ray, filter);
+}
 
 void Renderer::syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
                          const glm::mat4& projection) {
@@ -216,7 +236,8 @@ RayPickResult Renderer::resolvePick(const RenderPickHit& hit) const {
         hit.transformSource == TransformSource::SceneGraph) {
         const auto& bridge = found->second->bridge;
         auto* prim = bridge.resolve(hit.sceneInstanceId);
-        const int index = bridge.instanceIndex(hit.sceneInstanceId);
+        const int index =
+            bridge.instanceIndex(hit.sceneInstanceId, hit.instanceIndex);
         if (!prim || index < 0)
             return {};
         RayPickResult result;

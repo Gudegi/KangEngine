@@ -11,6 +11,8 @@ function debugDraw(inputs, outputs)
             slang.StructuredBuffer(slang.array(inputs["ids"])),
             slang.Texture2D(image), slang.Texture2D(depth),
             slang.RWTexture2D(outputs["Color"]),
+            slang.StructuredBuffer(slang.array(inputs["glyphs"])),
+            slang.StructuredBuffer(slang.array(inputs["font"])),
         },
     })
 end

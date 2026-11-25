@@ -684,21 +684,8 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
             continue;
 
         const glm::mat4& transform = instanceTransforms[i];
-        const float determinant = glm::determinant(glm::mat3(transform));
-        if (!std::isfinite(determinant) || determinant == 0.0f)
+        if (!mesh.intersectWorld(ray, transform, distance))
             continue;
-        const glm::mat4 inverse = glm::inverse(transform);
-        const glm::vec3 localDirection =
-            glm::vec3(inverse * glm::vec4(ray.direction, 0.0f));
-        const float directionScale = glm::length(localDirection);
-        if (!std::isfinite(directionScale) || directionScale == 0.0f)
-            continue;
-        const Geometry::Ray localRay(
-            glm::vec3(inverse * glm::vec4(ray.origin, 1.0f)), localDirection);
-        if (!mesh.intersect(localRay, distance))
-            continue;
-        // Local ray normalization changes distance under nonuniform scale.
-        distance /= directionScale;
         if (distance >= outDistance)
             continue;
 

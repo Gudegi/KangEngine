@@ -4,11 +4,11 @@ This compact planar mechanism demonstrates the construction pattern used by
 examples/physics/physx_articulation.cpp; it is not a dimension-for-dimension port.
 """
 
-import argparse
 import math
 
 import numpy as np
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -115,13 +115,13 @@ class Viewer(ke.App):
         self.configure_timing(ke.SimulationTimingConfig(
             physics_hz=240., fixed_update_hz=240., render_hz=60.))
         self.set_simulation_hotkeys_enabled(True)
-        self.materials = self.create_standard_materials()
+        self.standard_materials = self.create_standard_materials()
         self.set_camera_view([5., -8., 4.], [0., 0., 2.])
         self.views = []
         for name in self.demo.names:
             half = self.demo.shapes[name]
             mesh = ke.geometry.create_box_data(*[2*x for x in half])
-            self.views.append(self.scene.add_mesh(f"/scissor/{name}", mesh, self.materials.common))
+            self.views.append(self.scene.add_mesh(f"/scissor/{name}", mesh, self.standard_materials.common))
 
     def fixed_update(self, fixed_dt):
         self.demo.step()
@@ -144,13 +144,13 @@ class Viewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
     if not args.headless:
         app = Viewer(args.gpu)
-        app.initialize(1280, 800, False, ke.UpAxis.Z)
+        app.initialize(1280, 800, False, ke.UpAxis.Z, renderer=args.renderer)
         app.start()
         return
     demo = Scissor(args.gpu)

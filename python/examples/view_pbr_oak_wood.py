@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -44,8 +45,7 @@ class PBROakWoodViewer(ke.App):
         self.check_error()
 
     def _load_texture(self, name):
-        texture = self.get_renderer().device().create_texture(str(ROOT / name), True)
-        self.textures.append(texture)
+        texture = self.load_texture(path=ROOT / name)
         return texture
 
     def _make_oak_material(self):
@@ -101,6 +101,7 @@ class PBROakWoodViewer(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = PBROakWoodViewer()
-    app.initialize(1600, 1000, False, ke.UpAxis.Z)
+    app.initialize(1600, 1000, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()

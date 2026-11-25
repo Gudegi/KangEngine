@@ -20,14 +20,14 @@ MODEL = '''<mujoco><worldbody><body name="base" pos="0 0 1">
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     app = ke.App()
     world = ke.sim.KangSimWorld(num_envs=2, add_ground=False)
     viewer = None
     try:
         app.initialize(width=320, height=240, hide_ui=True, headless=True,
-                       up_axis=ke.UpAxis.Z, render_backend=args.backend)
+                       up_axis=ke.UpAxis.Z, renderer=args.renderer)
         app.set_camera_view(position=(5, -8, 5), target=(0, 0, 1))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "robot.xml"
@@ -83,7 +83,7 @@ def main():
 
             # Source-only selections have a prim, while execution batches also have a handle.
             for env_id, record in enumerate(scene_robots):
-                if args.backend == "ovrtx":
+                if args.renderer == "ovrtx":
                     assert not record.body_handles
                     system = app.get_scene_render_system()
                     component = record.render_prims[0].get_render_component()
@@ -102,7 +102,7 @@ def main():
                 handle = record.body_handles[0] if record.body_handles else -1
                 hit = record.pick_body(SimpleNamespace(hit=True, prim=record.body_prims[0], handle=handle))
                 assert (hit.env_id, hit.obj_id, hit.body_id) == (env_id, 1, 0)
-                if args.backend == "ovrtx":
+                if args.renderer == "ovrtx":
                     assert record.pick_body(SimpleNamespace(hit=True, prim=scene_robots[0].render_prims[0], handle=-1)) is None
 
             for record in scene_robots + scene_rigids:
@@ -132,7 +132,7 @@ def main():
             assert app.get_scene_render_system().registration_count == 0
             assert np.abs(capture().astype(float) - empty).mean() < 1
             viewer = None
-        print(f"PASS: {args.backend} CPU SceneGraph/ExternalBuffer, picking, reset, video, and recreation")
+        print(f"PASS: {args.renderer} CPU SceneGraph/ExternalBuffer, picking, reset, video, and recreation")
     finally:
         if viewer is not None:
             viewer.release()

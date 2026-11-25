@@ -1,6 +1,7 @@
 """Texture keyboard overlay plus independently cropped WASD/Shift keys."""
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 
 
 class KeyboardVisualizerApp(ke.App):
@@ -26,6 +27,7 @@ class KeyboardVisualizerApp(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = KeyboardVisualizerApp()
-    app.initialize(width=1920, height=1080, up_axis=ke.UpAxis.Z)
+    app.initialize(width=1920, height=1080, up_axis=ke.UpAxis.Z, renderer=args.renderer)
     app.start()

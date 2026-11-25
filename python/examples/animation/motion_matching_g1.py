@@ -236,7 +236,7 @@ def main():
         benchmark_search(database)
         return
     app = Viewer(database, args)
-    app.initialize(width=1920, height=1080, up_axis=ke.UpAxis.Z)
+    app.initialize(width=1920, height=1080, up_axis=ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

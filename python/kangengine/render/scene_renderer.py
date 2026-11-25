@@ -21,7 +21,10 @@ def _validate_frame(frame, texture_paths, validated_meshes):
                 raise ValueError("Scene renderer does not yet support vertex colors")
             validated_meshes.add(item["mesh_id"])
         for slot, texture in item["textures"].items():
-            if slot not in ("base_color_texture", "diffuse_map", "normal_texture", "normal_map", "alpha_map"):
+            if slot not in (
+                "base_color_texture", "diffuse_map", "normal_texture", "normal_map",
+                "alpha_map", "emissive_texture",
+            ):
                 raise ValueError(f"Scene renderer does not yet support texture slot {slot}")
             if texture["pixels"] is not None:
                 continue
@@ -32,7 +35,7 @@ def _validate_frame(frame, texture_paths, validated_meshes):
 
 
 class SceneRenderer:
-    """Render a scene to RGB images without changing its authoring code.
+    """Render a scene to RGB images; Native is the default renderer.
 
     Both backends accept opaque lit PBR triangle meshes, base-color textures
     from files or pixel arrays, scene lights, and a perspective camera. OVRTX
@@ -44,10 +47,18 @@ class SceneRenderer:
     thread and close to release backend resources.
     """
 
-    def __init__(self, scene, resources, *, camera_path: str, backend: str = "native",
-                 width: int = 512, height: int = 512):
-        if backend not in ("native", "ovrtx"):
-            raise ValueError("backend must be 'native' or 'ovrtx'")
+    def __init__(self, scene, resources, *, camera_path: str, renderer: str | None = None,
+                 width: int = 512, height: int = 512,
+                 # TODO: Remove the legacy backend keyword.
+                 backend: str | None = None):
+        if backend is not None:
+            if renderer is not None and renderer != backend:
+                raise ValueError("renderer and backend select different renderers")
+            renderer = backend
+        if renderer is None:
+            renderer = "native"
+        if renderer not in ("native", "ovrtx"):
+            raise ValueError("renderer must be 'native' or 'ovrtx'")
         if width <= 0 or height <= 0:
             raise ValueError("Image dimensions must be positive")
         self._scene = scene
@@ -59,7 +70,7 @@ class SceneRenderer:
         self._owner_thread = threading.get_ident()
         self._adapter = None
         self._collect()
-        if backend == "native":
+        if renderer == "native":
             from ._native_scene import NativeSceneAdapter
             adapter_type = NativeSceneAdapter
         else:

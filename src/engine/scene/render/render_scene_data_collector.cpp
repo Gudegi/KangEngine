@@ -98,9 +98,10 @@ bool sameObject(const RenderObjectSource& a, const RenderObjectSource& b) {
            a.textures == b.textures && a.world == b.world &&
            a.color == b.color && a.visible == b.visible &&
            a.pickable == b.pickable && a.doubleSided == b.doubleSided &&
-           a.alphaMode == b.alphaMode && a.alphaCutoff == b.alphaCutoff &&
-           x.shadingModel == y.shadingModel && x.colorStyle == y.colorStyle &&
-           x.unlit == y.unlit && x.hasNativeTextures == y.hasNativeTextures &&
+           a.castsShadow == b.castsShadow && a.alphaMode == b.alphaMode &&
+           a.alphaCutoff == b.alphaCutoff && x.shadingModel == y.shadingModel &&
+           x.colorStyle == y.colorStyle && x.unlit == y.unlit &&
+           x.hasNativeTextures == y.hasNativeTextures &&
            x.baseColor == y.baseColor && x.ambient == y.ambient &&
            x.specular == y.specular && x.shininess == y.shininess &&
            x.metallic == y.metallic && x.roughness == y.roughness &&
@@ -269,11 +270,9 @@ RenderSceneDataCollector::collectScene(SceneBackend& scene,
         // API.
         if (registrations && registrations->hasBatch(*component))
             continue;
-        if (component->transformSource() != TransformSource::SceneGraph ||
-            !component->castsShadow())
+        if (component->transformSource() != TransformSource::SceneGraph)
             throw std::invalid_argument(
-                "SceneRenderer supports shadow-casting SceneGraph "
-                "meshes only");
+                "SceneRenderer supports SceneGraph meshes only");
         auto* material = prim->getMaterial();
         if (!material)
             throw std::invalid_argument("Renderable has no material: " +
@@ -316,6 +315,7 @@ RenderSceneDataCollector::collectScene(SceneBackend& scene,
         const auto selection = prim->getSelectionComponent();
         object.pickable = !selection || selection->isPickable();
         object.doubleSided = component->isDoubleSided();
+        object.castsShadow = component->castsShadow();
         object.alphaMode = component->alphaMode();
         object.alphaCutoff = component->alphaCutoff();
         frame.objects.push_back(std::move(object));

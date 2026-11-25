@@ -13,7 +13,7 @@ from kangengine._core import _ke
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     parser.add_argument("--scene-renderer", action="store_true")
     args = parser.parse_args()
     app = None
@@ -32,7 +32,7 @@ def main():
             else:
                 app = ke.App()
                 app.initialize(width=256, height=192, headless=True, hide_ui=True,
-                               render_backend=args.backend)
+                               renderer=args.renderer)
                 app.set_frame_capture_active(True)
                 scene, resources = app.scene.native, app.resources
                 material = app.create_pbr_material(roughness=0.8)
@@ -75,7 +75,7 @@ def main():
             if args.scene_renderer:
                 renderer = ke.render.SceneRenderer(
                     scene, resources, camera_path="/camera",
-                    backend=args.backend, width=256, height=192,
+                    renderer=args.renderer, width=256, height=192,
                 )
 
             def capture():
@@ -135,11 +135,11 @@ def main():
             check_delivery()
             emissive = means(capture())
             assert np.all(emissive[:, 1] > means(rough)[:, 1] + 10), emissive
-            if args.backend == "native" and app is not None:
+            if args.renderer == "native" and app is not None:
                 assert app.get_scene_render_system().shares_batch(
                     surfaces[0].component, surfaces[1].component)
             route = "SceneRenderer" if renderer is not None else "App"
-            print(f"PASS: {args.backend} {route} shared color, textures, "
+            print(f"PASS: {args.renderer} {route} shared color, textures, "
                   "roughness, emission, and idle delivery")
         finally:
             if renderer is not None:

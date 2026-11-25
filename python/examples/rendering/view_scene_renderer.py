@@ -1,11 +1,11 @@
 """Inspect materials, lights, deformation, skinning, instances, and picking."""
 
-import argparse
 import math
 from pathlib import Path
 
 import numpy as np
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 
 
 def rgba(preset):
@@ -374,7 +374,7 @@ class SceneRendererApp(ke.App):
                         self.set_camera_view(position=[8, 5, 13], target=[8, 0.5, 5])
                     ke.imgui.text_wrapped(self.cuda_status)
                 else:
-                    ke.imgui.text_wrapped("CUDA sample: launch with --backend ovrtx.")
+                    ke.imgui.text_wrapped("CUDA sample: launch with --renderer ovrtx.")
             if ke.imgui.collapsing_header("Materials"):
                 ke.imgui.text("Left to right: Color, Phong, PBR.")
                 changed, self.materials_unlit = ke.imgui.checkbox("Unlit", self.materials_unlit)
@@ -457,16 +457,15 @@ class SceneRendererApp(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--hdri-path", type=Path, help="Latlong environment image for ovrtx")
     args = parser.parse_args()
-    if args.hdri_path is not None and args.backend != "ovrtx":
-        parser.error("--hdri-path requires --backend ovrtx; Native supports uniform dome lighting")
+    if args.hdri_path is not None and args.renderer != "ovrtx":
+        parser.error("--hdri-path requires --renderer ovrtx; Native supports uniform dome lighting")
     app = SceneRendererApp()
     app.hdri_path = args.hdri_path
     try:
-        app.initialize(width=1280, height=800, up_axis=ke.UpAxis.Y, render_backend=args.backend)
+        app.initialize(width=1280, height=800, up_axis=ke.UpAxis.Y, renderer=args.renderer)
         app.start()
     finally:
         app.close()

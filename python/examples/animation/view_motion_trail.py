@@ -1,9 +1,9 @@
 """Inspect one FBX motion on a character and six independently posed clones."""
 
-import argparse
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -126,7 +126,7 @@ class MotionTrailApp(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--fbx-path", type=Path, default=DEFAULT_FBX)
     args = parser.parse_args()
     path = args.fbx_path.expanduser().resolve()
@@ -134,7 +134,10 @@ def main():
         raise FileNotFoundError(path)
     app = MotionTrailApp(path)
     try:
-        app.initialize(width=1440, height=900, up_axis=ke.UpAxis.Y)
+        app.initialize(
+            width=1440, height=900, up_axis=ke.UpAxis.Y,
+            renderer=args.renderer,
+        )
         app.start()
     finally:
         app.close()

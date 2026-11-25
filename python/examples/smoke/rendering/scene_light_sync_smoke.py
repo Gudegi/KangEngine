@@ -8,12 +8,12 @@ import kangengine as ke
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     app = ke.App()
     try:
         app.initialize(width=160, height=160, hide_ui=True, headless=True,
-                       up_axis=ke.UpAxis.Z, render_backend=args.backend)
+                       up_axis=ke.UpAxis.Z, renderer=args.renderer)
         app.set_frame_capture_active(True)
         app.scene.get_prim_at_path("/lights/default_directional").set_visible(False)
         app.set_camera_view(position=[0, -7, 6], target=[0, 0, 0])
@@ -56,7 +56,7 @@ def main():
             app.scene.remove_prim("/rig/light")
             removed = capture()
             assert np.abs(removed - dark).mean() < 2, kind
-            print(f"PASS: {args.backend} {kind} creation, hierarchy state, and removal")
+            print(f"PASS: {args.renderer} {kind} creation, hierarchy state, and removal")
     finally:
         app.close()
 

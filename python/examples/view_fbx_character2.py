@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys, JointMapper, JointSemantic
 
 
@@ -306,7 +306,7 @@ class FbxCharacterBridgeViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
     parser.add_argument("--bind-file", default=None)
     parser.add_argument("--clip-index", type=int, default=-1)
@@ -348,7 +348,7 @@ def main():
         not args.no_materials,
         args.material_mode,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

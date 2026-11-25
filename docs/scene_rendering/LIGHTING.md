@@ -31,12 +31,6 @@ the scene hierarchy, in creation order within each parent, without sorting by
 distance or brightness. More than 16 eligible Rect lights raises an error. Hidden or
 inactive lights, including those under hidden or inactive parents, are excluded.
 
-ovrtx supports all five types without Native's fixed light counts. The first
-eligible Directional light's `ambient` supplies constant fill in RTPT. Use a Dome
-for environment lighting and reflections. Point and Spot do not support `range`.
-Brightness and falloff may differ from Native.
-Rect supports emission textures.
-
 ## Common rules
 
 Use **Add → Light** and the inspector for interactive creation and editing.
@@ -96,15 +90,14 @@ previously applied to light getter results; those results are now local.
 intensity multiplier; their values are not interchangeable with USD light
 intensity. Rect and Dome additionally expose exposure and color temperature.
 
-Use `set_exposure()` on either backend to scale brightness before tone mapping.
+Use `set_exposure()` to scale brightness before tone mapping.
 The multiplier defaults to 1; 0 produces black output.
 
 ```python
 self.set_exposure(exposure=1.0)
 ```
 
-`set_tone_map()` and `set_gamma()` remain Native-only. OVRTX applies its own
-tone mapping and output encoding; do not apply them again to captured RGB images.
+`set_tone_map()` and `set_gamma()` are Native-only.
 On Native, both exposure multipliers apply when tone mapping is enabled.
 With tone mapping off, only `set_exposure()` applies.
 
@@ -258,14 +251,6 @@ All Dome contributions add to the directional light's `ambient`. Set `ambient`
 to zero if only the Domes should provide fill.
 Objects do not block dome illumination. Environment reflections and textured
 domes are not supported.
-
-With ovrtx, domes illuminate surfaces and reflections and provide the background.
-`set_background_color()` overrides the visible background without changing dome
-lighting or reflections. OVRTX requires background alpha=1.
-For a latitude-longitude HDRI, set `light.texture_path` to the image file and
-`light.texture_format = "latlong"` before calling `set_dome_light()`.
-Rotate the owning prim to rotate the environment. Visibility and active state
-control whether the dome contributes.
 
 ## USD scenes and camera exposure
 

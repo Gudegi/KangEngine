@@ -40,6 +40,7 @@ class SceneRenderSystem {
     void bind(Renderer* renderer, SceneResourceManager* resources = nullptr);
     void syncScene(SceneBackend& scene, const SceneResourceManager& resources);
     RayPickResult resolvePick(const RenderPickHit& hit) const;
+    RayPickResult raycast(const Geometry::Ray& ray) const;
     RayPickResult buildPrimSelection(Prim& prim) const;
 
     std::shared_ptr<RenderComponent>

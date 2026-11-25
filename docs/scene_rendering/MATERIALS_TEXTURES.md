@@ -36,10 +36,6 @@ from this collection:
 ground = self.scene.add_ground()
 ```
 
-On ovrtx, standard checker ground uses a shared texture. `set_ground_style()`
-supports `use_pbr=True` and `grid_emission=0`, with opaque colors in `[0, 1]`.
-Filtering may differ from Native's procedural grid. DebugChecker is unsupported.
-
 Get the collection directly when you want to reuse one of its materials or
 replace the ground material explicitly:
 
@@ -117,6 +113,8 @@ Switching from Phong to PBR does not automatically convert `diffuse` and
 `App.load_texture()` loads an image and keeps the texture alive while the App
 is open. Loading the same file with the same `flip` and `srgb` settings reuses
 the texture. `flip=True` (the default) flips the image vertically.
+
+For ImGui images, use `App.load_ui_texture()`. A window graphics device is required.
 
 Use `srgb=True` for color images stored as sRGB. Images storing surface data,
 such as normals, roughness, or metallic values, use `srgb=False` (the default).

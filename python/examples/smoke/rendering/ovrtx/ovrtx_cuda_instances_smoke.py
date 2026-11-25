@@ -47,6 +47,7 @@ def main():
         with patch.object(torch.Tensor, "cpu", side_effect=AssertionError("CPU transform copy")), \
              patch.object(torch.Tensor, "numpy", side_effect=AssertionError("NumPy transform copy")):
             before = capture()
+            assert not app.raycast(ke.Vec3(0.8, 0, 5), ke.Vec3(0, 0, -1)).hit
             with patch.object(adapter._stage, "write_attribute", wraps=adapter._stage.write_attribute) as writes:
                 retained = submit(1)
                 capture()
@@ -59,7 +60,9 @@ def main():
         assert np.abs(before - after).mean() > 1
         system.update_instances(view.component, np.eye(4, dtype=np.float32)[None])
         capture()
+        assert app.raycast(ke.Vec3(0, 0, 5), ke.Vec3(0, 0, -1)).hit
         retained = submit(3)
+        assert not app.raycast(ke.Vec3(0, 0, 5), ke.Vec3(0, 0, -1)).hit
         capture()
         view.remove()
         capture()

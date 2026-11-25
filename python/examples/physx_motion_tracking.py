@@ -7,12 +7,12 @@ But in kw.xml definition, all joints are defined hinge joint(1~3 hinge). It mean
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, keys, visual
 from kangengine.utils.math import quat_wxyz_to_xyzw, quat_wxyz_twist_angle
 
@@ -248,7 +248,7 @@ def main():
             "KangEngine built without PhysX. Missing: " + ", ".join(missing)
         )
 
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--char-file", default=str(default_char_file()))
     parser.add_argument("--motion-file", default=str(default_motion_file()))
     parser.add_argument("--order", default="DFS", choices=("DFS", "BFS"))
@@ -264,7 +264,7 @@ def main():
         raise FileNotFoundError(motion_file)
 
     app = KwMotionTrackingApp(char_file, motion_file, order=args.order)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

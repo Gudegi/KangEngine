@@ -1,10 +1,10 @@
 """Render the same authored scene with Native or optional ovrtx."""
 
-import argparse
 from pathlib import Path
 
 from PIL import Image
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 
 
 def build_scene(image_path):
@@ -42,13 +42,12 @@ def build_scene(image_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("tmp/scene-renderer.png"))
     args = parser.parse_args()
     image_path = Path(ke.__file__).parent / "assets/textures/awesomeface.png"
     scene, resources, material, _ = build_scene(image_path)
-    with ke.render.SceneRenderer(scene, resources, camera_path="/camera", backend=args.backend) as renderer:
+    with ke.render.SceneRenderer(scene, resources, camera_path="/camera", renderer=args.renderer) as renderer:
         pixels = renderer.render()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(pixels).save(args.output)

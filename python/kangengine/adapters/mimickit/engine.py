@@ -128,10 +128,11 @@ def _parse_bool(value):
 
 
 class _KangEngineViewer(App):
-    def __init__(self, world, headless=False):
+    def __init__(self, world, headless=False, renderer="native"):
         super().__init__()
         self.world = world
         self.headless = bool(headless)
+        self._viewer_renderer = renderer
         self.visual_bridge = None
         self.robot_material = None
         self.ground_material = None
@@ -143,7 +144,10 @@ class _KangEngineViewer(App):
             return
         if headless is None:
             headless = self.headless
-        self.initialize(width, height, False, _ke.UpAxis.Z, headless=bool(headless))
+        self.initialize(
+            width, height, False, _ke.UpAxis.Z, headless=bool(headless),
+            renderer=self._viewer_renderer,
+        )
         materials = self.create_standard_materials()
         self.robot_material = materials.common
         self.ground_material = materials.ground
@@ -296,8 +300,13 @@ class KangEngineEngine(_BaseEngine):
         self._initialized = False
         self._released = False
         self._headless = _parse_bool(self._config.get("headless", False))
+        # TODO: Remove the legacy render_backend config key.
+        renderer = self._config.get("renderer", self._config.get("render_backend", "native"))
         self._viewer = (
-            _KangEngineViewer(self._world, headless=self._headless)
+            _KangEngineViewer(
+                self._world, headless=self._headless,
+                renderer=renderer,
+            )
             if self._visualize or self._record_video
             else None
         )

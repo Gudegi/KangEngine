@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, scene
 
 FBX_ROOT_PATH = "/fbx_static"
@@ -209,7 +209,7 @@ def _material_texture_path(mesh, texture_kind: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
     parser.add_argument("--scale", type=float, default=0.01)
     parser.add_argument("--width", type=int, default=1280)
@@ -222,7 +222,7 @@ def main():
         raise FileNotFoundError(fbx_file)
 
     app = FBXMeshViewer(fbx_file, args.scale, not args.no_ground)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

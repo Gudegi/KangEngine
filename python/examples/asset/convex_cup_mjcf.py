@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys
 
 
@@ -100,6 +101,7 @@ class CupComparison(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = CupComparison()
-    app.initialize(width=1440, height=900)
+    app.initialize(width=1440, height=900, renderer=args.renderer)
     app.start()

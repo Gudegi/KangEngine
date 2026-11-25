@@ -21,7 +21,8 @@ class PickApp(ke.App):
 
 def main():
     app = PickApp()
-    app.initialize(width=320, height=240, hide_ui=True, render_backend="ovrtx")
+    app.initialize(width=320, height=240, hide_ui=True, renderer="ovrtx")
+    app.set_vsync(False)
     try:
         app.set_camera_view(position=[0, 0, 5], target=[0, 0, 0])
         app.set_light_ambient([0, 0, 0])

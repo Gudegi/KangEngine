@@ -83,6 +83,9 @@ int main() {
     const auto secondId = values.ids[1];
     require(firstId != secondId && input.resolve(secondId) == second,
             "instance identity is not independent of array position");
+    require(input.instanceIndex(secondId, 1) == 1 &&
+                input.instanceIndex(secondId, 0) == 1,
+            "instance index hint changed identity resolution");
     const auto* storage = values.transforms.data();
     input.collect();
     require(storage == values.transforms.data() && firstId == values.ids[0],
@@ -92,6 +95,9 @@ int main() {
     input.collect();
     require(values.ids.size() == 1 && values.ids[0] == secondId,
             "visibility compaction changed surviving instance identity");
+    require(input.instanceIndex(secondId, 1) == 0 &&
+                input.instanceIndex(firstId, 0) == -1,
+            "stale index hint resolved a different instance");
     parent->setActive(false);
     input.collect();
     require(values.ids.empty() && second->isVisible(),

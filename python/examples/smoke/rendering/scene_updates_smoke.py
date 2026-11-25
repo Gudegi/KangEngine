@@ -92,6 +92,14 @@ def main():
     assert versions == [scene.get_prim_at_path(path).get_material_binding_component().version
                         for path in ids]
 
+    for enabled in (False, True):
+        second.get_render_component().casts_shadow = enabled
+        changed = collect()["objects"]
+        assert len(changed) == 1 and changed[0]["id"] == ids["/group/second"]
+        assert changed[0]["casts_shadow"] is enabled
+        collector.accept()
+        assert not collect()["objects"]
+
     original_textures = material.texture_resources
     replacement = resources.register_texture_source(
         "Replacement", str(Path(ke.__file__).parent / "assets/textures/awesomeface.png"),

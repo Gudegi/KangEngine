@@ -4,6 +4,7 @@
 #include "py_array_view.hpp"
 #include "py_render_backend.hpp"
 #include "engine/scene/types/camera.hpp"
+#include "geometry/mesh_bvh.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -12,6 +13,7 @@
 #include <cmath>
 #include <climits>
 #include <cstring>
+#include <limits>
 
 namespace py = pybind11;
 using namespace KE::Scene;
@@ -128,6 +130,7 @@ py::dict sceneFrameToDict(const RenderSceneFrame& frame) {
         item["visible"] = object.visible;
         item["pickable"] = object.pickable;
         item["double_sided"] = object.doubleSided;
+        item["casts_shadow"] = object.castsShadow;
         item["alpha_mode"] = static_cast<int>(object.alphaMode);
         item["alpha_cutoff"] = object.alphaCutoff;
         addMaterialSource(item, object.material, object.materialResource,
@@ -182,7 +185,8 @@ class PythonSceneCollector {
 };
 
 class PythonRenderBackend final : public KE::RenderBackend,
-                                  public KE::RenderDebugDraw {
+                                  public KE::RenderDebugDraw,
+                                  public KE::RenderTextDraw {
   public:
     explicit PythonRenderBackend(py::object factory, bool gpuOutput)
         : _factory(std::move(factory)), _gpuOutput(gpuOutput) {}
@@ -261,9 +265,6 @@ class PythonRenderBackend final : public KE::RenderBackend,
     }
     void setSceneBatchState(KE::RenderableHandle handle,
                             const KE::SceneBatchState& state) override {
-        if (!state.castsShadow)
-            throw std::runtime_error(
-                "Python render batches require shadow-casting meshes");
         _batches.at(handle).state = state;
     }
     void
@@ -418,6 +419,68 @@ class PythonRenderBackend final : public KE::RenderBackend,
         py::gil_scoped_acquire gil;
         _adapter.attr("set_exposure")(exposure);
     }
+    KE::RenderTextDraw& textDraw() override { return *this; }
+    void setWorldText(const std::string& path,
+                      const KE::WorldTextDesc& desc) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw")
+            .attr("set_world")(path,
+                               py::cast(desc, py::return_value_policy::copy));
+    }
+    void setWorldString(const std::string& path, std::string text) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw").attr("update")("world", path, "text", text);
+    }
+    void setWorldPosition(const std::string& path,
+                          const glm::vec3& position) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw")
+            .attr("update")("world", path, "position", vec3Values(position));
+    }
+    void setWorldHidden(const std::string& path, bool hidden) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw")
+            .attr("update")("world", path, "hidden", hidden);
+    }
+    void removeWorldText(const std::string& path) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw").attr("remove")("world", path);
+    }
+    void clearWorldText() override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw").attr("clear")("world");
+    }
+    void setScreenText(const std::string& path,
+                       const KE::ScreenTextDesc& desc) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw")
+            .attr("set_screen")(path,
+                                py::cast(desc, py::return_value_policy::copy));
+    }
+    void setScreenString(const std::string& path, std::string text) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw").attr("update")("screen", path, "text", text);
+    }
+    void setScreenPosition(const std::string& path,
+                           const glm::vec2& position) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw")
+            .attr("update")("screen", path, "position",
+                            std::array<float, 2>{position.x, position.y});
+    }
+    void setScreenHidden(const std::string& path, bool hidden) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw")
+            .attr("update")("screen", path, "hidden", hidden);
+    }
+    void removeScreenText(const std::string& path) override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw").attr("remove")("screen", path);
+    }
+    void clearScreenText() override {
+        py::gil_scoped_acquire gil;
+        _adapter.attr("text_draw").attr("clear")("screen");
+    }
     KE::RenderDebugDraw& debugDraw() override { return *this; }
     void setLines(const std::string& path, const std::vector<glm::vec3>& starts,
                   const std::vector<glm::vec3>& ends,
@@ -472,6 +535,73 @@ class PythonRenderBackend final : public KE::RenderBackend,
         auto result = _pickResult;
         _pickResult.reset();
         return result;
+    }
+    KE::RenderPickHit
+    raycast(const KE::Geometry::Ray& ray,
+            const std::function<bool(uint64_t)>& filter) const override {
+        if (!std::isfinite(glm::dot(ray.origin, ray.origin)) ||
+            !std::isfinite(glm::dot(ray.direction, ray.direction)) ||
+            glm::dot(ray.direction, ray.direction) == 0.0f)
+            throw std::invalid_argument(
+                "raycast requires a finite, nonzero ray");
+
+        KE::RenderPickHit best;
+        best.distance = std::numeric_limits<float>::infinity();
+        ++_raycastRevision;
+
+        auto intersect = [&](const RenderMeshData& source,
+                             const glm::mat4& world, KE::RenderPickHit hit) {
+            auto [it, inserted] =
+                _raycastMeshes.try_emplace(source.mesh.get(), source.mesh);
+            auto& mesh = it->second;
+            mesh.revision = _raycastRevision;
+            hit.bounds = KE::Geometry::transformAABB(mesh.bounds, world);
+            float distance;
+            if (!KE::Geometry::intersects(ray, hit.bounds, distance) ||
+                distance >= best.distance ||
+                !mesh.bvh.intersectWorld(ray, world, distance) ||
+                distance >= best.distance)
+                return;
+            hit.hit = true;
+            hit.distance = distance;
+            hit.position = ray.getPoint(distance);
+            best = hit;
+        };
+
+        // The scene filters snapshot identities against current selection flags.
+        for (const auto& object : _scene.objects) {
+            if (!object.visible || object.geometry || !object.mesh.mesh ||
+                (filter ? !filter(object.id) : !object.pickable))
+                continue;
+            KE::RenderPickHit hit;
+            hit.sceneInstanceId = object.id;
+            hit.instanceIndex = 0;
+            intersect(object.mesh, object.world, hit);
+        }
+        for (const auto& [handle, batch] : _batches) {
+            if (batch.skin || batch.geometry ||
+                (batch.external && batch.external->view.isCuda()) ||
+                !std::any_of(batch.owners->pickable.begin(),
+                             batch.owners->pickable.end(),
+                             [](uint8_t value) { return value != 0; }))
+                continue;
+            for (size_t i = 0; i < batch.transforms->size(); ++i) {
+                KE::RenderPickHit hit;
+                hit.handle = handle;
+                hit.instanceIndex = static_cast<int>(i);
+                hit.transformSource = KE::TransformSource::ExternalBuffer;
+                intersect(batch.mesh, (*batch.transforms)[i], hit);
+            }
+        }
+
+        // Prune only during queries; idle render frames do no raycast work.
+        for (auto it = _raycastMeshes.begin(); it != _raycastMeshes.end();) {
+            if (it->second.revision != _raycastRevision)
+                it = _raycastMeshes.erase(it);
+            else
+                ++it;
+        }
+        return best;
     }
     void renderScene(const glm::mat4&, const glm::mat4&, bool) override {
         py::gil_scoped_acquire gil;
@@ -627,6 +757,14 @@ class PythonRenderBackend final : public KE::RenderBackend,
         std::optional<KE::ExternalBufferDesc> external;
     };
 
+    struct RaycastMesh {
+        explicit RaycastMesh(const std::shared_ptr<const MeshData>& source)
+            : bvh(source), bounds(source->computeLocalAABB()) {}
+        KE::Geometry::MeshBVH bvh;
+        KE::Geometry::AABB bounds;
+        uint64_t revision = 0;
+    };
+
     std::shared_ptr<SkinSource> skinSource(const RenderMeshData& mesh,
                                            const SkinnedMeshData& skin) {
         if (skin.boneIndices.size() != mesh.mesh->vertices.size() ||
@@ -695,6 +833,7 @@ class PythonRenderBackend final : public KE::RenderBackend,
                 [](uint8_t value) { return value != 0; });
             item["instance_ids"] = batch.owners->ids;
             item["double_sided"] = batch.state.doubleSided;
+            item["casts_shadow"] = batch.state.castsShadow;
             item["alpha_mode"] = static_cast<int>(batch.state.alphaMode);
             item["alpha_cutoff"] = batch.state.alphaCutoff;
             addMaterialSource(item, batch.material->values,
@@ -751,6 +890,8 @@ class PythonRenderBackend final : public KE::RenderBackend,
     RenderSceneUpdateTracker _updates;
     std::map<KE::RenderableHandle, Batch> _batches;
     std::multimap<const MeshData*, std::weak_ptr<SkinSource>> _skins;
+    mutable std::map<const MeshData*, RaycastMesh> _raycastMeshes;
+    mutable uint64_t _raycastRevision = 0;
     KE::RenderableHandle _nextBatch = 0;
     KE::RenderImage _image, _pending;
     int _width = 0, _height = 0;

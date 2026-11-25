@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, visual
 from kangengine.asset.smpl import SMPLXModel, repository_smplx_model_path
 
@@ -224,7 +224,7 @@ class MultiMotionViewer(ke.App):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--bvh-file", type=Path, default=default_bvh_file())
     parser.add_argument("--fbx-file", type=Path, default=default_fbx_file())
     parser.add_argument("--smpl-motion", type=Path, default=default_amass_file())
@@ -262,6 +262,7 @@ def main():
         height=args.height,
         hide_ui=False,
         up_axis=ke.UpAxis.Y,
+        renderer=args.renderer,
     )
     app.start()
 

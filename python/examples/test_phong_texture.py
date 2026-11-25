@@ -12,9 +12,8 @@ path used by commonTex.fs examples.
 
 from __future__ import annotations
 
-import argparse
-
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -26,12 +25,9 @@ class PhongTextureViewer(ke.App):
     def setup(self):
         self.create_standard_materials()
 
-        device = self.get_renderer().device()
-        texture = device.create_texture(
-            self.package_asset_path("textures", "awesomeface.png"),
-            True,
+        texture = self.load_texture(
+            path=self.package_asset_path("textures", "awesomeface.png"),
         )
-        self.textures.append(texture)
 
         white = self.create_phong_material(
             diffuse=ke.Vec3(1.0, 1.0, 1.0),
@@ -82,11 +78,11 @@ class PhongTextureViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.parse_args()
+    parser = render_example_parser()
+    args = parser.parse_args()
 
     app = PhongTextureViewer()
-    app.initialize(900, 500, False, ke.UpAxis.Z)
+    app.initialize(900, 500, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

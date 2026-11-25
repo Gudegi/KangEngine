@@ -4,6 +4,7 @@
 #include "engine/graphics/renderer/renderer.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 
@@ -97,6 +98,30 @@ RayPickResult SceneRenderSystem::resolvePick(const RenderPickHit& hit) const {
     RayPickResult result;
     static_cast<RenderPickHit&>(result) = hit;
     result.prim = prim;
+    return result;
+}
+
+RayPickResult SceneRenderSystem::raycast(const Geometry::Ray& ray) const {
+    if (!_renderer)
+        throw std::runtime_error(
+            "SceneRenderSystem is not bound to a Renderer");
+
+    const auto hit = _renderer->raycast(ray, [this](uint64_t id) {
+        const auto component = _collector.resolve(id);
+        if (!component || !component->isAttached() || !isRegistered(*component))
+            return false;
+        const auto* prim = component->owner();
+        if (!prim || !prim->isActiveInHierarchy() ||
+            !prim->isVisibleInHierarchy())
+            return false;
+        const auto selection = prim->getSelectionComponent();
+        return !selection || selection->isPickable();
+    });
+
+    RayPickResult result;
+    static_cast<RenderPickHit&>(result) = hit;
+    if (hit.hit && hit.transformSource == TransformSource::SceneGraph)
+        result = resolvePick(hit);
     return result;
 }
 

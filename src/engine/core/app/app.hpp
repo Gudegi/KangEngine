@@ -215,8 +215,9 @@ class App {
     GLFWwindow* getWindow() { return _window.getGlfwWindow(); }
     const glm::mat4& getViewMatrix() const { return _viewMatrix; }
     const glm::mat4& getProjectionMatrix() const { return _projectionMatrix; }
+    // Window/UI device; an external scene renderer owns its device separately.
     Backend::GraphicsDevice* getGraphicsDevice() {
-        return getRenderer().device();
+        return _graphicsDevice.get();
     }
     Backend::Texture* getPresentedTexture();
     // ovrtx image uploads start with the top row; Native textures need a UV flip.

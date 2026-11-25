@@ -187,8 +187,8 @@ def run(backend, fbx_path=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("recording", "native", "ovrtx"), default="recording")
+    parser.add_argument("--renderer", choices=("recording", "native", "ovrtx"), default="recording")
     parser.add_argument("--fbx-path", type=Path)
     args = parser.parse_args()
-    run(args.backend, args.fbx_path)
-    print(f"PASS: {args.backend} independent skinning")
+    run(args.renderer, args.fbx_path)
+    print(f"PASS: {args.renderer} independent skinning")

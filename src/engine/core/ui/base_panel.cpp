@@ -1454,42 +1454,52 @@ void RendererDebugPanel::buildPanel() {
     }
 
     constexpr ImGuiTreeNodeFlags defaultOpen = ImGuiTreeNodeFlags_DefaultOpen;
-    RendererSettings& rendererSettings = _app->getRenderer().settings();
+    Renderer& renderer = _app->getRenderer();
+    RendererSettings& rendererSettings = renderer.settings();
+    Rasterizer* rasterizer = renderer.rasterizer();
 
     if (ImGui::CollapsingHeader("Controls", defaultOpen)) {
-        ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
+        if (renderer.capabilities().wireframe)
+            ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
         ImGui::SeparatorText("Background");
-        ImGui::Checkbox("Show Grid", &rendererSettings.background.showGrid);
-        ImGui::ColorEdit4("Grid Color",
-                          &rendererSettings.background.gridColor.x);
-        ImGui::ColorEdit4("Background Color",
-                          &rendererSettings.background.backgroundColor.x);
-        ImGui::ColorEdit4("Checker A",
-                          &rendererSettings.background.checkerColor1.x);
-        ImGui::ColorEdit4("Checker B",
-                          &rendererSettings.background.checkerColor2.x);
-        const char* groundShadingLabels[] = {"Phong", "PBR"};
-        int groundShading =
-            static_cast<int>(rendererSettings.background.groundShadingModel);
-        if (ImGui::Combo("Ground Shading", &groundShading, groundShadingLabels,
-                         2)) {
-            rendererSettings.background.groundShadingModel =
-                static_cast<GroundShadingModel>(groundShading);
+        auto background = rendererSettings.background;
+        const ImGuiColorEditFlags colorFlags =
+            rasterizer ? ImGuiColorEditFlags_None : ImGuiColorEditFlags_NoAlpha;
+        bool groundChanged = ImGui::Checkbox("Show Grid", &background.showGrid);
+        groundChanged |= ImGui::ColorEdit4("Grid Color",
+                                           &background.gridColor.x, colorFlags);
+        if (ImGui::ColorEdit4("Background Color", &background.backgroundColor.x,
+                              colorFlags))
+            renderer.setBackgroundColor(background.backgroundColor);
+        groundChanged |= ImGui::ColorEdit4(
+            "Checker A", &background.checkerColor1.x, colorFlags);
+        groundChanged |= ImGui::ColorEdit4(
+            "Checker B", &background.checkerColor2.x, colorFlags);
+        if (rasterizer) {
+            const char* groundShadingLabels[] = {"Phong", "PBR"};
+            int groundShading = static_cast<int>(background.groundShadingModel);
+            if (ImGui::Combo("Ground Shading", &groundShading,
+                             groundShadingLabels, 2)) {
+                background.groundShadingModel =
+                    static_cast<GroundShadingModel>(groundShading);
+                groundChanged = true;
+            }
         }
-        ImGui::SliderFloat("Ground Metallic",
-                           &rendererSettings.background.groundMetallic, 0.0f,
-                           1.0f);
-        ImGui::SliderFloat("Ground Roughness",
-                           &rendererSettings.background.groundRoughness, 0.04f,
-                           1.0f);
-        ImGui::DragFloat("Grid Scale", &rendererSettings.background.gridScale,
-                         0.05f, 0.05f, 20.0f);
-        ImGui::DragFloat("Grid Line Width",
-                         &rendererSettings.background.gridLineWidth, 0.001f,
-                         0.001f, 0.49f);
-        ImGui::SliderFloat("Grid Emission",
-                           &rendererSettings.background.gridEmission, 0.0f,
-                           2.0f);
+        groundChanged |= ImGui::SliderFloat(
+            "Ground Metallic", &background.groundMetallic, 0.0f, 1.0f);
+        groundChanged |= ImGui::SliderFloat(
+            "Ground Roughness", &background.groundRoughness, 0.04f, 1.0f);
+        groundChanged |= ImGui::DragFloat("Grid Scale", &background.gridScale,
+                                          0.05f, 0.05f, 20.0f);
+        groundChanged |=
+            ImGui::DragFloat("Grid Line Width", &background.gridLineWidth,
+                             0.001f, 0.001f, 0.49f);
+        if (rasterizer)
+            groundChanged |= ImGui::SliderFloat(
+                "Grid Emission", &background.gridEmission, 0.0f, 2.0f);
+        if (groundChanged)
+            renderer.setGroundStyle(background);
+
         ImGui::SeparatorText("Interaction");
         const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
         int interactionMode = static_cast<int>(_app->getInteractionMode());
@@ -1502,7 +1512,13 @@ void RendererDebugPanel::buildPanel() {
                          0.0f, 500.0f, "%.2f");
     }
 
-    if (ImGui::CollapsingHeader("Post Processing", defaultOpen)) {
+    if (ImGui::CollapsingHeader("Exposure", defaultOpen)) {
+        float exposure = rendererSettings.exposure;
+        if (ImGui::SliderFloat("Linear Exposure", &exposure, 0.0f, 5.0f))
+            renderer.setExposure(exposure);
+    }
+
+    if (rasterizer && ImGui::CollapsingHeader("Post Processing", defaultOpen)) {
         ImGui::SliderFloat("Gamma Correction", &rendererSettings.gamma, 0.f,
                            5.f);
         const char* toneMapLabels[] = {"None", "Reinhard Simple", "Exponential",
@@ -1529,7 +1545,7 @@ void RendererDebugPanel::buildPanel() {
         }
     }
 
-    if (ImGui::CollapsingHeader("Selection")) {
+    if (rasterizer && ImGui::CollapsingHeader("Selection")) {
         if (SelectionOutlineProcessor* outline =
                 _app->getRenderer().selectionOutline()) {
             SelectionOutlineConfig& config = outline->config();
@@ -1545,23 +1561,18 @@ void RendererDebugPanel::buildPanel() {
         }
     }
 
-    Rasterizer* rasterizer = _app->getRenderer().rasterizer();
-    if (!rasterizer) {
-        ImGui::End();
-        return;
-    }
-
-    Scene::Prim* defaultLight = _app->getScene()
-        ? _app->getScene()->getPrimAtPath("/lights/default_directional") : nullptr;
-    DirectionalLight light = defaultLight
-        ? defaultLight->getDirectionalLight() : _app->getRenderer().light();
+    Scene::Prim* defaultLight =
+        _app->getScene()
+            ? _app->getScene()->getPrimAtPath("/lights/default_directional")
+            : nullptr;
+    DirectionalLight light = defaultLight ? defaultLight->getDirectionalLight()
+                                          : _app->getRenderer().light();
     glm::vec3 direction = light.direction;
     float color[3] = {light.color.r, light.color.g, light.color.b};
     glm::vec3 ambient = light.ambient;
 
     if (ImGui::CollapsingHeader("Lighting", defaultOpen)) {
-        if (ImGui::DragFloat3("Sun local ray direction", &direction.x,
-                              0.02f)) {
+        if (ImGui::DragFloat3("Sun local ray direction", &direction.x, 0.02f)) {
             _app->setLightDirection(direction);
         }
         if (ImGui::ColorEdit3("Light Color", color)) {
@@ -1574,6 +1585,11 @@ void RendererDebugPanel::buildPanel() {
         if (ImGui::ColorEdit3("Ambient", &ambient.x)) {
             _app->setLightAmbient(ambient);
         }
+    }
+
+    if (!rasterizer) {
+        ImGui::End();
+        return;
     }
 
     float distance = rasterizer->getShadowDistance();

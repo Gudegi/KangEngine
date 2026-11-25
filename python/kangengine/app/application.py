@@ -1024,6 +1024,7 @@ class App(_NativeApp):
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0
         self._textures_by_uri = {}
+        self._ui_textures_by_uri = {}
         self._scene_hook_resource_handles = {}
         self._render_hook_resource_usage = {}
         self.playback_controller = PlaybackController(self)
@@ -1322,6 +1323,27 @@ class App(_NativeApp):
         self.textures.append(texture)
         self._remember_resource_handle(texture, handle)
         self._textures_by_uri[key] = texture
+        return texture
+
+    def load_ui_texture(self, path, *, flip: bool = True) -> render_api.Texture:
+        """Load and retain an ImGui texture; requires a window graphics device."""
+        if self.render_backend == "native":
+            return self.load_texture(path, flip=flip)
+        if not self.is_initialized:
+            raise RuntimeError("Initialize App before loading UI textures")
+        device = self.get_graphics_device()
+        if device is None:
+            raise RuntimeError("UI textures require a window graphics device")
+
+        texture_path = str(_texture_path_candidate(path).resolve())
+        key = (texture_path, bool(flip))
+        texture = self._ui_textures_by_uri.get(key)
+        if texture is not None:
+            return texture
+
+        texture = device.create_texture(texture_path, flip)
+        self._remember_textures(texture)
+        self._ui_textures_by_uri[key] = texture
         return texture
 
     def create_texture(
@@ -1865,6 +1887,7 @@ class App(_NativeApp):
                     self.textures = []
                     self._resource_handles_by_object_id.clear()
                     self._textures_by_uri.clear()
+                    self._ui_textures_by_uri.clear()
                     self._scene_hook_resource_handles.clear()
                     self._render_hook_resource_usage.clear()
                     self._mcp_scenario_targets.clear()
@@ -1880,9 +1903,11 @@ class App(_NativeApp):
         scene_backend_type=None,
         headless=False,
         *,
-        render_backend="native",
+        renderer=None,
+        # TODO: Remove the legacy render_backend keyword.
+        render_backend=None,
     ):
-        """Initialize Native rendering or the optional ovrtx backend.
+        """Initialize the selected renderer; Native is the default.
 
         ovrtx supports skinning, CPU deformation, CPU/CUDA instances, picking,
         and built-in Color/Phong/PBR materials with unlit and alpha masking.
@@ -1893,15 +1918,21 @@ class App(_NativeApp):
         without a window. CUDA instance inputs also require ``cuda-bindings``.
         Unsupported scene features raise when submitted.
         """
-        if render_backend not in ("native", "ovrtx"):
-            raise ValueError("render_backend must be 'native' or 'ovrtx'")
-        if render_backend != "native" and graphics_backend_type is not None:
+        if render_backend is not None:
+            if renderer is not None and renderer != render_backend:
+                raise ValueError("renderer and render_backend select different renderers")
+            renderer = render_backend
+        if renderer is None:
+            renderer = "native"
+        if renderer not in ("native", "ovrtx"):
+            raise ValueError("renderer must be 'native' or 'ovrtx'")
+        if renderer != "native" and graphics_backend_type is not None:
             raise ValueError("ovrtx manages its graphics device; omit graphics_backend_type")
         self.initial_width = width
         self.initial_height = height
         self.hide_ui = hide_ui
         self.headless = headless
-        self.render_backend = render_backend
+        self.render_backend = renderer
 
         self.up_axis = _ke.UpAxis.Y if up_axis is None else up_axis
         if graphics_backend_type is None:
@@ -1911,7 +1942,7 @@ class App(_NativeApp):
         self.graphics_backend_type = graphics_backend_type
         self.scene_backend_type = scene_backend_type
 
-        if render_backend == "native":
+        if renderer == "native":
             result = super().initialize(
                 self.initial_width,
                 self.initial_height,

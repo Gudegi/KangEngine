@@ -41,7 +41,7 @@ class SceneRenderBridge {
     void refreshSelection();
     Prim* resolve(RenderInstanceId id) const;
     int instanceIndex(const Prim& prim) const;
-    int instanceIndex(RenderInstanceId id) const;
+    int instanceIndex(RenderInstanceId id, int hint = -1) const;
     const RenderInstanceData& instances() const { return _instances; }
 
   private:

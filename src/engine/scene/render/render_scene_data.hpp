@@ -56,6 +56,7 @@ struct RenderObjectSource {
     bool visible = true;
     bool pickable = true;
     bool doubleSided = false;
+    bool castsShadow = true;
     AlphaMode alphaMode = AlphaMode::Opaque;
     float alphaCutoff = 0.5f;
 };

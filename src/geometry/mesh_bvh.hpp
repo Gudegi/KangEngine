@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geometry/mesh_data.hpp"
+#include <cmath>
 #include <memory>
 
 namespace KE::Geometry {
@@ -11,6 +12,25 @@ class MeshBVH {
     explicit MeshBVH(std::shared_ptr<const Scene::MeshData> mesh);
     // Tests both triangle sides; distance is measured along a normalized ray.
     bool intersect(const Ray& ray, float& distance) const;
+    // Preserve world distance under rotated, mirrored, nonuniform transforms.
+    bool intersectWorld(const Ray& ray, const glm::mat4& transform,
+                        float& distance) const {
+        const float determinant = glm::determinant(glm::mat3(transform));
+        if (!std::isfinite(determinant) || determinant == 0.0f)
+            return false;
+        const glm::mat4 inverse = glm::inverse(transform);
+        const glm::vec3 direction =
+            glm::vec3(inverse * glm::vec4(ray.direction, 0.0f));
+        const float scale = glm::length(direction);
+        if (!std::isfinite(scale) || scale == 0.0f)
+            return false;
+        const Ray localRay(glm::vec3(inverse * glm::vec4(ray.origin, 1.0f)),
+                           direction);
+        if (!intersect(localRay, distance))
+            return false;
+        distance /= scale;
+        return true;
+    }
 
   private:
     struct Node {

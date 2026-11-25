@@ -13,14 +13,14 @@ from kangengine.utils.batched_rotations import quat_xyzw_to_matrix
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     app = ke.App()
     world = ke.sim.KangSimWorld(num_envs=3, sim_device="cuda:0", add_ground=False)
     visualizer = None
     try:
         app.initialize(width=320, height=240, hide_ui=True, headless=True,
-                       up_axis=ke.UpAxis.Z, render_backend=args.backend)
+                       up_axis=ke.UpAxis.Z, renderer=args.renderer)
         app.set_camera_view(position=(5, -8, 5), target=(0, 0, 1))
         mesh = ke.geometry.create_cube_data(0.4)
         collision = ke.asset.CollisionGeomDesc(
@@ -61,7 +61,7 @@ def main():
             assert len(backend._groups) == 2
             before = capture()
             assert np.abs(before - empty).mean() > 0.2
-            if args.backend == "ovrtx":
+            if args.renderer == "ovrtx":
                 pointers = [buffer.data_ptr() for buffer in backend._transforms]
 
             positions = torch.tensor([[1.2, 0, 1.5], [-1, 0, 1], [0, 2, 1]], device="cuda:0")
@@ -78,7 +78,7 @@ def main():
                     visualizer.sync()
             torch.cuda.synchronize()
 
-            if args.backend == "ovrtx":
+            if args.renderer == "ovrtx":
                 assert pointers == [buffer.data_ptr() for buffer in backend._transforms]
                 for (rows, visual), matrices in zip(backend._groups, backend._transforms):
                     env_ids = [batch.env_ids[row] for row in rows]
@@ -116,7 +116,7 @@ def main():
             visualizer = None
             assert app.get_scene_render_system().registration_count == 0
             assert np.abs(capture() - empty).mean() < 1
-        print(f"PASS: {args.backend} GPU rigid groups, local transforms, streams, reset, and recreation")
+        print(f"PASS: {args.renderer} GPU rigid groups, local transforms, streams, reset, and recreation")
     finally:
         if visualizer is not None:
             visualizer.release()

@@ -1,4 +1,4 @@
-"""Check material models, unlit color, alpha, normal maps, and memory images."""
+"""Check material models, unlit color, alpha, normal/emissive maps, and images."""
 
 from pathlib import Path
 import tempfile
@@ -8,6 +8,79 @@ import numpy as np
 from PIL import Image
 import kangengine as ke
 from kangengine.render._ovrtx_scene import OvrtxAppAdapter
+
+
+def check_emissive(app, adapter, view, capture):
+    material = app.create_pbr_material(
+        base_color=[0, 0, 0, 1], emissive_color=[1, 1, 1], emissive_strength=1,
+    )
+    view.set_material(material)
+    view.set_alpha_mode(ke.render.AlphaMode.OPAQUE)
+    app.set_light_intensity(0)
+    pixels = np.full((16, 16, 3), [255, 0, 0], dtype=np.uint8)
+    pixels[:8] = [0, 0, 255]
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "emissive.png"
+        Image.fromarray(pixels).save(path)
+        material.emissive_texture = app.load_texture(path, srgb=True)
+        file_image = capture()
+        material.emissive_texture = app.create_texture(pixels, srgb=True)
+        mapped = capture()
+        assert np.abs(mapped - file_image).mean() < 2
+    assert np.count_nonzero(mapped[..., 0] > mapped[..., 2] + 50) > 50
+    assert np.count_nonzero(mapped[..., 2] > mapped[..., 0] + 50) > 50
+
+    material.emissive_strength = 0
+    assert capture()[96, 128].max() < 15
+    # Keep the strength comparison below the output's saturation range.
+    app.set_exposure(0.001)
+    material.emissive_strength = 0.25
+    dim = capture()
+    material.emissive_strength = 1
+    bright = capture()
+    assert bright.mean() > dim.mean() + 1, (dim.mean(), bright.mean())
+    app.set_exposure(1)
+    material.emissive_color = [1, 0, 0]
+    assert capture()[..., 2].max() < 15
+    material.emissive_color = [1, 1, 1]
+    material.emissive_texture = None
+    assert capture()[96, 128].min() > 200
+    assert not adapter._textures
+
+    green = app.create_texture(np.full((8, 8, 3), [0, 255, 0], dtype=np.uint8))
+    material.emissive_texture = green
+    assert capture()[96, 128, 1] > 200
+    with patch.object(adapter._stage, "write_attribute", wraps=adapter._stage.write_attribute) as writes:
+        capture()
+        assert not any(call.args[1] == "texture:data" for call in writes.call_args_list)
+
+    # Unlit uses base color, regardless of the separate emissive map.
+    material.base_color = [1, 0, 0, 1]
+    material.unlit = True
+    unlit = capture()[96, 128]
+    assert unlit[0] > 200 and unlit[1] < 15
+    material.unlit = False
+    material.base_color = [0, 0, 0, 1]
+    assert capture()[96, 128, 1] > 200
+
+    # External instances share emission without tinting it by instance color.
+    view.set_visible(False)
+    batch = app.scene.add_mesh(
+        "/emissive_batch", ke.geometry.create_cube_data(1), material,
+        transform_source=ke.render.TransformSource.EXTERNAL_BUFFER,
+    )
+    matrices = np.tile(np.eye(4, dtype=np.float32), (2, 1, 1))
+    matrices[:, 3, 0] = [-0.8, 0.8]
+    system = app.get_scene_render_system()
+    system.update_instances(batch.component, matrices)
+    system.set_instance_colors(batch.component, [[1, 0, 0, 1], [0, 0, 1, 1]])
+    instances = capture()
+    assert np.count_nonzero(instances[:, :128, 1] > 200) > 50
+    assert np.count_nonzero(instances[:, 128:, 1] > 200) > 50
+    material.emissive_strength = 0
+    assert capture()[..., 1].max() < 15
+    batch.remove()
+    view.set_visible(True)
 
 
 def main():
@@ -102,10 +175,11 @@ def main():
         assert capture()[96, 128].max() < 5
         phong.alpha_map = None
         assert capture()[96, 128].min() > 200
+        check_emissive(app, adapter, view, capture)
         view.remove()
         capture()
         assert not adapter._textures and not adapter._texture_pixels
-        print("PASS: Color/Phong/PBR, unlit, alpha mask, blend rejection, normal map, and memory texture lifetime")
+        print("PASS: Color/Phong/PBR, unlit, alpha mask, normal/emissive maps, and texture lifetime")
     finally:
         app.close()
 

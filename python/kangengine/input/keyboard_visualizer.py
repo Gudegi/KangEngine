@@ -47,7 +47,7 @@ class KeyboardVisualizer:
         self.full_keyboard = full_keyboard
         asset = Path(__file__).resolve().parents[1] / "assets" / "keyboard"
         self._regions = json.loads((asset / "regions.json").read_text())
-        self._texture = app.load_texture(asset / "keyboard.png", flip=True)
+        self._texture = app.load_ui_texture(asset / "keyboard.png", flip=True)
         self._active = _ke.Vec4(*preset_rgba(_ke.ColorType.SKY_BLUE, 0.45))
         self._window_name = f"Keyboard Visualizer##{id(self)}"
         self._window_flags = (
@@ -70,7 +70,7 @@ class KeyboardVisualizer:
         image_width, image_height = self._regions["image_size"]
         if height is None:
             height = width * (y1 - y0) / (x1 - x0)
-        # App.load_texture(flip=True) stores the top of the PNG at texture v=1.
+        # Flipped UI textures store the top of the PNG at texture v=1.
         _ke.imgui.image(
             self._texture,
             width,

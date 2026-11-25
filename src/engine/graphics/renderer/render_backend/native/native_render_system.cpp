@@ -46,6 +46,15 @@ RenderDebugDraw& NativeRenderSystem::debugDraw() {
     return _renderer.native().rasterizer().debugDraw();
 }
 
+RenderTextDraw& NativeRenderSystem::textDraw() {
+    return _renderer.native().rasterizer().textDraw();
+}
+
+RenderPickHit NativeRenderSystem::raycast(
+    const Geometry::Ray& ray, const std::function<bool(uint64_t)>&) const {
+    return _renderer.native().rasterizer().raycastHit(ray);
+}
+
 void NativeRenderSystem::initialize(int width, int height) {
     _width = width;
     _height = height;
@@ -354,7 +363,7 @@ void NativeRenderSystem::syncSceneSnapshot(
             throw std::invalid_argument(
                 "Static scene requires opaque lit PBR and source textures");
         const SceneBatchKey key{object.mesh.resource, object.materialResource,
-                                object.doubleSided,
+                                object.doubleSided, object.castsShadow,
                                 object.geometry ? object.id : 0};
         if (object.geometry) {
             const auto& geometry = *object.geometry;
@@ -410,7 +419,7 @@ void NativeRenderSystem::syncSceneSnapshot(
     std::set<SceneBatchKey> liveBatches;
     for (const auto& object : scene.objects) {
         const SceneBatchKey key{object.mesh.resource, object.materialResource,
-                                object.doubleSided,
+                                object.doubleSided, object.castsShadow,
                                 object.geometry ? object.id : 0};
         liveBatches.insert(key);
         auto& entry = _sceneBatches[key];
@@ -443,8 +452,9 @@ void NativeRenderSystem::syncSceneSnapshot(
             if (batch.handle == InvalidHandle)
                 throw std::runtime_error(
                     "Failed to register static scene batch");
-            setSceneBatchState(batch.handle, {object.doubleSided, true,
-                                              AlphaMode::Opaque, 0.5f});
+            setSceneBatchState(batch.handle,
+                               {object.doubleSided, object.castsShadow,
+                                AlphaMode::Opaque, 0.5f});
         }
         if (object.geometry != batch.geometry) {
             updateRenderableGeometry(

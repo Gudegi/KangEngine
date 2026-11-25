@@ -1,10 +1,10 @@
 """KW5 world-anchor D6 playground. Run with --gpu or --headless for a smoke check."""
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys
 
 
@@ -95,12 +95,12 @@ class SuspensionViewer(ke.App):
         self.configure_timing(ke.SimulationTimingConfig(
             physics_hz=120., fixed_update_hz=120., render_hz=60.))
         self.set_simulation_hotkeys_enabled(True)
-        self.materials = self.create_standard_materials()
-        self.add_ground(material=self.materials.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.add_ground(material=self.standard_materials.ground)
         self.set_camera_view([5., -6., 4.], [0., 0., 2.5])
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.demo.world)
         self.robot_visual = self.visual.add(self.demo.robot, self.demo.xml, path="/kw_d6",
-                                            material=self.materials.common)
+                                            material=self.standard_materials.common)
 
     def pre_update(self):
         for limb, key in enumerate((keys.J, keys.K, keys.N, keys.M)):
@@ -152,7 +152,7 @@ class SuspensionViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
@@ -200,7 +200,7 @@ def main():
             demo.close()
     else:
         app = SuspensionViewer(args.gpu)
-        app.initialize(1440, 900, False, ke.UpAxis.Z)
+        app.initialize(1440, 900, False, ke.UpAxis.Z, renderer=args.renderer)
         app.start()
 
 

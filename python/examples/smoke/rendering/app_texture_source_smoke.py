@@ -108,11 +108,11 @@ def collect_frames(directory):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backend", choices=("native", "ovrtx"), default="native")
+    parser.add_argument("--renderer", choices=("native", "ovrtx"), default="native")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory() as directory:
         adapter = None
-        if args.backend == "ovrtx":
+        if args.renderer == "ovrtx":
             # This SDK stalls when first initialized after the source App closes.
             from kangengine.render._ovrtx_scene import OvrtxSceneAdapter
             adapter = OvrtxSceneAdapter(96, 96)
@@ -131,7 +131,7 @@ def main():
         finally:
             if adapter is not None:
                 adapter.close()
-    print(f"PASS: {args.backend} App texture sources, slots, replacement, removal, and lifetime")
+    print(f"PASS: {args.renderer} App texture sources, slots, replacement, removal, and lifetime")
 
 
 if __name__ == "__main__":

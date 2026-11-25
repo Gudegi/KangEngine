@@ -14,6 +14,7 @@ import math
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -290,7 +291,7 @@ class HeightmapTerrainViewer(ke.App):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="View a heightmap terrain mesh.")
+    parser = render_example_parser(description="View a heightmap terrain mesh.")
     parser.add_argument("heightmap", nargs="?", type=Path, default=DEFAULT_HEIGHTMAP)
     parser.add_argument("--sample-stride", type=int, default=8)
     parser.add_argument("--horizontal-scale", type=float, default=1.0)
@@ -345,7 +346,7 @@ def main():
         test_radius=args.test_radius,
         title=args.title,
     )
-    app.initialize(args.width, args.height, False, up_axis)
+    app.initialize(args.width, args.height, False, up_axis, renderer=args.renderer)
     app.start()
 
 

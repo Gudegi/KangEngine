@@ -6,10 +6,10 @@ spawn one rigid body, step the world, and sync it to the viewer.
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys
 
 
@@ -102,7 +102,7 @@ class MinimalSimWorldApp(ke.App):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     return parser.parse_args()
@@ -111,7 +111,7 @@ def parse_args():
 def main():
     args = parse_args()
     app = MinimalSimWorldApp()
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

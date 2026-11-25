@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import argparse
 import math
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, render
 
 
@@ -195,10 +195,11 @@ class USDSceneViewer(ke.App):
         self.set_light_ambient(ke.Vec3(0.42, 0.40, 0.36))
 
     def _apply_exposure(self):
-        self.set_tone_map(
-            mode=render.ToneMapMode.ACES_NARKOWICZ,
-            exposure=self.camera_exposure * 2.0 ** self.exposure_compensation,
-        )
+        exposure = self.camera_exposure * 2.0 ** self.exposure_compensation
+        if self.render_backend == "native":
+            self.set_tone_map(mode=render.ToneMapMode.ACES_NARKOWICZ, exposure=exposure)
+        else:
+            self.set_exposure(exposure=exposure)
 
     def _reset_camera(self):
         if not self.result.cameras:
@@ -302,7 +303,7 @@ def _parse_usd_or_explain(usd_file: str, scale: float):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("usd_file", type=Path, nargs="?", default=SPONZA_USD)
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--width", type=int, default=1920)
@@ -322,7 +323,8 @@ def main():
         double_sided=args.double_sided,
     )
     app.initialize(
-        width=args.width, height=args.height, hide_ui=False, up_axis=app.result.up_axis
+        width=args.width, height=args.height, hide_ui=False, up_axis=app.result.up_axis,
+        renderer=args.renderer,
     )
     app.start()
 

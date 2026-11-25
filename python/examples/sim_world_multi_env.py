@@ -12,13 +12,13 @@ friction changes can be checked while the simulation is running.
 
 from __future__ import annotations
 
-import argparse
 import math
 from pathlib import Path
 
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys
 
 
@@ -288,7 +288,7 @@ class MultiEnvSimWorldApp(ke.App):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--num-envs", type=int, default=16)
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
@@ -304,7 +304,7 @@ def parse_args():
 def main():
     args = parse_args()
     app = MultiEnvSimWorldApp(args.num_envs, args.friction_switch_time)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

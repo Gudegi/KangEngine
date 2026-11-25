@@ -1060,7 +1060,7 @@ void bind_viewer(py::module& m) {
             "triangle sides without material alpha tests.")
         .def("get_graphics_device", &App::getGraphicsDevice,
              py::return_value_policy::reference,
-             "Return the application's graphics device.")
+             "Return the window/UI graphics device, or None without a window.")
         .def(
             "get_renderer", [](App& self) { return &self.getRenderer(); },
             py::return_value_policy::reference,

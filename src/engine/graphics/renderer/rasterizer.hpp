@@ -393,6 +393,7 @@ class Rasterizer : public RenderPipeline {
                               int slot = 0);
     // CPU triangle query: excludes skinning, dynamic geometry and GPU transforms.
     RayPickResult raycast(const Geometry::Ray& ray) const;
+    RenderPickHit raycastHit(const Geometry::Ray& ray) const;
     RayPickResult rayPick(const Geometry::Ray& ray) const {
         return raycast(ray);
     }
@@ -437,6 +438,7 @@ class Rasterizer : public RenderPipeline {
                         bool overlay = false);
     void clearDebugPoints(const std::string& path);
     RenderDebugDraw& debugDraw() { return _debugRenderer; }
+    RenderTextDraw& textDraw() { return _textRenderer; }
     void setDebugVisible(const std::string& path, bool visible);
     void removeDebug(const std::string& path);
     void removeAllDebug();
