@@ -7,15 +7,17 @@
 
 #include <glm/fwd.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <variant>
 #include <unordered_map>
 #include <string>
+#include <stdexcept>
 #include <memory>
 #include <vector>
 #include <map>
 #include <optional>
+#include <cstdint>
 #include "../scene_backend.hpp"
 #include "engine/scene/types/light.hpp"
+#include "engine/scene/types/attribute_value.hpp"
 #include "token.hpp"
 #include "utils/types.hpp"
 
@@ -36,10 +38,6 @@ class SelectionComponent;
 class ArticulationComponent;
 class ArticulationBindingComponent;
 class CollisionShapeComponent;
-
-using AttributeValue =
-    std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
-                 glm::quat, std::vector<std::string>>;
 
 // Prim 타입
 enum class PrimType {
@@ -68,6 +66,7 @@ class Prim {
     std::string _path; // "/World/Cube"
     PrimType _type;
     Prim* _parent; // 부모 (소유하지 않음)
+    uint64_t _structureVersion = 1;
     std::vector<std::unique_ptr<Prim>> _children; // 자식들
     std::map<std::string, Prim*> _childrenMap;    // 빠른 탐색용
 
@@ -90,8 +89,9 @@ class Prim {
     bool _active = true;  // Scene traversal / update participation
     ManipulationPolicy _manipulationPolicy = ManipulationPolicy::Inherit;
 
-    void onAttributeChanged(const Token& name);
-    void markLocalTransformDirty();
+    void setAttributeValue(const Token& name, AttributeValue value);
+    const AttributeValue* findAttribute(const Token& name) const;
+    void markStructureChanged();
     void markWorldTransformDirtyRecursive();
     TransformComponent& getTransformComponentOrThrow();
     const TransformComponent& getTransformComponentOrThrow() const;
@@ -118,6 +118,9 @@ class Prim {
     const std::string& getPath() const { return _path; }
     PrimType getType() const { return _type; }
     Prim* getParent() const { return _parent; }
+    // Changes when descendants are added or removed; poses do not invalidate
+    // membership.
+    uint64_t structureVersion() const { return _structureVersion; }
 
     // Mesh 데이터 (type == Mesh일 때만)
     void setMeshData(std::shared_ptr<MeshData> data);
@@ -251,8 +254,7 @@ class Prim {
     void traverse(std::function<void(Prim*)> func);
 
     template <typename T> void setAttribute(const Token& name, const T& value) {
-        _Attributes[name] = value;
-        onAttributeChanged(name);
+        setAttributeValue(name, value);
     }
 
     template <typename T>
@@ -261,7 +263,10 @@ class Prim {
     }
 
     template <typename T> T getAttribute(const Token& name) const {
-        return std::get<T>(_Attributes.at(name));
+        const auto* value = findAttribute(name);
+        if (!value)
+            throw std::out_of_range("Attribute not found: " + name.str());
+        return std::get<T>(*value);
     }
 
     template <typename T> T getAttribute(const std::string& name) const {
@@ -270,10 +275,8 @@ class Prim {
 
     template <typename T>
     T getAttribute(const Token& name, const T& defaultValue) const {
-        auto it = _Attributes.find(name);
-        if (it == _Attributes.end())
-            return defaultValue;
-        return std::get<T>(it->second);
+        const auto* value = findAttribute(name);
+        return value ? std::get<T>(*value) : defaultValue;
     }
 
     template <typename T>
@@ -282,14 +285,15 @@ class Prim {
     }
 
     bool hasAttribute(const Token& name) const {
-        return _Attributes.count(name) > 0;
+        return findAttribute(name) != nullptr;
     }
 
     bool hasAttribute(const std::string& name) const {
         return hasAttribute(Token(name));
     }
 
-    const auto& getAttributes() const { return _Attributes; }
+    // Inspection snapshot; xform values remain owned by TransformComponent.
+    std::unordered_map<Token, AttributeValue, Token::Hash> getAttributes() const;
 
     bool isRenderable() const { return _renderable; }
     bool isVisible() const { return _visible; }
@@ -307,32 +311,12 @@ class Prim {
     Prim* resolveManipulationTarget();
     const Prim* resolveManipulationTarget() const;
 
-    void setXformOpOrder(const std::vector<std::string>& order) {
-        this->setAttribute("xformOpOrder", order);
-    }
+    void setXformOpOrder(const std::vector<std::string>& order);
 
-    // TODO: maybe impractical saving vec3 rgb color and vec4 rgba color
-    void setDisplayColor(glm::vec3 color) {
-        this->setAttribute("primvars:displaycolor", color);
-    }
-
-    std::optional<glm::vec3> getDisplayColor() {
-        if (hasAttribute("primvars:displaycolor")) {
-            return getAttribute<glm::vec3>("primvars:displaycolor");
-        }
-        return std::nullopt;
-    }
-
-    void setDisplayColorAlpha(glm::vec4 color) {
-        this->setAttribute("primvars:displaycolorAlpha", color);
-    }
-
-    std::optional<glm::vec4> getDisplayColorAlpha() {
-        if (hasAttribute("primvars:displaycolorAlpha")) {
-            return getAttribute<glm::vec4>("primvars:displaycolorAlpha");
-        }
-        return std::nullopt;
-    }
+    void setDisplayColor(glm::vec3 color);
+    std::optional<glm::vec3> getDisplayColor() const;
+    void setDisplayColorAlpha(glm::vec4 color);
+    std::optional<glm::vec4> getDisplayColorAlpha() const;
 
     LightType getLightType(LightType defaultType = LightType::Point) const;
     // Local authoring values. Direction follows emitted rays; position is parent-relative.

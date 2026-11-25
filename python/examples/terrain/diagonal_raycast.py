@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -100,8 +101,9 @@ class DiagonalRaycastViewer(ke.App):
 
 
 def main():
+    args = render_example_parser(description=__doc__).parse_args()
     app: DiagonalRaycastViewer = DiagonalRaycastViewer()
-    app.initialize(width=1280, height=900, up_axis=ke.UpAxis.Z)
+    app.initialize(width=1280, height=900, up_axis=ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

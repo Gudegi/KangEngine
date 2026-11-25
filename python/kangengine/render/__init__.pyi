@@ -5,6 +5,21 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Callable, overload
 
+class SceneRenderer:
+    """Synchronous scene image rendering through Native or optional ovrtx."""
+    def __init__(self, scene: Any, resources: Any, *, camera_path: str,
+                 renderer: str | None = None, width: int = 512, height: int = 512,
+                 # TODO: Remove the legacy backend keyword.
+                 backend: str | None = None) -> None: ...
+    def render(self) -> Any:
+        """Return an owned top-down uint8 RGB [height, width, 3] image."""
+        ...
+    def close(self) -> None:
+        """Release renderer resources without destroying the source scene."""
+        ...
+    def __enter__(self) -> SceneRenderer: ...
+    def __exit__(self, *args: Any) -> None: ...
+
 class BackendType(Enum):
     """Graphics backend selected by the application."""
     OPENGL: BackendType
@@ -227,6 +242,25 @@ class RenderHookPhase(Enum):
     """Point at which a scene command-recording callback runs."""
     AFTER_OPAQUE: RenderHookPhase
     AFTER_TRANSPARENT: RenderHookPhase
+
+class TextureSource:
+    """Immutable scene-local reference returned by App texture creation."""
+    @property
+    def path(self) -> str | None:
+        """Absolute image path, or None for a memory image."""
+        ...
+    @property
+    def srgb(self) -> bool:
+        """Whether to decode image RGB from sRGB."""
+        ...
+    @property
+    def flip(self) -> bool:
+        """Whether to flip image rows during loading."""
+        ...
+    @property
+    def resource_handle(self) -> int:
+        """Texture source identity in the owning App's resource manager."""
+        ...
 
 class Texture:
     """GPU texture created by a graphics device."""
@@ -455,8 +489,8 @@ class FrameProfile:
         """Whether all timing results have a terminal status."""
         ...
     @property
-    def backend(self) -> BackendType:
-        """Backend that rendered the captured frame."""
+    def backend(self) -> BackendType | None:
+        """RHI backend, or None for an externally managed renderer."""
         ...
     @property
     def gpu_latency_frames(self) -> int | None:
@@ -547,6 +581,20 @@ class ProfileSummary:
 
 class Renderer:
     """Facade for custom pipelines and renderable resource updates."""
+    def set_exposure(self, exposure: float) -> None:
+        """Set a nonnegative linear brightness multiplier; 1 is unchanged."""
+        ...
+    @property
+    def capabilities(self) -> dict[str, bool]:
+        """Frame support: screen_presentation, selection_outline, wireframe,
+        static_scene, scene_batches, skinning, screen_picking, native_extensions.
+
+        Input/output support:
+        - texture_pixels_input: create textures from CPU pixel arrays.
+        - cpu_instance_transforms_input: submit CPU instance transform arrays.
+        - cuda_image_output: return rendered images through CUDA handles.
+        """
+        ...
     def set_profiler_enabled(self, enabled: bool) -> None:
         """Enable or disable CPU/GPU pass capture at the next frame boundary."""
         ...
@@ -598,7 +646,7 @@ class Renderer:
         """Synchronize renderer lights from scene light prims."""
         ...
     def update_renderable_transforms(self, handle: int, transforms: Any, colors: Any | None = None) -> None:
-        """Replace instance transforms and optional colors."""
+        """Replace column-major CPU world matrices; ovrtx does not support colors."""
         ...
     def set_renderable_colors(self, handle: int, colors: Any) -> None:
         """Set per-instance colors."""

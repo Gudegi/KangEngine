@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 from kangengine.asset import load_obj_rigid, rigid_from_terrain_mesh
 from kangengine.sim import GridCloner, KangSimWorld
@@ -112,8 +113,9 @@ class RigidAssetViewer(ke.App):
 
 
 def main():
+    args = render_example_parser(description=__doc__).parse_args()
     app: RigidAssetViewer = RigidAssetViewer()
-    app.initialize(width=1280, height=900, up_axis=ke.UpAxis.Z)
+    app.initialize(width=1280, height=900, up_axis=ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

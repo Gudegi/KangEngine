@@ -46,7 +46,8 @@ struct FrameProfile {
     uint64_t captureId = 0, frameIndex = 0;
     uint32_t revision = 0;
     bool finalized = true;
-    BackendType backend{};
+    // No RHI device is required for an external render backend.
+    std::optional<BackendType> backend;
     std::vector<ProfileSample> samples;
     RenderCounters counters;
     std::optional<uint32_t> gpuLatencyFrames;
@@ -138,7 +139,7 @@ class ProfileContext {
         return _owner == std::this_thread::get_id() && _frame;
     }
     void beginFrame(uint64_t captureId, uint64_t frameIndex,
-                    BackendType backend);
+                    std::optional<BackendType> backend);
     std::shared_ptr<const FrameProfile> endFrame(bool aborted = false);
     void cancelFrame() noexcept;
     void setMetadata(std::string key, std::string value);

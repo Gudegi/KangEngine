@@ -20,6 +20,7 @@ import math
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 CRYTEK_SPONZA_OBJ = (
@@ -250,7 +251,7 @@ def compute_obj_bounds(info):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="View an OBJ/MTL scene.")
+    parser = render_example_parser(description="View an OBJ/MTL scene.")
     parser.add_argument("--obj-file", type=Path, default=None)
     parser.add_argument("--preset", type=str, default=None)
     parser.add_argument("--root-path", default=None)
@@ -315,7 +316,10 @@ def main():
             ground_size=args.ground_size,
             ground_y=args.ground_y,
         )
-    app.initialize(args.width, args.height, False, parse_up_axis(args.up_axis))
+    app.initialize(
+        args.width, args.height, False, parse_up_axis(args.up_axis),
+        renderer=args.renderer,
+    )
     app.start()
 
 

@@ -291,8 +291,7 @@ class PrimShowcaseApp : public App {
         ImGui::Separator();
         for (auto& e : entries) {
             auto pos = e.prim->getAttribute<glm::vec3>("xformOp:translate");
-            auto col =
-                e.prim->getAttribute<glm::vec4>("primvars:displaycolorAlpha");
+            auto col = e.prim->getDisplayColorAlpha().value_or(glm::vec4(1.0f));
             ImGui::ColorButton("##col", ImVec4(col.r, col.g, col.b, col.a),
                                ImGuiColorEditFlags_NoTooltip, ImVec2(14, 14));
             ImGui::SameLine();

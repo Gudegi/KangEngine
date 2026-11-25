@@ -7,15 +7,14 @@ Use Shift + Left drag to apply a Newton-owned picking force.
 
 from __future__ import annotations
 
-import argparse
-
 import numpy as np
 
+from kangengine.utils._example_args import render_example_parser
 from kangengine.adapters.newton import ViewerKE
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--headless", action="store_true")
@@ -94,6 +93,7 @@ def main():
         width=args.width,
         height=args.height,
         headless=args.headless,
+        renderer=args.renderer,
     )
     viewer.show_ground = False
     viewer.app.scene.add_ground("/Ground", scale=20.0)

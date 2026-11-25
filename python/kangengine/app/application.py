@@ -230,14 +230,19 @@ class RenderablePrimView:
         """Return the per-instance base-color multiplier."""
         return self.prim.get_display_color_alpha()
 
-    def set_texture(self, texture, role_or_slot=render_api.TextureRole.BASE_COLOR):
-        self._render_system.set_texture(
+    def set_batch_texture(self, texture, role_or_slot=render_api.TextureRole.BASE_COLOR):
+        """Override a Native ColorMaterial texture for the entire render batch."""
+        self._render_system.set_batch_texture(
             self.component, unwrap_native(texture), role_or_slot
         )
         return self
 
+    # TODO: Remove this alias after callers migrate to set_batch_texture().
+    set_texture = set_batch_texture
+
     def set_material(self, material):
         """Replace this renderable's material and move it to the right batch."""
+        self._app._register_material_resource(material)
         self._render_system.set_material(self.component, unwrap_native(material))
         return self
 
@@ -273,7 +278,12 @@ class RenderablePrimView:
         return self
 
     def update_geometry(self, positions, normals=None):
-        """Update dynamic vertex positions and optional normals."""
+        """Update mesh-local CPU positions and optional normals, shaped [N, 3].
+
+        Vertex count and topology stay fixed; omitted normals retain their values.
+        Native updates the shared batch; ovrtx updates this object. Source
+        MeshData is unchanged.
+        """
         self._render_system.update_geometry(self.component, positions, normals)
         return self
 
@@ -338,7 +348,7 @@ class ObjImportView:
 
 
 class DebugGeometry:
-    """Mesh-based debug geometry owned by the SceneGraph."""
+    """Scene-registered debug meshes driven by external world transforms."""
 
     def __init__(self, scene_context: "SceneContext"):
         self._scene = scene_context
@@ -435,6 +445,7 @@ class DebugGeometry:
             path,
             geometry_api.create_sphere_data(1.0, segments, rings),
             material,
+            transform_source=render_api.TransformSource.EXTERNAL_BUFFER,
         )
         view._render_system.update_instances(view.component, transforms, colors)
         view.set_casts_shadow(False)
@@ -442,7 +453,7 @@ class DebugGeometry:
 
 
 class DebugOverlay:
-    """Persistent debug batches; repeat a draw call at the same path to replace data."""
+    """Persistent Native/OVRTX debug batches; repeat a path to replace its data."""
 
     def __init__(self, app: "App"):
         self._app = app
@@ -790,8 +801,9 @@ class SceneContext:
         """
         if transform_source is None:
             transform_source = render_api.TransformSource.SCENE_GRAPH
-        self._app._add_renderable(material, prim, transform_source)
-        component = prim.get_render_component()
+        self._app._register_material_resource(material)
+        component = self._app._add_scene_renderable(
+            unwrap_native(material), prim, transform_source)
         if component is None:
             raise RuntimeError(f"failed to register renderable prim: {prim.get_path()}")
         return RenderablePrimView(self._app, prim, component)
@@ -961,7 +973,7 @@ class App(_NativeApp):
     - `pre_update()` handles per-frame input before simulation updates.
     - `fixed_update(dt)` runs zero or more times in `update_and_draw()`.
     - `pre_render()` runs before scene rendering each frame.
-    - `render()` runs while the ImGui frame is active.
+    - `render()` runs inside the render frame; ImGui requires Native rendering.
     - `post_render()` runs after UI rendering and before capture/presentation.
 
     `start()` repeats `update_and_draw()`. External simulation loops use
@@ -1001,6 +1013,7 @@ class App(_NativeApp):
         self.graphics_backend_type = render_api.BackendType.OPENGL
         self.scene_backend_type = scene.BackendType.NATIVE
         self.headless = False
+        self.render_backend = "native"
         self.scene = SceneContext(self)
         self.input = input_api.Input(self)
         self.debug_overlay = DebugOverlay(self)
@@ -1011,6 +1024,7 @@ class App(_NativeApp):
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0
         self._textures_by_uri = {}
+        self._ui_textures_by_uri = {}
         self._scene_hook_resource_handles = {}
         self._render_hook_resource_usage = {}
         self.playback_controller = PlaybackController(self)
@@ -1033,7 +1047,7 @@ class App(_NativeApp):
         return self.scene
 
     def get_renderer(self):
-        """Return the native renderer exposed through ``ke.render``."""
+        """Return the renderer facade exposed through ``ke.render``."""
         return super().get_renderer()
 
     def create_scene_hook_pipeline(
@@ -1205,6 +1219,8 @@ class App(_NativeApp):
         return f"{prefix}_{type(obj).__name__}_{self._resource_counter}"
 
     def _register_material_resource(self, material):
+        if isinstance(material, material_api.Material):
+            material._bind_resources(self.resources)
         existing = self._existing_resource_handle(material)
         if existing is not None:
             return existing
@@ -1217,6 +1233,10 @@ class App(_NativeApp):
         return self._remember_resource_handle(material, handle)
 
     def _register_texture_resource(self, texture, display_name=None, uri=None):
+        if isinstance(texture, render_api.TextureSource):
+            if texture._resources is not self.resources:
+                raise ValueError("Texture source belongs to a different App")
+            return self._remember_resource_handle(texture, texture.resource_handle)
         existing = self._existing_resource_handle(texture)
         if existing is not None:
             return existing
@@ -1271,26 +1291,75 @@ class App(_NativeApp):
 
     def load_texture(
         self, path, *, flip: bool = True, srgb: bool = False
-    ) -> render_api.Texture:
+    ) -> render_api.Texture | render_api.TextureSource:
         """Load and retain a texture, with optional sRGB decoding for color maps.
 
         Normal, roughness, metallic and other data maps use ``srgb=False``.
         Cache identity includes image orientation and color space.
+        External renderers retain a file source instead of a native GPU texture.
         """
+        if not self.is_initialized:
+            raise RuntimeError("Initialize App before loading textures")
         texture_path = str(_texture_path_candidate(path).resolve())
         key = (texture_path, bool(flip), bool(srgb))
         cached = self._textures_by_uri.get(key)
         if cached is not None:
             return cached
         device = self.get_renderer().device()
-        texture = device.create_texture(texture_path, bool(flip), srgb=srgb)
+        if self.render_backend != "native":
+            handle = self.resources.register_texture_source(
+                Path(texture_path).name, texture_path, srgb=srgb, flip=flip,
+            )
+            texture = render_api.TextureSource(
+                texture_path, bool(srgb), bool(flip), handle, self.resources,
+            )
+        else:
+            texture = device.create_texture(texture_path, bool(flip), srgb=srgb)
+            handle = self.resources._register_texture_file(
+                Path(texture_path).name, unwrap_native(texture),
+                f"{texture_path}#flip={int(flip)}&srgb={int(srgb)}",
+                texture_path, bool(srgb), bool(flip),
+            )
         self.textures.append(texture)
-        self._register_texture_resource(
-            texture,
-            display_name=Path(texture_path).name,
-            uri=f"{texture_path}#flip={int(flip)}&srgb={int(srgb)}",
-        )
+        self._remember_resource_handle(texture, handle)
         self._textures_by_uri[key] = texture
+        return texture
+
+    def load_ui_texture(self, path, *, flip: bool = True) -> render_api.Texture:
+        """Load and retain an ImGui texture; requires a window graphics device."""
+        if self.render_backend == "native":
+            return self.load_texture(path, flip=flip)
+        if not self.is_initialized:
+            raise RuntimeError("Initialize App before loading UI textures")
+        device = self.get_graphics_device()
+        if device is None:
+            raise RuntimeError("UI textures require a window graphics device")
+
+        texture_path = str(_texture_path_candidate(path).resolve())
+        key = (texture_path, bool(flip))
+        texture = self._ui_textures_by_uri.get(key)
+        if texture is not None:
+            return texture
+
+        texture = device.create_texture(texture_path, flip)
+        self._remember_textures(texture)
+        self._ui_textures_by_uri[key] = texture
+        return texture
+
+    def create_texture(
+        self, pixels, *, srgb: bool = False, flip: bool = True
+    ) -> render_api.Texture | render_api.TextureSource:
+        """Create a texture from contiguous uint8 [height, width, 3 or 4] pixels.
+
+        Copies the input as an immutable source. Later edits to the input do not
+        change the texture; create a new texture to replace it. ``flip`` and
+        ``srgb`` have the same meaning as in :meth:`load_texture`.
+        """
+        texture, handle = self._create_texture_image(pixels, srgb, flip)
+        if texture is None:
+            texture = render_api.TextureSource(None, srgb, flip, handle, self.resources)
+        self.textures.append(texture)
+        self._remember_resource_handle(texture, handle)
         return texture
 
     def create_phong_material(
@@ -1539,6 +1608,7 @@ class App(_NativeApp):
         if transform_source is None:
             transform_source = render_api.TransformSource.SCENE_GRAPH
         self._ensure_prim_mesh_resource(prim)
+        self._register_material_resource(material)
         self._add_skinned_renderable(
             material,
             prim,
@@ -1817,6 +1887,7 @@ class App(_NativeApp):
                     self.textures = []
                     self._resource_handles_by_object_id.clear()
                     self._textures_by_uri.clear()
+                    self._ui_textures_by_uri.clear()
                     self._scene_hook_resource_handles.clear()
                     self._render_hook_resource_usage.clear()
                     self._mcp_scenario_targets.clear()
@@ -1831,11 +1902,38 @@ class App(_NativeApp):
         graphics_backend_type=None,
         scene_backend_type=None,
         headless=False,
+        *,
+        renderer=None,
+        # TODO: Remove the legacy render_backend keyword.
+        render_backend=None,
     ):
+        """Initialize the selected renderer; Native is the default.
+
+        ovrtx supports skinning, CPU deformation, CPU/CUDA instances, picking,
+        and built-in Color/Phong/PBR materials with unlit and alpha masking.
+        Standard checker ground uses a filtered texture; Phong ground and grid
+        emission are unsupported. Lit PBR BLEND uses USD opacity; unlit/color
+        fading and DebugChecker are unsupported.
+        Its window requires CUDA–OpenGL interop on the same GPU.
+        Use ``headless=True, hide_ui=True`` for CPU image output
+        without a window. CUDA instance inputs also require ``cuda-bindings``.
+        Unsupported scene features raise when submitted.
+        """
+        if render_backend is not None:
+            if renderer is not None and renderer != render_backend:
+                raise ValueError("renderer and render_backend select different renderers")
+            renderer = render_backend
+        if renderer is None:
+            renderer = "native"
+        if renderer not in ("native", "ovrtx"):
+            raise ValueError("renderer must be 'native' or 'ovrtx'")
+        if renderer != "native" and graphics_backend_type is not None:
+            raise ValueError("ovrtx manages its graphics device; omit graphics_backend_type")
         self.initial_width = width
         self.initial_height = height
         self.hide_ui = hide_ui
         self.headless = headless
+        self.render_backend = renderer
 
         self.up_axis = _ke.UpAxis.Y if up_axis is None else up_axis
         if graphics_backend_type is None:
@@ -1845,15 +1943,26 @@ class App(_NativeApp):
         self.graphics_backend_type = graphics_backend_type
         self.scene_backend_type = scene_backend_type
 
-        result = super().initialize(
-            self.initial_width,
-            self.initial_height,
-            self.hide_ui,
-            self.up_axis,
-            self.graphics_backend_type,
-            self.scene_backend_type,
-            self.headless,
-        )
+        if renderer == "native":
+            result = super().initialize(
+                self.initial_width,
+                self.initial_height,
+                self.hide_ui,
+                self.up_axis,
+                self.graphics_backend_type,
+                self.scene_backend_type,
+                self.headless,
+            )
+        else:
+            from ..render._ovrtx_scene import OvrtxAppAdapter
+
+            self.graphics_backend_type = None
+            result = self._initialize_scene_renderer(
+                self.initial_width, self.initial_height, self.up_axis,
+                self.scene_backend_type, OvrtxAppAdapter,
+                hide_ui=self.hide_ui, headless=self.headless,
+                gpu_output=not (self.headless and self.hide_ui),
+            )
         # Native initialize() recreates the SceneBackend. Keep the resource
         # registry mirrored into the live scene used by ScenePanel/rendering.
         self.resources.bind_scene(self.get_native_scene())

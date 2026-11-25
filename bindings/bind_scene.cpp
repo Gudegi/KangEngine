@@ -30,6 +30,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "geometry/primitive_mesh.hpp"
 #include "py_array_view.hpp"
+#include "py_texture_source.hpp"
 
 #ifdef KANGENGINE_USE_USD
 #include "engine/scene/usd/usd_scene.hpp"
@@ -94,7 +95,7 @@ void bind_scene(py::module& m) {
         .def_readwrite("height", &KE::Scene::RectLight::height)
         .def_readwrite("texture_path", &KE::Scene::RectLight::texturePath);
     py::class_<KE::Scene::DomeLight, KE::Scene::LightEmission>(scene, "DomeLight",
-        "Uniform environment light. The rasterizer currently evaluates diffuse illumination only.")
+        "Infinite environment light.")
         .def(py::init<>())
         .def_readwrite("texture_path", &KE::Scene::DomeLight::texturePath)
         .def_readwrite("texture_format", &KE::Scene::DomeLight::textureFormat);
@@ -232,6 +233,9 @@ void bind_scene(py::module& m) {
                       &KE::Scene::RenderComponent::setVisible,
                       "Get or set local render visibility. Registered "
                       "components sync this change to the renderer.")
+        .def_property("display_color", &KE::Scene::RenderComponent::displayColor,
+                      &KE::Scene::RenderComponent::setDisplayColor,
+                      "Linear RGBA multiplier; None means unauthored white.")
         .def_property("double_sided",
                       &KE::Scene::RenderComponent::isDoubleSided,
                       &KE::Scene::RenderComponent::setDoubleSided,
@@ -624,17 +628,63 @@ void bind_scene(py::module& m) {
              "backend.")
         .def("bind_scene", &KE::Scene::SceneResourceManager::bindScene,
              py::arg("scene"), "Bind the scene used for Resource prim mirrors.")
+        // TODO: Use explicit file/pixel names for texture source registration.
+        .def(
+            "register_texture_source",
+            [](KE::Scene::SceneResourceManager& resources,
+               const std::string& name, const std::string& imagePath, bool srgb,
+               bool flip, const KE::Backend::SamplerDesc& sampler) {
+                return resources.registerTextureSource(
+                    name, {imagePath, srgb, flip, sampler});
+            },
+            py::arg("name"), py::arg("image_path"), py::kw_only(),
+            py::arg("srgb") = false, py::arg("flip") = true,
+            py::arg("sampler") = KE::Backend::SamplerDesc(),
+            "Register an immutable image file source without creating a GPU "
+            "texture.")
+        .def(
+            "register_texture_image",
+            [](KE::Scene::SceneResourceManager& resources,
+               const std::string& name, const py::array& pixels, bool srgb,
+               bool flip, const KE::Backend::SamplerDesc& sampler) {
+                return resources.registerTextureSource(
+                    name, textureSourceFromArray(pixels, srgb, flip, sampler));
+            },
+            py::arg("name"), py::arg("pixels").noconvert(), py::kw_only(),
+            py::arg("srgb") = false, py::arg("flip") = true,
+            py::arg("sampler") = KE::Backend::SamplerDesc(),
+            "Copy contiguous uint8 [height, width, 3 or 4] pixels into an "
+            "immutable source.")
         .def("register_mesh", &KE::Scene::SceneResourceManager::registerMesh,
              py::arg("name"), py::arg("mesh"), py::arg("uri") = "",
-             "Register mesh data and return a resource handle.")
+             "Register mesh data; the same mesh object keeps its handle and metadata.")
         .def("register_material",
              &KE::Scene::SceneResourceManager::registerMaterial,
              py::arg("name"), py::arg("material"), py::arg("uri") = "",
+             py::keep_alive<1, 3>(),
              "Register a non-owned material and return a resource handle.")
-        .def("register_texture",
-             &KE::Scene::SceneResourceManager::registerTexture, py::arg("name"),
-             py::arg("texture"), py::arg("uri") = "",
-             "Register a non-owned texture and return a resource handle.")
+        .def(
+            "register_texture",
+            [](KE::Scene::SceneResourceManager& resources,
+               const std::string& name, KE::Backend::Texture* texture,
+               const std::string& uri) {
+                return resources.registerTexture(name, texture, uri);
+            },
+            py::arg("name"), py::arg("texture"), py::arg("uri") = "",
+            "Register a non-owned texture and return a resource handle.")
+        .def(
+            "_register_texture_file",
+            [](KE::Scene::SceneResourceManager& resources,
+               const std::string& name, KE::Backend::Texture* texture,
+               const std::string& uri, const std::string& imagePath, bool srgb,
+               bool flip) {
+                return resources.registerTexture(
+                    name, texture, uri,
+                    KE::Scene::TextureSourceResource{
+                        imagePath, srgb, flip, {}});
+            },
+            py::arg("name"), py::arg("texture"), py::arg("uri"),
+            py::arg("image_path"), py::arg("srgb"), py::arg("flip"))
         .def("register_shader_source",
              &KE::Scene::SceneResourceManager::registerShaderSource,
              py::arg("name"), py::arg("shader_source"), py::arg("uri") = "",
@@ -1023,13 +1073,13 @@ void bind_scene(py::module& m) {
              "Compatibility alias for local scale.")
         // Display color
         .def("set_display_color", &KE::Scene::Prim::setDisplayColor,
-             py::arg("color"), "Set RGB display color metadata.")
+             py::arg("color"), "Set linear RGB tint, preserving opacity.")
         .def("get_display_color", &KE::Scene::Prim::getDisplayColor,
-             "Return RGB display color metadata if present.")
+             "Return RGB tint, or None if unauthored.")
         .def("set_display_color_alpha", &KE::Scene::Prim::setDisplayColorAlpha,
-             py::arg("color"), "Set RGBA display color metadata.")
+             py::arg("color"), "Set linear RGB tint and opacity multiplier.")
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha,
-             "Return RGBA display color metadata if present.")
+             "Return RGBA tint, or None if unauthored.")
         .def("set_material", &KE::Scene::Prim::setMaterial, py::arg("material"),
              "Bind a non-owned material to this prim at the scene level.")
         .def("get_material", &KE::Scene::Prim::getMaterial,

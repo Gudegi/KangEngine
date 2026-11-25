@@ -8,14 +8,14 @@ articulation link.
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
+from kangengine.utils._example_args import render_example_parser
 from kangengine.adapters.newton import ViewerKE
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument(
         "--mjcf",
         type=Path,
@@ -86,6 +86,7 @@ def main():
         width=args.width,
         height=args.height,
         headless=args.headless,
+        renderer=args.renderer,
     )
     viewer.show_ground = False
     viewer.app.scene.add_ground("/Ground", scale=20.0)

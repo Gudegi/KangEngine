@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import math
 import time
 from pathlib import Path
@@ -12,6 +11,7 @@ import torch
 
 from mjcf_dof_control import MjcfDofControlApp
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 from kangengine.lbfgs_ik import MJCFLBFGSIK
 
@@ -441,7 +441,7 @@ class SO101DofControlApp(MjcfDofControlApp):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--xml-path", default=None)
     parser.add_argument("--robot-port", default=None)
     parser.add_argument("--robot-id", default="so101_follower")
@@ -460,7 +460,7 @@ def main():
         robot_send_hz=args.robot_send_hz,
         send_on_start=args.send_on_start,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

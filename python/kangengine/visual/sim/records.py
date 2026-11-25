@@ -32,6 +32,8 @@ class VisualArticulationSceneGraph:
     handle_body_ids: dict[int, int] | None = None
     base_colors: list | None = None
     owned_paths: tuple = ()
+    # Source-only renderers identify SceneGraph selections by prim path.
+    prim_body_ids: dict[str, int] | None = None
 
     @property
     def key(self):
@@ -66,6 +68,10 @@ class VisualArticulationSceneGraph:
         if selection is None or not getattr(selection, "hit", False):
             return None
         body_id = self.body_id_from_render_handle(getattr(selection, "handle", -1))
+        if body_id is None and self.prim_body_ids is not None:
+            prim = getattr(selection, "prim", None)
+            if prim is not None:
+                body_id = self.prim_body_ids.get(prim.get_path())
         if body_id is None:
             return None
         return VisualBodyPick(self.env_id, self.obj_id, int(body_id), self)
@@ -135,6 +141,12 @@ class VisualRigidSceneGraph:
         if selection is None or not getattr(selection, "hit", False):
             return None
         body_id = self.body_id_from_render_handle(getattr(selection, "handle", -1))
+        if body_id is None and not self.body_handles:
+            prim = getattr(selection, "prim", None)
+            if prim is not None and any(
+                part.get_path() == prim.get_path() for part in self.body_prims
+            ):
+                body_id = 0
         if body_id is None:
             return None
         return VisualBodyPick(self.env_id, self.obj_id, int(body_id), self)

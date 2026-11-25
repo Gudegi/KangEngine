@@ -17,9 +17,6 @@ namespace KE {
 class App;
 class Material;
 
-namespace Backend {
-class Texture;
-} // namespace Backend
 namespace Scene {
 class RenderComponent;
 }
@@ -86,8 +83,6 @@ class SkinVisualBridge {
     std::vector<MeshBinding> _meshes;
     std::vector<Animation::Transform> _globalTransforms;
     std::vector<glm::mat4> _globalMatrices;
-    std::vector<std::unique_ptr<Backend::Texture>> _textures;
-    std::unique_ptr<Backend::Texture> _fallbackWhiteTexture;
 };
 
 } // namespace Bridge

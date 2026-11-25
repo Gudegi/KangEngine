@@ -18,6 +18,7 @@ import numpy as np
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 from kangengine.utils.batched_rotations import (
     matrix_to_rotation_6d,
@@ -62,8 +63,8 @@ class RotationEncodingComparison(ke.App):
 
         self.world = ke.sim.KangSimWorld(num_envs=3, add_ground=False)
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
-        self.materials = self.create_standard_materials()
-        self.scene.add_ground(scale=18.0, material=self.materials.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.scene.add_ground(scale=18.0, material=self.standard_materials.ground)
 
         self.kw_path = str(
             Path(ke.__file__).resolve().parent
@@ -109,7 +110,7 @@ class RotationEncodingComparison(ke.App):
                 self.kw_path,
                 path=f"/robots/{plane}",
                 order="DFS",
-                material=self.materials.pbr,
+                material=self.standard_materials.pbr,
                 color=color,
             )
             hips = self.body_names.index("Hips")
@@ -283,7 +284,7 @@ class RotationEncodingComparison(ke.App):
             if experiment.arrow_view is None:
                 experiment.arrow_view = self.scene.log_arrows(
                     f"/debug/{experiment.plane}_heading",
-                    self.materials.debug,
+                    self.standard_materials.debug,
                     starts,
                     ends,
                     colors,
@@ -431,6 +432,7 @@ class RotationEncodingComparison(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = RotationEncodingComparison()
-    app.initialize(1920, 1080, False, ke.UpAxis.Z)
+    app.initialize(1920, 1080, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()

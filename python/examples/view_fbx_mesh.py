@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, scene
 
 FBX_ROOT_PATH = "/fbx_static"
@@ -71,6 +71,10 @@ class FBXMeshViewer(ke.App):
                 if diffuse_texture is not None
                 else self.mesh_material
             )
+            if diffuse_texture is not None:
+                shader = self._remember_material(shader.clone())
+                shader.base_color_texture = diffuse_texture
+                shader.normal_texture = normal_texture
             view = self.scene.add_mesh(
                 prim_path,
                 mesh.mesh_data,
@@ -78,7 +82,6 @@ class FBXMeshViewer(ke.App):
                 color=_mesh_material_color(mesh, _mesh_color(idx)),
             )
             if diffuse_texture is not None:
-                view.set_texture(diffuse_texture, 0)
                 if Path(diffuse_path).suffix.lower() in {".png", ".tga"}:
                     # FBX does not reliably describe alpha semantics. Atlas
                     # textures in these formats commonly use binary cutouts;
@@ -86,7 +89,6 @@ class FBXMeshViewer(ke.App):
                     view.set_alpha_mode(ke.render.AlphaMode.MASK, 0.5)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
-                view.set_texture(normal_texture, 5)
                 normal_mapped_count += 1
             view.set_double_sided(self.double_sided)
             view.set_casts_shadow(self.cast_shadows)
@@ -207,7 +209,7 @@ def _material_texture_path(mesh, texture_kind: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
     parser.add_argument("--scale", type=float, default=0.01)
     parser.add_argument("--width", type=int, default=1280)
@@ -220,7 +222,7 @@ def main():
         raise FileNotFoundError(fbx_file)
 
     app = FBXMeshViewer(fbx_file, args.scale, not args.no_ground)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 
 
 OBJ_PATH = Path(__file__).resolve().parents[3] / "assets/external/bunny.obj"
@@ -56,8 +57,9 @@ class BunnyPointCloud(ke.App):
 
 
 def main():
+    args = render_example_parser(description=__doc__).parse_args()
     app = BunnyPointCloud()
-    app.initialize(width=1280, height=900, up_axis=ke.UpAxis.Y)
+    app.initialize(width=1280, height=900, up_axis=ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

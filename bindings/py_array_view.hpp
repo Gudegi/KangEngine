@@ -1,8 +1,7 @@
 #ifndef _PY_ARRAY_VIEW_HPP_
 #define _PY_ARRAY_VIEW_HPP_
 
-// Shared pybind helpers for accepting numpy arrays and CPU torch tensors
-// without requiring Python callers to build GLM objects or std::vector lists.
+// Shared pybind conversions for GLM values, NumPy arrays, and CPU torch tensors.
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -139,12 +138,41 @@ inline glm::quat quatFromXYZWSequence(const py::sequence& values,
                      values[1].cast<float>(), values[2].cast<float>());
 }
 
+template <glm::length_t N>
+inline py::array_t<float>
+floatArrayFromVecVector(const std::vector<glm::vec<N, float>>& values) {
+    py::array_t<float> result({py::ssize_t(values.size()), py::ssize_t(N)});
+    auto out = result.template mutable_unchecked<2>();
+    for (size_t i = 0; i < values.size(); ++i)
+        for (glm::length_t j = 0; j < N; ++j)
+            out(i, j) = values[i][j];
+    return result;
+}
+
+inline std::array<float, 3> vec3Values(const glm::vec3& value) {
+    return {value.x, value.y, value.z};
+}
+
+inline std::array<float, 4> vec4Values(const glm::vec4& value) {
+    return {value.x, value.y, value.z, value.w};
+}
+
 inline py::tuple vec3Tuple(const glm::vec3& value) {
     return py::make_tuple(value.x, value.y, value.z);
 }
 
 inline py::tuple quatXYZWTuple(const glm::quat& value) {
     return py::make_tuple(value.x, value.y, value.z, value.w);
+}
+
+// Returns an owned [row, column] array, independent of GLM's column storage.
+inline py::array_t<float> floatArrayFromMat4(const glm::mat4& value) {
+    py::array_t<float> result({4, 4});
+    auto out = result.mutable_unchecked<2>();
+    for (int row = 0; row < 4; ++row)
+        for (int col = 0; col < 4; ++col)
+            out(row, col) = value[col][row];
+    return result;
 }
 
 inline py::tuple mat4Tuple(const glm::mat4& value) {

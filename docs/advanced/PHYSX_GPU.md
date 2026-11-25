@@ -442,7 +442,7 @@ with a visual body id is incorrect for branched articulations.
 
 - `python/examples/sim_gpu_root_state_batch.py`: high-level batched root state
 - `python/examples/sim_gpu_mixed_batch.py`: Torch CUDA articulation control
-- `python/examples/smoke/physics_gpu_system_smoke.py`: low-level buffer contract
+- `python/examples/smoke/physics/physics_gpu_system_smoke.py`: low-level buffer contract
 
 Run the GPU validation suites:
 

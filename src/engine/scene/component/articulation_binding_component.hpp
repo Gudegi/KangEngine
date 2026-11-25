@@ -8,11 +8,6 @@
 namespace KE {
 namespace Scene {
 
-// Semantic metadata for prims generated from an articulated character/robot.
-//
-// This component intentionally does not own FK state or hierarchy arrays.
-// It only records how this Prim is bound to a future/root articulation
-// controller: which body it belongs to and what role this Prim plays.
 enum class ArticulationPrimRole {
     Root,
     BodyFrame,
@@ -20,6 +15,8 @@ enum class ArticulationPrimRole {
     CollisionGeom,
 };
 
+// Maps a Prim to an articulation root path, body index, and role.
+// Stores names, paths, and indices; does not own FK or physics state.
 class ArticulationBindingComponent : public ComponentBase {
   public:
     ArticulationPrimRole role() const { return _role; }

@@ -4,11 +4,13 @@
 #include "engine/scene/native/xform_token.hpp"
 
 #include <glm/ext/quaternion_transform.hpp>
+#include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/trigonometric.hpp>
 
 #include <stdexcept>
+#include <utility>
 
 namespace KE {
 namespace Scene {
@@ -20,6 +22,15 @@ void decomposeTRS(const glm::mat4& matrix, glm::vec3& translation,
     glm::vec4 perspective;
     glm::decompose(matrix, scale, rotation, translation, skew, perspective);
     rotation = glm::normalize(rotation);
+}
+
+glm::vec3 matrixTranslation(const glm::mat4& matrix) {
+    const float w = matrix[3][3];
+    if (glm::epsilonEqual(w, 0.0f, glm::epsilon<float>()))
+        throw std::invalid_argument(
+            "Cannot extract translation from a matrix with zero homogeneous w");
+    // Match decomposition's homogeneous normalization without decomposing TRS.
+    return glm::vec3(matrix[3]) / w;
 }
 
 } // namespace
@@ -54,12 +65,62 @@ void TransformComponent::markWorldTransformDirtyRecursive(
     }
 }
 
+void TransformComponent::prepareTRS() {
+    const auto& attributes = _xformAttributes;
+    const auto it = attributes.find(XformTokens::opOrder);
+    if (it == attributes.end())
+        return;
+    static const std::vector<std::string> trsOrder = {
+        "xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"};
+    if (std::get<std::vector<std::string>>(it->second) == trsOrder)
+        return;
+
+    // Preserve the evaluated pose when replacing matrix or custom xform ops.
+    glm::vec3 translation, scale;
+    glm::quat rotation;
+    glm::vec3 skew;
+    glm::vec4 perspective;
+    if (!glm::decompose(computeLocalMatrix(), scale, rotation, translation,
+                         skew, perspective) ||
+        glm::length(skew) > 1e-5f ||
+        glm::length(perspective - glm::vec4(0, 0, 0, 1)) > 1e-5f)
+        throw std::invalid_argument(
+            "TRS edits require a decomposable affine transform without shear; "
+            "use setLocalMatrix for this transform");
+    rotation = glm::normalize(rotation);
+    setXformAttribute(XformTokens::translate, translation);
+    setXformAttribute(XformTokens::rotateQuat, rotation);
+    setXformAttribute(XformTokens::scale, scale);
+}
+
+void TransformComponent::setXformAttribute(const Token& name,
+                                           AttributeValue value) {
+    requireAttached();
+    _xformAttributes[name] = std::move(value);
+    markLocalTransformDirty();
+}
+
+void TransformComponent::setXformOpOrder(const std::vector<std::string>& order) {
+    setXformAttribute(XformTokens::opOrder, order);
+}
+
 void TransformComponent::setLocalTranslation(glm::vec3 translation) {
     requireAttached();
+    const auto& attributes = _xformAttributes;
+    const auto it = attributes.find(XformTokens::opOrder);
+    const auto* order = it == attributes.end() ? nullptr :
+        &std::get<std::vector<std::string>>(it->second);
+    if (order && order->size() == 1 && order->front() == "xformOp:transform") {
+        auto matrix = computeLocalMatrix();
+        matrix[3] = glm::vec4(translation, 1.0f);
+        setLocalMatrix(matrix);
+        return;
+    }
     _suppressLocalDirtyVersion = true;
     try {
-        _owner->setAttribute(XformTokens::translate, translation);
-        _owner->setXformOpOrder(
+        prepareTRS();
+        setXformAttribute(XformTokens::translate, translation);
+        setXformOpOrder(
             {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
@@ -73,8 +134,9 @@ void TransformComponent::setLocalScale(glm::vec3 scale) {
     requireAttached();
     _suppressLocalDirtyVersion = true;
     try {
-        _owner->setAttribute(XformTokens::scale, scale);
-        _owner->setXformOpOrder(
+        prepareTRS();
+        setXformAttribute(XformTokens::scale, scale);
+        setXformOpOrder(
             {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
@@ -88,8 +150,9 @@ void TransformComponent::setLocalRotation(glm::quat rotation) {
     requireAttached();
     _suppressLocalDirtyVersion = true;
     try {
-        _owner->setAttribute(XformTokens::rotateQuat, glm::normalize(rotation));
-        _owner->setXformOpOrder(
+        prepareTRS();
+        setXformAttribute(XformTokens::rotateQuat, glm::normalize(rotation));
+        setXformOpOrder(
             {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
@@ -110,8 +173,8 @@ void TransformComponent::setLocalMatrix(const glm::mat4& matrix) {
     requireAttached();
     _suppressLocalDirtyVersion = true;
     try {
-        _owner->setAttribute(XformTokens::transform, matrix);
-        _owner->setXformOpOrder({"xformOp:transform"});
+        setXformAttribute(XformTokens::transform, matrix);
+        setXformOpOrder({"xformOp:transform"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
         throw;
@@ -161,13 +224,8 @@ void TransformComponent::setWorldMatrix(const glm::mat4& matrix) {
     setLocalMatrix(localMatrix);
 }
 
-// TODO : inefficient
 glm::vec3 TransformComponent::getLocalTranslation() {
-    glm::vec3 translation;
-    glm::quat rotation;
-    glm::vec3 scale;
-    decomposeTRS(computeLocalMatrix(), translation, rotation, scale);
-    return translation;
+    return matrixTranslation(computeLocalMatrix());
 }
 
 glm::quat TransformComponent::getLocalRotation() {
@@ -179,11 +237,7 @@ glm::quat TransformComponent::getLocalRotation() {
 }
 
 glm::vec3 TransformComponent::getWorldTranslation() {
-    glm::vec3 translation;
-    glm::quat rotation;
-    glm::vec3 scale;
-    decomposeTRS(computeWorldMatrix(), translation, rotation, scale);
-    return translation;
+    return matrixTranslation(computeWorldMatrix());
 }
 
 glm::quat TransformComponent::getWorldRotation() {
@@ -202,9 +256,9 @@ glm::mat4 TransformComponent::computeLocalMatrix() {
         const std::vector<Token>* orderPtr = &XformTokens::defaultOpOrder;
         std::vector<Token> customOrder;
 
-        if (_owner->hasAttribute(XformTokens::opOrder)) {
+        if (_xformAttributes.count(XformTokens::opOrder)) {
             const auto& strOrder =
-                _owner->getAttribute<std::vector<std::string>>(
+                getXformAttribute<std::vector<std::string>>(
                     XformTokens::opOrder);
             customOrder.reserve(strOrder.size());
             for (const auto& s : strOrder) {
@@ -214,7 +268,7 @@ glm::mat4 TransformComponent::computeLocalMatrix() {
         }
 
         for (const auto& opToken : *orderPtr) {
-            if (!_owner->hasAttribute(opToken))
+            if (!_xformAttributes.count(opToken))
                 continue;
 
             XformOpType type = XformTokens::getXformOpType(opToken);
@@ -222,17 +276,17 @@ glm::mat4 TransformComponent::computeLocalMatrix() {
 
             switch (type) {
             case XformOpType::Translate: {
-                auto t = _owner->getAttribute<glm::vec3>(opToken);
+                auto t = getXformAttribute<glm::vec3>(opToken);
                 opMat = glm::translate(glm::mat4(1.0f), t);
                 break;
             }
             case XformOpType::RotateQuat: {
-                auto q = _owner->getAttribute<glm::quat>(opToken);
+                auto q = getXformAttribute<glm::quat>(opToken);
                 opMat = glm::mat4_cast(q);
                 break;
             }
             case XformOpType::RotateXYZ: {
-                auto r = _owner->getAttribute<glm::vec3>(opToken);
+                auto r = getXformAttribute<glm::vec3>(opToken);
                 glm::mat4 rot =
                     glm::rotate(glm::mat4(1.0f), glm::radians(r.x), {1, 0, 0});
                 rot = glm::rotate(rot, glm::radians(r.y), {0, 1, 0});
@@ -241,12 +295,12 @@ glm::mat4 TransformComponent::computeLocalMatrix() {
                 break;
             }
             case XformOpType::Scale: {
-                auto s = _owner->getAttribute<glm::vec3>(opToken);
+                auto s = getXformAttribute<glm::vec3>(opToken);
                 opMat = glm::scale(glm::mat4(1.0f), s);
                 break;
             }
             case XformOpType::Matrix: {
-                opMat = _owner->getAttribute<glm::mat4>(opToken);
+                opMat = getXformAttribute<glm::mat4>(opToken);
                 break;
             }
             default:

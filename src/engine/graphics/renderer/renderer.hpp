@@ -5,12 +5,20 @@
 #include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/renderer_profiler.hpp"
+#include "engine/graphics/renderer/render_backend/render_image.hpp"
+#include "engine/graphics/renderer/render_backend/render_backend.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
+#include "engine/scene/render/render_scene_data_collector.hpp"
+#include "utils/types.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <array>
 #include <memory>
 #include <vector>
+#include <map>
+#include <tuple>
+#include <unordered_map>
 
 namespace KE {
 
@@ -18,6 +26,8 @@ class Camera;
 class Material;
 class Rasterizer;
 class SelectionOutlineProcessor;
+class NativeRenderSystem;
+class NativeRenderExtension;
 
 namespace Scene {
 class Prim;
@@ -39,6 +49,7 @@ class BindGroup;
 } // namespace Backend
 
 struct RendererSettings {
+    float exposure = 1.0f;
     float gamma = 2.2f;
     ToneMapMode toneMapMode = ToneMapMode::None;
     float toneMapExposure = 1.0f;
@@ -70,12 +81,56 @@ struct SceneHookPipelineDesc {
     std::string label = "scene_hook_pipeline";
 };
 
-// Facade for render-system access. App owns the concrete resources; Renderer
-// only groups the public rendering surface so App does not expose every member
-// directly as the primary API.
+// Owns the selected frame backend; Native resource access remains available.
 class Renderer {
   public:
+    Renderer();
     ~Renderer();
+    void initialize(Backend::GraphicsDevice& device, int width, int height,
+                    std::unique_ptr<RenderBackend> backend = nullptr);
+    void initialize(std::unique_ptr<RenderBackend> backend, int width,
+                    int height);
+    RenderBackendCapabilities capabilities() const;
+    void resizeFrame(int width, int height);
+    void setBackgroundColor(const glm::vec4& color);
+    void setGroundStyle(const BackgroundSettings& settings);
+    void setExposure(float exposure);
+    RenderDebugDraw& debugDraw();
+    RenderTextDraw& textDraw();
+    RenderPickHit
+    raycast(const Geometry::Ray& ray,
+            const std::function<bool(uint64_t)>& filter = {}) const;
+    void syncScene(const Scene::RenderSceneFrame& scene);
+    void syncFrame(Scene::SceneBackend* scene, const glm::mat4& view,
+                   const glm::mat4& projection);
+    void prepareFrame(Camera& camera, UpAxis upAxis);
+    void beginFrame();
+    void renderScene(const glm::mat4& view, const glm::mat4& projection,
+                     bool wireframe);
+    void endFrame(const RayPickResult& selection, bool presentToScreen);
+    uint64_t requestPick(glm::vec2 ndc);
+    std::optional<RenderPickResult> pollPick();
+    void cancelPick() { _pendingPick.reset(); }
+    bool hasPendingPick() const { return _pendingPick.has_value(); }
+    RayPickResult resolvePick(const RenderPickHit& hit) const;
+    bool buildPrimSelection(Scene::Prim& prim, RayPickResult& selection) const;
+    // Explicit synchronous readback; true returns top-down rows, false
+    // bottom-up.
+    RenderImage readImage(bool flipY = true);
+    RenderImage readImageResized(int width, int height, bool flipY = true);
+
+    // External GPU output (currently ovrtx) for App's image presenter.
+    const CudaRenderImage* cudaImage() const;
+
+    // Native GPU output for existing viewport and camera-preview consumers.
+    Backend::Texture* presentedTexture();
+    Backend::Texture* renderCameraPreview(const glm::mat4& view,
+                                          const glm::mat4& projection,
+                                          int width, int height);
+    RenderImage readCameraPreview(bool flipY = true);
+    int sampleCount() const;
+    void rebuildSceneRenderTarget();
+    void rebuildSceneClearTarget(const glm::vec4& clearColor);
     void bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
               PostProcessor* postProcessor,
               SelectionOutlineProcessor* selectionOutlineProcessor);
@@ -104,6 +159,10 @@ class Renderer {
         _profiler.exportJson(path, maxFrames);
     }
 
+    // Native-only access; throws for external backends. Legacy accessors
+    // remain.
+    NativeRenderExtension& native();
+    const NativeRenderExtension& native() const;
     Backend::GraphicsDevice* device() { return _device; }
     const Backend::GraphicsDevice* device() const { return _device; }
     Rasterizer* rasterizer() { return _rasterizer; }
@@ -117,6 +176,8 @@ class Renderer {
         return _selectionOutlineProcessor;
     }
     RendererSettings& settings() { return _settings; }
+    // Catalog outlives this renderer's registered scene batches.
+    void bindSceneResources(const Scene::SceneResourceManager& resources);
     const RendererSettings& settings() const { return _settings; }
     void applyBackgroundSettings();
 
@@ -175,6 +236,8 @@ class Renderer {
                              const std::vector<glm::vec4>& colors);
     void setRenderableDoubleSided(RenderableHandle handle,
                                   bool doubleSided = true);
+    void setSceneBatchState(RenderableHandle handle,
+                            const SceneBatchState& state);
     void setRenderableCastsShadow(RenderableHandle handle,
                                   bool castsShadow = true);
     void setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
@@ -190,44 +253,55 @@ class Renderer {
         RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
   private:
+    using SceneBatchKey =
+        std::tuple<const Scene::MeshData*, Material*, TransformSource, size_t>;
+    struct SceneBatch {
+        SceneBatchKey key;
+        Scene::RenderMeshData mesh;
+        Material* material = nullptr;
+        Scene::RenderMaterialSource materialSource;
+        Scene::SceneRenderBridge bridge;
+        SceneBatchState state;
+        bool hasGeometryUpdates = false;
+        RenderableHandle handle = InvalidHandle;
+    };
+
+    RenderPickRequest _pickView;
+    std::optional<RenderPickRequest> _pendingPick;
+    uint64_t _nextPickId = 1;
+    uint64_t _instanceRevision = 0;
+    uint64_t _pickInstanceRevision = 0;
+
+    size_t _nextSkinningId = 1;
+    // Backend draws borrow these arrays; release the backend before the
+    // sources.
+    std::multimap<SceneBatchKey, std::unique_ptr<SceneBatch>> _sceneBatches;
+    std::unordered_map<RenderableHandle, SceneBatch*> _sceneBatchHandles;
+
+    // Native extension resources are released before the frame backend.
+    std::unique_ptr<RenderBackend> _renderBackend;
+    std::unique_ptr<NativeRenderExtension> _native;
+    RenderBackendCapabilities _backendCapabilities;
+    Scene::RenderLightCollector _lightCollector;
+    bool _snapshotLighting = false;
+    bool _sceneLighting = false;
+    const Scene::SceneResourceManager* _sceneResources = nullptr;
     RendererProfiler _profiler;
-    void ensureOffscreenSceneTarget(Backend::Framebuffer* target, int width,
-                                    int height);
-    void ensureOffscreenClearTarget(const glm::vec4& clearColor);
-    void ensureOffscreenFormatConversion(Backend::Texture* targetColor);
-    void recordOffscreenFormatConversion(int width, int height);
+    // Borrowed aliases for existing Native accessors; owned by the backend.
     Backend::GraphicsDevice* _device = nullptr;
     Rasterizer* _rasterizer = nullptr;
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
-    Backend::Framebuffer* _offscreenFramebuffer = nullptr;
-    Backend::Texture* _offscreenResolvedColor = nullptr;
-    int _offscreenWidth = 0;
-    int _offscreenHeight = 0;
-    std::unique_ptr<Backend::Texture> _offscreenMsaaColor;
-    std::unique_ptr<Backend::Texture> _offscreenIntermediateColor;
-    std::unique_ptr<Backend::Texture> _offscreenMsaaDepthStencil;
-    std::unique_ptr<Backend::TextureView> _offscreenMsaaColorView;
-    std::unique_ptr<Backend::TextureView> _offscreenResolveColorView;
-    std::unique_ptr<Backend::TextureView> _offscreenDepthStencilView;
-    std::unique_ptr<Backend::RenderTarget> _offscreenClearTarget;
-    std::unique_ptr<Backend::RenderTarget> _offscreenDrawTarget;
-    std::unique_ptr<Backend::RenderTarget> _offscreenResolveTarget;
-    std::unique_ptr<Backend::TextureView> _offscreenOutputView;
-    std::unique_ptr<Backend::RenderTarget> _offscreenOutputTarget;
-    std::array<std::unique_ptr<Backend::BindGroupLayout>, 4>
-        _offscreenCopyGroupLayouts;
-    std::unique_ptr<Backend::PipelineLayout> _offscreenCopyPipelineLayout;
-    std::unique_ptr<Backend::GraphicsPipeline> _offscreenCopyPipeline;
-    std::unique_ptr<Backend::Sampler> _offscreenCopySampler;
-    std::unique_ptr<Backend::BindGroup> _offscreenCopyBindGroup;
-    Backend::TextureFormat _offscreenOutputFormat =
-        Backend::TextureFormat::Undefined;
-    std::unique_ptr<Backend::PipelineLayout> _sceneHookDefaultPipelineLayout;
-    std::unique_ptr<Backend::PipelineLayout> _sceneHookFramePipelineLayout;
     RendererSettings _settings;
-    int _viewportWidth = 0;
-    int _viewportHeight = 0;
+
+    RenderBackend& renderBackend();
+    NativeRenderSystem& nativeRenderSystem();
+    RenderableHandle
+    addSceneRenderable(Material& material, Scene::Prim& prim,
+                       TransformSource source,
+                       const Scene::SkinnedMeshData* skinnedMesh);
+    void releaseEmptyBatch(RenderableHandle handle);
+    void syncSceneInstances();
 };
 
 } // namespace KE

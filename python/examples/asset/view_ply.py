@@ -5,12 +5,12 @@ Usage:
     python python/examples/asset/view_ply.py --ply-path scan.ply --colors-srgb
 """
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 
 
 POINT_SIZE = 6.0
@@ -70,7 +70,7 @@ class PlyViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--ply-path", required=True)
     parser.add_argument("--texture-path", help="Color image for a mesh with UV coordinates")
     parser.add_argument("--up-axis", choices=("Y", "Z"), default="Y",
@@ -79,7 +79,10 @@ def main():
                         help="Decode sRGB vertex colors to linear RGB")
     args = parser.parse_args()
     app = PlyViewer(args.ply_path, colors_srgb=args.colors_srgb, texture_path=args.texture_path)
-    app.initialize(up_axis=ke.UpAxis.Y if args.up_axis == "Y" else ke.UpAxis.Z)
+    app.initialize(
+        up_axis=ke.UpAxis.Y if args.up_axis == "Y" else ke.UpAxis.Z,
+        renderer=args.renderer,
+    )
     app.start()
 
 

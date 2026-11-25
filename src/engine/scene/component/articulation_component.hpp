@@ -8,13 +8,9 @@
 namespace KE {
 namespace Scene {
 
-// Root-level metadata for an articulated object subtree.
-//
-// This component intentionally does not own PhysX handles, FK state, or body
-// prim pointers. Runtime ownership currently stays in KangSimWorld /
-// ArticulationVisualBridge / PhysicsBridge. The component marks the root Prim as the
-// stable scene identity for that articulation and stores lightweight import /
-// instancing metadata that inspectors and future systems can use.
+// Describes an articulated subtree using its root Prim as the scene identity.
+// Stores asset paths, body/visual counts, and whether visual meshes are split.
+// Does not own PhysX objects, FK state, or body Prims.
 class ArticulationComponent : public ComponentBase {
   public:
     const std::string& assetPath() const { return _assetPath; }

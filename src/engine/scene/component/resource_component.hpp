@@ -21,11 +21,8 @@ enum class ResourceType {
 using ResourceHandle = uint32_t;
 static constexpr ResourceHandle InvalidResourceHandle = ~0u;
 
-// User/editor visible resource entry attached to a Resource prim.
-//
-// ResourceComponent is metadata only. It describes the manager entry mirrored
-// at `/.Resources/...`; the actual CPU/GPU payload remains owned by
-// SceneResourceManager or by the renderable components that cache it.
+// Mirrors a SceneResourceManager entry as metadata under /.Resources/.
+// Does not own the source resource or its GPU representation.
 class ResourceComponent : public ComponentBase {
   public:
     ResourceType type() const;

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys, visual
 
 
@@ -175,7 +175,7 @@ class MotionViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--char-file", default=str(default_char_file()))
     parser.add_argument("--motion-file", default=str(default_motion_file()))
     parser.add_argument("--width", type=int, default=1920)
@@ -190,7 +190,7 @@ def main():
         raise FileNotFoundError(motion_file)
 
     app = MotionViewer(char_file, motion_file)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

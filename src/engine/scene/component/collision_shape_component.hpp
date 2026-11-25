@@ -9,13 +9,6 @@
 namespace KE {
 namespace Scene {
 
-// Scene-side metadata for a collision shape.
-//
-// This component deliberately does not own PhysX objects or runtime contact
-// state. It mirrors the imported/reference collision descriptor onto debug
-// prims so Inspector, Python tools, and future editors can reason about shape
-// type, local pose, and material settings without touching the simulation hot
-// path.(GPU batch)
 enum class CollisionShapeType {
     Sphere,
     Capsule,
@@ -24,6 +17,9 @@ enum class CollisionShapeType {
     ConvexMesh,
 };
 
+// Stores collision descriptors on debug Prims for inspection: shape, local pose,
+// and contact settings. These are descriptive values, not live contact state.
+// Does not own PhysX objects; edits do not update the physics simulation.
 class CollisionShapeComponent : public ComponentBase {
   public:
     CollisionShapeType shapeType() const { return _shapeType; }

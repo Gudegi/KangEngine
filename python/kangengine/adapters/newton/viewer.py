@@ -161,7 +161,10 @@ class ViewerKE(_ViewerBase):
         width: int = 1920,
         height: int = 1080,
         headless: bool = False,
+        renderer: str | None = None,
         allow_cuda_readback: bool = False,
+        # TODO: Remove the legacy render_backend keyword.
+        render_backend: str | None = None,
     ):
         if _newton is None:
             load_newton()
@@ -190,6 +193,8 @@ class ViewerKE(_ViewerBase):
             False,
             _ke.UpAxis.Z,
             headless=bool(headless),
+            renderer=renderer,
+            render_backend=render_backend,
         )
         self.app.set_simulation_hotkeys_enabled(True)
         self.app.set_external_force_drag_enabled(False)

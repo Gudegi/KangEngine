@@ -33,8 +33,8 @@ void bind_sim_visual(py::module& m) {
           py::arg("rigid_state"), py::arg("rigid_rows"),
           py::arg("local_transforms"), py::arg("mapped_transforms"),
           "Compose selected rigid poses with host column-major [P, 16] local "
-          "matrices directly into mapped graphics buffers. Inputs produced on "
-          "another CUDA stream require ready events.");
+          "matrices directly into CUDA or mapped graphics buffers. Inputs "
+          "produced on another CUDA stream require ready events.");
     m.def("articulation_link_state_to_mat4_cuda",
           &launchArticulationLinkStateToMat4CUDA,
           py::arg("articulation_link_state"), py::arg("articulation_rows"),

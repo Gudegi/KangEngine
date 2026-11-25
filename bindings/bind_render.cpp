@@ -4,6 +4,8 @@
 
 #include "../src/kangEngine.hpp"
 #include "py_array_view.hpp"
+#include "utils/asset_path.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
@@ -11,6 +13,30 @@
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
+
+namespace {
+// Copy glyph fields explicitly; GLM alignment is not part of the Python
+// contract.
+py::array_t<float> glyphArray(const std::vector<KE::GlyphInstance>& glyphs) {
+    py::array_t<float> result(
+        {static_cast<py::ssize_t>(glyphs.size()), py::ssize_t(15)});
+    auto out = result.mutable_unchecked<2>();
+    for (size_t i = 0; i < glyphs.size(); ++i) {
+        const auto& glyph = glyphs[i];
+        for (int j = 0; j < 3; ++j)
+            out(i, j) = glyph.origin[j];
+        for (int j = 0; j < 2; ++j) {
+            out(i, 3 + j) = glyph.offset[j];
+            out(i, 5 + j) = glyph.size[j];
+        }
+        for (int j = 0; j < 4; ++j) {
+            out(i, 7 + j) = glyph.uvRect[j];
+            out(i, 11 + j) = glyph.color[j];
+        }
+    }
+    return result;
+}
+} // namespace
 
 void bind_render(py::module& m) {
     using namespace KE;
@@ -250,6 +276,65 @@ void bind_render(py::module& m) {
         .value("BOTTOM_CENTER", ScreenAnchor::BottomCenter)
         .value("BOTTOM_RIGHT", ScreenAnchor::BottomRight);
 
+    // Internal text sources and CPU layout for external render adapters.
+    py::class_<WorldTextDesc>(m, "_WorldTextDesc")
+        .def_readwrite("text", &WorldTextDesc::text)
+        .def_readwrite("hidden", &WorldTextDesc::hidden)
+        .def_readonly("pixel_size", &WorldTextDesc::pixelSize)
+        .def_readonly("alignment", &WorldTextDesc::alignment)
+        .def_property_readonly(
+            "color",
+            [](const WorldTextDesc& desc) { return vec4Values(desc.color); })
+        .def_property(
+            "position",
+            [](const WorldTextDesc& desc) { return vec3Values(desc.position); },
+            [](WorldTextDesc& desc, std::array<float, 3> value) {
+                desc.position = {value[0], value[1], value[2]};
+            })
+        .def_readonly("depth_mode", &WorldTextDesc::depthMode);
+    py::class_<ScreenTextDesc>(m, "_ScreenTextDesc")
+        .def_readwrite("text", &ScreenTextDesc::text)
+        .def_readwrite("hidden", &ScreenTextDesc::hidden)
+        .def_readonly("pixel_size", &ScreenTextDesc::pixelSize)
+        .def_readonly("alignment", &ScreenTextDesc::alignment)
+        .def_property_readonly(
+            "color",
+            [](const ScreenTextDesc& desc) { return vec4Values(desc.color); })
+        .def_property(
+            "position",
+            [](const ScreenTextDesc& desc) {
+                return std::array<float, 2>{desc.position.x, desc.position.y};
+            },
+            [](ScreenTextDesc& desc, std::array<float, 2> value) {
+                desc.position = {value[0], value[1]};
+            })
+        .def_readonly("anchor", &ScreenTextDesc::anchor);
+    py::class_<FontAtlasData>(m, "_FontAtlasData")
+        .def(py::init([]() {
+            return FontAtlasData::loadAscii(
+                KE::getAssetPath("fonts/godoFont/GodoM.ttf"));
+        }))
+        .def_property_readonly(
+            "pixels",
+            [](const FontAtlasData& atlas) {
+                py::array_t<uint8_t> pixels({atlas.height(), atlas.width()});
+                std::memcpy(pixels.mutable_data(), atlas.pixels().data(),
+                            atlas.pixels().size());
+                return pixels;
+            })
+        .def("world",
+             [](const FontAtlasData& atlas, const WorldTextDesc& desc) {
+                 std::vector<GlyphInstance> glyphs;
+                 atlas.appendWorldText(desc, glyphs);
+                 return glyphArray(glyphs);
+             })
+        .def("screen", [](const FontAtlasData& atlas,
+                          const ScreenTextDesc& desc, int width, int height) {
+            std::vector<GlyphInstance> glyphs;
+            atlas.appendScreenText(desc, width, height, glyphs);
+            return glyphArray(glyphs);
+        });
+
     py::class_<Backend::ShaderStage>(m, "ShaderStage")
         .def(py::init<>())
         .def(py::init<std::string, Backend::ShaderType, std::string>(),
@@ -423,7 +508,8 @@ void bind_render(py::module& m) {
         .def_readonly("frame_index", &Backend::FrameProfile::frameIndex)
         .def_readonly("revision", &Backend::FrameProfile::revision)
         .def_readonly("finalized", &Backend::FrameProfile::finalized)
-        .def_readonly("backend", &Backend::FrameProfile::backend)
+        .def_readonly("backend", &Backend::FrameProfile::backend,
+                      "RHI backend, or None for an externally managed renderer.")
         .def_readonly("gpu_latency_frames",
                       &Backend::FrameProfile::gpuLatencyFrames)
         .def_readonly("dropped_samples", &Backend::FrameProfile::droppedSamples)
@@ -473,6 +559,55 @@ void bind_render(py::module& m) {
     py::class_<Renderer>(
         m, "Renderer",
         "Renderer facade for updating renderable resources and draw settings.")
+        .def_property_readonly(
+            "capabilities",
+            [](const Renderer& renderer) {
+                const auto caps = renderer.capabilities();
+                py::dict result;
+                result["screen_presentation"] = caps.screenPresentation;
+                result["selection_outline"] = caps.selectionOutline;
+                result["wireframe"] = caps.wireframe;
+                result["static_scene"] = caps.staticScene;
+                result["scene_batches"] = caps.sceneBatches;
+                result["cpu_instance_transforms_input"] =
+                    caps.cpuInstanceTransformsInput;
+                result["skinning"] = caps.skinning;
+                result["texture_pixels_input"] = caps.texturePixelsInput;
+                result["screen_picking"] = caps.screenPicking;
+                result["cuda_image_output"] = caps.cudaImageOutput;
+                result["native_extensions"] = renderer.rasterizer() != nullptr;
+                return result;
+            },
+            "Return supported frame features and availability of Native extensions.")
+        .def("set_exposure", &Renderer::setExposure, py::arg("exposure"),
+             "Set a linear brightness multiplier before tone mapping; "
+             "1 is unchanged.")
+        .def(
+            "_sync_scene",
+            [](Renderer& renderer, py::dict frame) {
+                auto& snapshot =
+                    frame["_snapshot"].cast<Scene::RenderSceneFrame&>();
+                const auto objects = frame["objects"].cast<py::list>();
+                // Use the same resolved file paths as the Python adapters.
+                for (size_t i = 0; i < snapshot.objects.size(); ++i) {
+                    const auto textures =
+                        objects[i]["textures"].cast<py::dict>();
+                    for (auto& [slot, resource] :
+                         snapshot.objects[i].textures) {
+                        const auto path =
+                            textures[py::str(slot)]["path"].cast<std::string>();
+                        if (path == resource.second->path)
+                            continue;
+                        auto source =
+                            std::make_shared<Scene::TextureSourceResource>(
+                                *resource.second);
+                        source->path = path;
+                        resource.second = std::move(source);
+                    }
+                }
+                renderer.syncScene(snapshot);
+            },
+            py::arg("frame"))
         .def("set_profiler_enabled", &Renderer::setProfilerEnabled,
              py::arg("enabled"),
              "Enable CPU/GPU pass profiling at the next frame boundary. "

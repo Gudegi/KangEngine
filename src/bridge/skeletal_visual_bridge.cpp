@@ -1,6 +1,8 @@
 #include "skeletal_visual_bridge.hpp"
 #include "animation/skeleton_math.hpp"
 #include "engine/core/app/app.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -11,11 +13,6 @@
 
 namespace KE {
 namespace Bridge {
-
-static glm::vec4 withVisibility(glm::vec4 color, bool visible) {
-    color.a *= visible ? 1.0f : 0.0f;
-    return color;
-}
 
 static std::vector<glm::vec4> repeatedColor(size_t count, glm::vec4 color) {
     return std::vector<glm::vec4>(count, color);
@@ -59,14 +56,15 @@ void SkeletalVisualBridge::applyState(const Animation::SkeletonState& state) {
 
     const Animation::SkeletonBoneLines bones = Animation::boneLines(state);
     const std::vector<glm::vec4> boneColors =
-        repeatedColor(bones.starts.size(),
-                      withVisibility(_config.boneColor, _config.visible));
+        repeatedColor(bones.starts.size(), _config.boneColor);
 
     if (_boneHandle == InvalidHandle) {
         _boneHandle = Scene::DebugDraw::logLines(
             _app, _material, _basePath + "/bones", bones.starts, bones.ends,
             boneColors, _config.boneRadius, _config.segments);
         _app->setRenderableCastsShadow(_boneHandle, false);
+        if (auto* prim = _app->getScene()->getPrimAtPath(_basePath + "/bones"))
+            prim->setVisible(_config.visible);
     } else {
         Scene::DebugDraw::updateLines(_app, _boneHandle, bones.starts,
                                       bones.ends, boneColors);
@@ -74,19 +72,20 @@ void SkeletalVisualBridge::applyState(const Animation::SkeletonState& state) {
 
     const std::vector<glm::vec3> joints = Animation::jointPositions(state);
     if (_config.showJoints || _jointHandle != InvalidHandle) {
-        const std::vector<glm::vec4> jointColors = repeatedColor(
-            joints.size(),
-            withVisibility(_config.jointColor,
-                           _config.visible && _config.showJoints));
+        const std::vector<glm::vec4> jointColors =
+            repeatedColor(joints.size(), _config.jointColor);
 
         if (_jointHandle == InvalidHandle) {
-            App::MeshPrimDesc desc;
-            desc.material = _material;
-            desc.path = _basePath + "/joints";
-            desc.meshData = Scene::Prim::createSphereData(1.0f, 16, 8);
-            desc.castsShadow = false;
-            _jointHandle = _app->addMeshPrim(std::move(desc)).handle;
-            _app->setRenderableCastsShadow(_jointHandle, false);
+            auto* prim = _app->getScene()->definePrim(
+                _basePath + "/joints", Scene::PrimType::Mesh);
+            prim->setMeshData(std::make_shared<Scene::MeshData>(
+                Scene::Prim::createSphereData(1.0f, 16, 8)));
+            auto& system = _app->getSceneRenderSystem();
+            auto component = system.addRenderable(
+                *prim, _material, TransformSource::ExternalBuffer);
+            component->setCastsShadow(false);
+            _jointHandle = system.handle(*component);
+            prim->setVisible(_config.visible && _config.showJoints);
         }
 
         if (_jointHandle != InvalidHandle) {
@@ -106,16 +105,24 @@ void SkeletalVisualBridge::setVisible(bool visible) {
     if (_config.visible == visible)
         return;
     _config.visible = visible;
-    if (_lastState)
-        applyState(*_lastState);
+    if (!_app)
+        return;
+    if (auto* prim = _app->getScene()->getPrimAtPath(_basePath + "/bones"))
+        prim->setVisible(visible);
+    if (auto* prim = _app->getScene()->getPrimAtPath(_basePath + "/joints"))
+        prim->setVisible(visible && _config.showJoints);
 }
 
 void SkeletalVisualBridge::setShowJoints(bool showJoints) {
     if (_config.showJoints == showJoints)
         return;
     _config.showJoints = showJoints;
-    if (_lastState)
+    if (showJoints && _jointHandle == InvalidHandle && _lastState)
         applyState(*_lastState);
+    if (!_app)
+        return;
+    if (auto* prim = _app->getScene()->getPrimAtPath(_basePath + "/joints"))
+        prim->setVisible(_config.visible && showJoints);
 }
 
 void SkeletalVisualBridge::setPickable(bool pickable) {

@@ -44,7 +44,7 @@ void launchIndexedRigidStateToMat4CUDA(const GpuArrayView& rigidState,
                                        GpuArrayView& transforms);
 
 // Compose selected actor poses with column-major local matrices directly in
-// each part's mapped renderer buffer, without intermediate GPU matrices.
+// each part's CUDA or mapped renderer buffer, without intermediate matrices.
 void launchRigidStateToMappedMat4CUDA(
     const GpuArrayView& rigidState, const GpuArrayView& rigidRows,
     const std::vector<std::array<float, 16>>& localTransforms,

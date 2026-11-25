@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys, visual
 
 
@@ -106,8 +106,8 @@ class ArticulationMotionComparison(ke.App):
 
     def setup(self):
         self.set_camera_view([0.0, -7.0, 2.8], [0.0, 0.0, 1.0])
-        self.materials = self.create_standard_materials()
-        self.scene.add_ground(scale=20.0, material=self.materials.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.scene.add_ground(scale=20.0, material=self.standard_materials.ground)
 
         desc = ke.asset.MJCFLoader.load(str(self.mjcf), order="DFS")
         self.source_motion = _load_kw_motion(self.motion_path, desc.skeleton_tree)
@@ -129,18 +129,18 @@ class ArticulationMotionComparison(ke.App):
         self.source_surface = asset.create(
             self,
             "/Comparison/Source",
-            material=self.materials.common,
+            material=self.standard_materials.common,
             color=(0.25, 0.65, 1.0, 1.0),
         )
         self.round_trip_surface = asset.create(
             self,
             "/Comparison/RoundTrip",
-            material=self.materials.common,
+            material=self.standard_materials.common,
             color=(1.0, 0.5, 0.18, 1.0),
         )
         self.source_skeleton = visual.SkeletalVisual.define(
             app=self,
-            material=self.materials.common,
+            material=self.standard_materials.common,
             path="/Comparison/SourceSkeleton",
             state=self.source_motion.frame(0),
             config=visual.SkeletalVisualConfig(
@@ -149,7 +149,7 @@ class ArticulationMotionComparison(ke.App):
         )
         self.round_trip_skeleton = visual.SkeletalVisual.define(
             app=self,
-            material=self.materials.common,
+            material=self.standard_materials.common,
             path="/Comparison/RoundTripSkeleton",
             state=self.round_trip_motion.frame(0),
             config=visual.SkeletalVisualConfig(
@@ -226,7 +226,7 @@ class ArticulationMotionComparison(ke.App):
 
 def _parse_args():
     root = _repo_root()
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument(
         "--mjcf",
         type=Path,
@@ -252,7 +252,7 @@ def main():
     app = ArticulationMotionComparison(
         args.mjcf.resolve(), args.motion.resolve(), args.separation
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

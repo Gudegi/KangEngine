@@ -8,12 +8,12 @@ Run with::
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import visual
 
 from kangengine.adapters.physx import PhysXMotionAdapter
@@ -71,8 +71,8 @@ class PhysXArticulationMotionApp(ke.App):
 
     def setup(self) -> None:
         self.set_camera_view([4.5, -7.0, 3.0], [0.0, 0.0, 1.0])
-        self.materials = self.create_standard_materials()
-        self.scene.add_ground(scale=20.0, material=self.materials.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.scene.add_ground(scale=20.0, material=self.standard_materials.ground)
 
         data = ke.asset.MJCFLoader.load(str(self.mjcf_path), order="DFS")
         self.source_motion = _load_kw_motion(self.motion_path, data.skeleton_tree)
@@ -141,7 +141,7 @@ class PhysXArticulationMotionApp(ke.App):
             str(self.mjcf_path),
             path="/PhysX",
             order="DFS",
-            material=self.materials.pbr,
+            material=self.standard_materials.pbr,
             color=np.array([1.0, 0.42, 0.14, 1.0], dtype=np.float32),
         )
 
@@ -151,7 +151,7 @@ class PhysXArticulationMotionApp(ke.App):
         self.source_surface = source_asset.create(
             self,
             "/NativeSource",
-            material=self.materials.common,
+            material=self.standard_materials.common,
             color=(0.2, 0.55, 1.0, 1.0),
         )
         self.frame = 0
@@ -216,7 +216,7 @@ class PhysXArticulationMotionApp(ke.App):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--mjcf", type=Path, default=_default_mjcf())
     parser.add_argument("--motion", type=Path, default=_default_motion())
     parser.add_argument("--separation", type=float, default=2.5)
@@ -250,7 +250,10 @@ def main() -> None:
         args.loop,
         args.motion_source,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z, headless=args.headless)
+    app.initialize(
+        args.width, args.height, False, ke.UpAxis.Z, headless=args.headless,
+        renderer=args.renderer,
+    )
     app.start()
 
 

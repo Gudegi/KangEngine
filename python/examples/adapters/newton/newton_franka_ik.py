@@ -11,12 +11,12 @@ DAE visual meshes require ``pycollada`` in the Newton environment.
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine.adapters.newton import ViewerKE
 
 
@@ -90,7 +90,7 @@ def log_target_axes(
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument(
         "--urdf",
         type=Path,
@@ -168,6 +168,7 @@ def main():
         width=args.width,
         height=args.height,
         headless=args.headless,
+        renderer=args.renderer,
     )
     viewer.show_ground = False
     viewer.app.scene.add_ground("/Ground", scale=20.0)

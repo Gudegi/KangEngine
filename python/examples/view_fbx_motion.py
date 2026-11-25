@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui, keys
 
 
@@ -164,7 +164,7 @@ class FbxMotionViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
     parser.add_argument("--clip-index", type=int, default=-1)
     parser.add_argument("--fps", type=float, default=-1.0)
@@ -185,7 +185,7 @@ def main():
         args.scale,
         args.line_radius,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import asset, imgui
 from kangengine.asset.smpl import (
     SMPL_JOINT_NAMES,
@@ -161,7 +161,7 @@ class SMPLMotionViewer(ke.App):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--model", type=Path)
     parser.add_argument(
         "--model-type",
@@ -216,7 +216,7 @@ def main():
         args.scale,
         args.betas,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

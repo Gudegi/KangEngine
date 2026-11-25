@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, scene
 
 
@@ -117,6 +118,7 @@ class PBRStudioViewer(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = PBRStudioViewer()
-    app.initialize(1600, 900, False, ke.UpAxis.Z)
+    app.initialize(1600, 900, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()

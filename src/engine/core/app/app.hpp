@@ -11,6 +11,8 @@
 #include <atomic>
 #include <iostream>
 #include <memory>
+#include <map>
+#include <tuple>
 #include <string>
 #include <thread>
 #include <glm/vec3.hpp>
@@ -48,6 +50,9 @@ class SkeletonMotion;
 }
 
 class ViewportPanel;
+namespace Backend {
+class OpenGLImagePresenter;
+}
 
 class App {
     friend class ViewportPanel;
@@ -101,39 +106,31 @@ class App {
   private:
     const std::thread::id _ownerThread = std::this_thread::get_id();
     bool _closed = false;
+    bool _closeRequested = false;
     bool _setupStarted = false;
     bool _inFrame = false;
+    bool _pickIsClick = false;
+    bool _pickForceDrag = false;
+    glm::vec3 _pickLookDir{0.0f};
     std::atomic<bool> _automationRequested{false};
     void requireOwnerThread() const;
+    double currentTimeSeconds() const;
+    std::shared_ptr<Backend::ProfileContext> _profileContext;
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
-    // Main Scene Pipeline: RHI-owned 4x MSAA attachments resolve into the
-    // legacy framebuffer's single-sample color texture during migration.
-    std::unique_ptr<Backend::Framebuffer> _framebuffer;
-    std::unique_ptr<Backend::Texture> _sceneMsaaColor;
-    std::unique_ptr<Backend::Texture> _sceneMsaaDepthStencil;
-    std::unique_ptr<Backend::TextureView> _sceneMsaaColorView;
-    std::unique_ptr<Backend::TextureView> _sceneResolveColorView;
-    std::unique_ptr<Backend::TextureView> _sceneMsaaDepthStencilView;
-    std::unique_ptr<Backend::RenderTarget> _sceneClearTarget;
-    // RHI passes append into the MSAA attachments without resolving. A final
-    // empty pass performs the frame's single resolve.
-    std::unique_ptr<Backend::RenderTarget> _sceneDrawTarget;
-    std::unique_ptr<Backend::RenderTarget> _sceneRenderTarget;
-    std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
-    std::unique_ptr<Backend::Framebuffer> _sceneCameraPreviewFramebuffer;
-    std::unique_ptr<PostProcessor> _sceneCameraPreviewPostProcessor;
-    int _sceneCameraPreviewPostWidth = 0;
-    int _sceneCameraPreviewPostHeight = 0;
-    Backend::Framebuffer* _lastPresentedFramebuffer = nullptr;
+    // Displays external CUDA images (currently ovrtx); unused by Native.
+    std::unique_ptr<Backend::OpenGLImagePresenter> _imagePresenter;
+    // Scene output pixels; external Editor output follows the viewport.
+    int _renderWidth = 0, _renderHeight = 0;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
-    std::unique_ptr<Rasterizer> _rasterizer;
-    std::unique_ptr<PostProcessor> _postProcessor;
-    std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
     Renderer _renderer;
     Scene::SceneRenderSystem _sceneRenderSystem;
     Scene::SceneResourceManager _sceneResourceManager;
+    std::map<std::tuple<std::string, bool, bool>,
+             std::unique_ptr<Backend::Texture>> _textures;
+    std::vector<std::unique_ptr<Material>> _materials;
     InteractionController _interaction;
     bool _externalForceDragEnabled = false;
+    bool _showExitConfirmation = false;
     GizmoController _gizmo;
     ViewportPanel* _editorViewportPanel = nullptr;
     std::string _activeSceneCameraPath;
@@ -141,10 +138,12 @@ class App {
     Scene::Prim* defaultDirectionalLightPrim();
     Scene::Prim* activeSceneCameraPrim() const;
     bool syncActiveSceneCameraView();
+    void updateExternalRenderSize();
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderRecordingIndicator();
     void renderShortcutHelp();
+    void renderExitConfirmation();
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
@@ -161,11 +160,13 @@ class App {
     void registerBuiltinRenderResources();
 
   public:
+    // Windowed CUDA-image backends use OpenGL only for presentation and UI.
     void initialize(
         int width, int height, bool hideUi, UpAxis upAxis = UpAxis::Y,
         Backend::BackendType graphicsBackendType = Backend::BackendType::OpenGL,
         Scene::BackendType sceneBackendType = Scene::BackendType::Native,
-        bool headless = false);
+        bool headless = false,
+        std::unique_ptr<RenderBackend> renderBackend = nullptr);
     void processInput();
     void checkError();
     void coreRender();
@@ -177,6 +178,8 @@ class App {
 
     int getWidth() { return _width; }
     int getHeight() { return _height; }
+    int getRenderWidth() const { return _renderWidth; }
+    int getRenderHeight() const { return _renderHeight; }
     int getLogicalWidth() { return _logicalWidth; }
     int getLogicalHeight() { return _logicalHeight; }
     const UIScale& getUiScale() const { return _uiScale; }
@@ -201,6 +204,10 @@ class App {
     const Scene::SceneResourceManager& getSceneResourceManager() const {
         return _sceneResourceManager;
     }
+    // Retain imported resources until close(), after renderer registrations end.
+    Backend::Texture* loadTexture(const std::string& path, bool flip = true,
+                                  bool srgb = false);
+    Material* rememberMaterial(std::unique_ptr<Material> material);
     void setLight(const DirectionalLight& light) {
         getRenderer().setLight(light);
     }
@@ -208,10 +215,13 @@ class App {
     GLFWwindow* getWindow() { return _window.getGlfwWindow(); }
     const glm::mat4& getViewMatrix() const { return _viewMatrix; }
     const glm::mat4& getProjectionMatrix() const { return _projectionMatrix; }
+    // Window/UI device; an external scene renderer owns its device separately.
     Backend::GraphicsDevice* getGraphicsDevice() {
-        return getRenderer().device();
+        return _graphicsDevice.get();
     }
     Backend::Texture* getPresentedTexture();
+    // ovrtx image uploads start with the top row; Native textures need a UV flip.
+    bool presentedImageTopDown() const { return _imagePresenter != nullptr; }
     Rasterizer* getRasterizer() { return getRenderer().rasterizer(); }
     const Rasterizer* getRasterizer() const {
         return getRenderer().rasterizer();
@@ -255,14 +265,17 @@ class App {
     }
     bool getPrimTransformSource(const Scene::Prim* prim,
                                 TransformSource& outSource) const {
-        return _rasterizer &&
-               _rasterizer->getPrimTransformSource(prim, outSource);
+        return getRasterizer() &&
+               getRasterizer()->getPrimTransformSource(prim, outSource);
     }
     bool hasSelection() const { return _interaction.hasSelection(); }
     const RayPickResult& getSelection() const {
         return _interaction.selection();
     }
-    void clearSelection() { _interaction.clearSelection(); }
+    void clearSelection() {
+        _renderer.cancelPick();
+        _interaction.clearSelection();
+    }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
     Backend::Texture*
@@ -520,7 +533,11 @@ class App {
 
     // 마우스 위치로부터 3D 월드 공간의 Ray 객체 생성
     Geometry::Ray getMouseRay();
-    RayPickResult rayPick(const Geometry::Ray& ray) const;
+    // Query undeformed CPU-addressable mesh surfaces without changing selection.
+    RayPickResult raycast(const Geometry::Ray& ray) const;
+    RayPickResult rayPick(const Geometry::Ray& ray) const {
+        return raycast(ray);
+    }
     RayPickResult pickMouse();
     const RayPickResult& getLastRayPickResult() const {
         return _interaction.lastPick();
@@ -547,6 +564,7 @@ class App {
     void setLightAmbient(const glm::vec3& ambient);
 
     // Record
+    RenderImage readImage(bool flipY = true);
     std::vector<uint8_t> readRgbPixels(bool flipY = true);
     std::vector<uint8_t> readRgbPixelsResized(int width, int height,
                                               bool flipY = true);

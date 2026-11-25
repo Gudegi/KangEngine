@@ -1,15 +1,20 @@
-"""Low-level rendering API exposed directly from the native bindings.
+"""Scene image rendering and low-level native graphics APIs.
 
 General scene workflows should prefer kangengine.App,
 ``app.scene``, and renderable views. This package owns the stable public paths
 for lower-level renderer, graphics-device, texture, and external-buffer
-APIs; the runtime objects themselves remain pybind types.
+APIs. SceneRenderer provides optional backend selection for static images.
 """
 
 from __future__ import annotations
 
 from .._core import _ke
 from .._public import set_public_module
+from .scene_renderer import SceneRenderer
+from .texture_source import TextureSource
+
+SceneRenderer = set_public_module(SceneRenderer, __name__)
+TextureSource = set_public_module(TextureSource, __name__)
 
 
 BackendType = set_public_module(_ke.BackendType, __name__)
@@ -61,6 +66,8 @@ GraphicsPipeline = set_public_module(_ke.GraphicsPipeline, __name__)
 
 
 __all__ = [
+    "SceneRenderer",
+    "TextureSource",
     "ProfilerCapabilities",
     "ProfileTimingDomain",
     "ProfileSampleStatus",

@@ -11,10 +11,10 @@ This example keeps the public path small:
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 import numpy as np
 import torch
 from kangengine import imgui, keys
@@ -500,7 +500,7 @@ class GpuContactSensorViewer(ke.App):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = render_example_parser(description=__doc__)
     parser.add_argument("--num-envs", type=int, default=8)
     parser.add_argument("--steps", type=int, default=180)
     parser.add_argument("--substeps", type=int, default=1)
@@ -548,7 +548,10 @@ def main():
     args = parse_args()
     if args.viewer:
         app = GpuContactSensorViewer(args)
-        app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+        app.initialize(
+            args.width, args.height, False, ke.UpAxis.Z,
+            renderer=args.renderer,
+        )
         app.start()
     else:
         run_headless(args)

@@ -11,12 +11,8 @@ namespace Scene {
 
 class Prim;
 
-// Scene-level material relationship for a Prim.
-//
-// MaterialBindingComponent does not own the material yet. The current Python
-// examples keep material lifetimes explicitly, and the renderer batches by
-// Material* already. A future material registry / shared_ptr migration can
-// replace this pointer without changing the scene concept.
+// References a Prim's Material without owning it or copying its values.
+// The caller must keep the Material alive while it is bound.
 class MaterialBindingComponent : public ComponentBase {
   public:
     Material* material() const;

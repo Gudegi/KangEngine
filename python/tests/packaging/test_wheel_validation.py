@@ -46,6 +46,9 @@ class WheelValidationTests(unittest.TestCase):
                         redirect_stdout(io.StringIO()) as output:
                     validate_wheel.main()
                     scripts = {Path(call.args[2]).name for call in run.call_args_list}
+                    for call in run.call_args_list:
+                        if call.args[2].endswith(".py"):
+                            self.assertTrue(Path(call.args[2]).is_file(), call.args[2])
                     for name in (
                         "scene_data_smoke.py",
                         "animation_sim_roundtrip_smoke.py",

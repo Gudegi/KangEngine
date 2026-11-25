@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace KE {
 namespace Scene {
@@ -15,13 +16,15 @@ class Prim;
 class MeshComponent;
 class SceneRenderSystem;
 
-// Renderer-independent visual state attached to one scene Prim.
-// Renderer registration and RenderableHandle ownership belong to
-// SceneRenderSystem, not to this component.
+// Owns a Prim's render settings and display color; visibility is stored in Prim.
+// SceneRenderSystem manages registration and RenderableHandles.
 class RenderComponent : public ComponentBase {
   public:
     bool isVisible() const;
     void setVisible(bool visible);
+
+    std::optional<glm::vec4> displayColor() const;
+    void setDisplayColor(glm::vec4 color);
 
     bool isDoubleSided() const;
     void setDoubleSided(bool doubleSided);
@@ -41,6 +44,7 @@ class RenderComponent : public ComponentBase {
   private:
     friend class Prim;
     friend class MeshComponent;
+    friend class MaterialBindingComponent;
     friend class SceneRenderSystem;
 
     explicit RenderComponent(Prim* owner);
@@ -51,6 +55,8 @@ class RenderComponent : public ComponentBase {
     void clearRegistrationCallbacks();
     void markChanged();
 
+    // Linear RGBA multiplier; unauthored colors act as white.
+    std::optional<glm::vec4> _displayColor;
     bool _doubleSided = false;
     bool _castsShadow = true;
     AlphaMode _alphaMode = AlphaMode::Opaque;

@@ -5,6 +5,7 @@ import tempfile
 from unittest import mock
 
 import kangengine as ke
+import numpy as np
 from kangengine.recording import VideoRecorder
 
 
@@ -82,6 +83,10 @@ def main():
             rgb = writer.append_data.call_args.args[0]
             assert rgb.shape == (app.get_height(), app.get_width(), 3)
             assert rgb.dtype.name == "uint8"
+            pixels = app.read_rgb_pixels()
+            np.testing.assert_array_equal(pixels, rgb)
+            scaled = app.read_rgb_pixels_resized(width=24, height=16)
+            assert scaled.shape == (16, 24, 3) and scaled.dtype == np.uint8
             screenshot = Path(directory) / "frame.png"
             assert app.write_pixels_png(path=str(screenshot), flip_y=True)
             assert screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
@@ -112,10 +117,19 @@ def main():
     app.set_fixed_update_hz(update_hz=0.0)
 
     # start() owns setup and uses the combined path, without duplicate hooks.
+    saved = app.read_rgb_pixels()
+    snapshot = saved.copy()
     app.calls.clear()
     app.close_after_draw = True
     app.start()
     assert app.calls == ["setup", "pre_update"] + render_calls
+    np.testing.assert_array_equal(saved, snapshot)
+    try:
+        app.read_rgb_pixels()
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("capture accepted a closed App")
     print("PASS: frame scheduling, callbacks, video/PNG capture, profiling, external stepping and start")
 
 

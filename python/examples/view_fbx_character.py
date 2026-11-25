@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import re
 from pathlib import Path
 
@@ -10,6 +9,7 @@ import numpy as np
 import torch
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import animation, asset, imgui, keys, scene
 
 
@@ -166,11 +166,11 @@ class FbxCharacterViewer(ke.App):
             shader = (
                 self.textured_mesh_material if texture is not None else self.mesh_material
             )
-            view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             if texture is not None:
-                view.set_texture(texture, 0)
-                if normal_texture is not None:
-                    view.set_texture(normal_texture, 5)
+                shader = self._remember_material(shader.clone())
+                shader.base_color_texture = texture
+                shader.normal_texture = normal_texture
+            view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             # view.set_double_sided(True)
             self.mesh_prims.append(prim)
             self.mesh_colors.append(color)
@@ -220,8 +220,7 @@ class FbxCharacterViewer(ke.App):
         texture_path = Path(material.diffuse_texture_path)
         if not texture_path.exists():
             return None
-        texture = self.get_renderer().device().create_texture(str(texture_path), True)
-        self.textures.append(texture)
+        texture = self.load_texture(path=texture_path)
         return texture
 
     def _load_mesh_normal_texture(self, mesh):
@@ -231,8 +230,7 @@ class FbxCharacterViewer(ke.App):
         texture_path = Path(material.normal_texture_path)
         if not texture_path.exists():
             return None
-        texture = self.get_renderer().device().create_texture(str(texture_path), True)
-        self.textures.append(texture)
+        texture = self.load_texture(path=texture_path)
         return texture
 
     def _apply_time(self, time: float):
@@ -472,7 +470,7 @@ class FbxCharacterViewer(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
     parser.add_argument("--clip-index", type=int, default=-1)
     parser.add_argument("--fps", type=float, default=-1.0)
@@ -493,7 +491,7 @@ def main():
         args.scale,
         args.line_radius,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
 
 

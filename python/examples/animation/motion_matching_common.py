@@ -12,6 +12,7 @@ from types import SimpleNamespace
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import animation, imgui, keys, visual
 from kangengine.animation.matching import (
     make_walking_query,
@@ -25,7 +26,7 @@ def parse_args(
     default_dataset: Path,
     description: str | None = None,
 ) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=description)
+    parser = render_example_parser(description=description)
     parser.add_argument("--dataset", type=Path, default=default_dataset)
     parser.add_argument(
         "--benchmark-search",

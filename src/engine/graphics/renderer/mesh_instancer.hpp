@@ -7,6 +7,8 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "geometry/bounds.hpp"
+#include "geometry/mesh_bvh.hpp"
+#include "engine/scene/render/render_scene_data.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -92,6 +94,7 @@ class MeshInstancer {
     AlphaMode _alphaMode = AlphaMode::Opaque;
     float _alphaCutoff = 0.5f;
     bool _hasSkinning = false;
+    bool _hasGeometryUpdates = false;
     bool _hasTangents = false;
     TransformSource _transformSource{};
     Geometry::AABB _localBounds;
@@ -114,6 +117,18 @@ class MeshInstancer {
     uint64_t _externalBufferVersion = 0;
 
     std::vector<Scene::Prim*> _prims;
+    const Scene::RenderInstanceData* _sceneInstances = nullptr;
+
+    bool usesSceneData() const {
+        return _sceneInstances && !_useExternalTransforms &&
+               !_hasExternalBufferDesc && !_hasDirectCudaTransforms;
+    }
+    const std::vector<glm::mat4>& transforms() const {
+        return usesSceneData() ? _sceneInstances->transforms : _transforms;
+    }
+    const std::vector<glm::vec4>& colors() const {
+        return usesSceneData() && !_colorsDirty ? _sceneInstances->colors : _colors;
+    }
 
     void _initMeshData(const Scene::MeshData& mesh);
     void _setupSkinningAttribs(const Scene::SkinnedMeshData& skinnedMesh);
@@ -135,7 +150,7 @@ class MeshInstancer {
     void _recordGeometry(Backend::RenderPassEncoder& pass,
                          Backend::Buffer* transformBuffer,
                          uint32_t instanceCount, bool includeTexCoord,
-                         bool includeSkinning) const;
+                         bool includeSkinning, uint64_t transformOffset = 0) const;
 
   public:
     MeshInstancer() = default;
@@ -154,9 +169,13 @@ class MeshInstancer {
 
     void addPrim(Scene::Prim* prim);
     void removePrim(Scene::Prim* prim);
+    // Borrows adapter-owned arrays while the batch is in use.
+    void setSceneData(const Scene::RenderInstanceData& input) {
+        _sceneInstances = &input;
+    }
+    Scene::RenderInstanceId sceneInstanceId(int instanceIndex) const;
 
-    // Collect visible prim transforms + colors, upload to instance VBOs.
-    // Call once per frame before render().
+    // Consume scene input or the legacy dynamic path before render().
     void update();
 
     // Track B mode: directly upload transforms (and optionally colors), then
@@ -187,8 +206,9 @@ class MeshInstancer {
         const std::vector<glm::mat4>& boneMatrices);
     // Compact instance buffers to objects intersecting the current frustum.
     void applyFrustumCulling(const Geometry::Frustum* frustum);
-    bool findRayIntersection(const Geometry::Ray& ray, int& outInstanceIndex,
-                             float& outDistance,
+    bool findRayIntersection(const Geometry::Ray& ray,
+                             const Geometry::MeshBVH& mesh,
+                             int& outInstanceIndex, float& outDistance,
                              Geometry::AABB* outBounds = nullptr,
                              Scene::Prim** outPrim = nullptr) const;
     bool findPrimInstance(Scene::Prim* prim, int& outInstanceIndex,
@@ -196,6 +216,16 @@ class MeshInstancer {
     bool getInstanceTransform(int instanceIndex, glm::mat4& outTransform) const;
     bool setInstanceTransform(int instanceIndex, const glm::mat4& transform);
     TransformSource transformSource() const { return _transformSource; }
+
+    struct PickInstances {
+        std::unique_ptr<Backend::Buffer> transforms;
+        std::unique_ptr<Backend::Buffer> opacity;
+        uint32_t count = 0;
+    };
+    PickInstances preparePickInstances() const;
+    void recordPickDraw(Backend::RenderPassEncoder& pass,
+                        const PickInstances& instances, bool textured) const;
+    RayPickResult pickInstance(int instanceIndex) const;
 
     // Record the currently visible instance batch without touching backend
     // state. Resources are only consumed when the command buffer is submitted.
@@ -239,6 +269,8 @@ class MeshInstancer {
     AlphaMode alphaMode() const { return _alphaMode; }
     float alphaCutoff() const { return _alphaCutoff; }
     bool hasSkinning() const { return _hasSkinning; }
+    bool hasPrims() const { return !_prims.empty(); }
+    bool hasGeometryUpdates() const { return _hasGeometryUpdates; }
     bool hasTangents() const { return _hasTangents; }
     bool hasVertexColors() const { return _vertexColors != nullptr; }
     const Geometry::AABB& localBounds() const { return _localBounds; }
@@ -263,11 +295,18 @@ class MeshInstancer {
         for (const auto& [texture, textureSlot] : _textures)
             if (textureSlot == slot)
                 return texture;
+        if (_material && _material->shadingModel() == MaterialShadingModel::Color) {
+            const auto* color = static_cast<const ColorMaterial*>(_material);
+            if (slot == RendererTextureSlot::BaseColor)
+                return color->baseColorTexture;
+            if (slot == RendererTextureSlot::Normal)
+                return color->normalTexture;
+        }
         return nullptr;
     }
     Material* material() const { return _material; }
     bool hasTransparent() const { return _hasTransparent; }
-    int instanceCount() const { return static_cast<int>(_transforms.size()); }
+    int instanceCount() const { return static_cast<int>(transforms().size()); }
     int visibleCount() const { return _visibleCount; }
 };
 

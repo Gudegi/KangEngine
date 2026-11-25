@@ -73,7 +73,7 @@ struct RectLight : LightEmission {
     std::string texturePath;
 };
 
-// Uniform infinite environment. Textured dome lighting is not yet evaluated.
+// Infinite environment light.
 struct DomeLight : LightEmission {
     std::string texturePath;
     std::string textureFormat = "automatic";

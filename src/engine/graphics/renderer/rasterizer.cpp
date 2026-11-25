@@ -3,8 +3,10 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/render_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/types/light_color.hpp"
+#include "engine/scene/render/render_light_data.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
@@ -59,6 +61,46 @@ void appendAABBLines(const KE::Geometry::AABB& box,
 
 namespace KE {
 
+void Rasterizer::setSceneLights(const Scene::RenderLightData& lighting) {
+    DirectionalLight directional;
+    directional.intensity = 0;
+    directional.ambient = glm::vec3(0);
+    bool hasDirectional = false;
+    std::vector<PointLight> points;
+    std::vector<SpotLight> spots;
+    std::vector<RectLightInstance> rectangles;
+    glm::vec3 domeRadiance(0.0f);
+    for (const auto& source : lighting.lights) {
+        if (const auto* light =
+                std::get_if<Scene::DirectionalLight>(&source.light)) {
+            if (!hasDirectional) {
+                directional = evaluateWorldLight(*light, source.world);
+                hasDirectional = true;
+            }
+        } else if (const auto* light =
+                       std::get_if<Scene::PointLight>(&source.light)) {
+            if (points.size() < MaxPointLights)
+                points.push_back(evaluateWorldLight(*light, source.world));
+        } else if (const auto* light =
+                       std::get_if<Scene::SpotLight>(&source.light)) {
+            if (spots.size() < MaxSpotLights)
+                spots.push_back(evaluateWorldLight(*light, source.world));
+        } else if (const auto* light =
+                       std::get_if<Scene::RectLight>(&source.light)) {
+            rectangles.push_back({*light, source.world});
+        } else if (const auto* light =
+                       std::get_if<Scene::DomeLight>(&source.light)) {
+            domeRadiance += Scene::emittedRadiance(*light) * light->diffuse;
+        }
+    }
+    // Validate the limited area-light array before replacing the other lights.
+    setRectLights(std::move(rectangles));
+    setLight(directional);
+    setPointLights(std::move(points));
+    setSpotLights(std::move(spots));
+    setDomeRadiance(domeRadiance);
+}
+
 void Rasterizer::setRectLights(std::vector<RectLightInstance> lights) {
     if (lights.size() > MaxRectLights)
         throw std::runtime_error("Rasterizer supports at most 16 visible RectLights");
@@ -71,6 +113,7 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _shadowPass.initialize(_graphicsDevice);
     _skyboxPass.initialize(_graphicsDevice);
     _selectionMaskPass.initialize(_graphicsDevice);
+    _pickingPass.initialize(_graphicsDevice);
     Backend::BufferDesc uniformDesc;
     uniformDesc.size = 2 * sizeof(glm::mat4);
     uniformDesc.usage =
@@ -157,27 +200,89 @@ RenderableHandle
 Rasterizer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
                                  const Scene::SkinnedMeshData& skinnedMesh,
                                  TransformSource transformSource) {
-    auto meshData = prim->resolveMeshData();
+    if (!prim)
+        return InvalidHandle;
+    const auto handle =
+        registerMeshBatch(Scene::SceneRenderBridge::meshData(*prim), material,
+                          transformSource, &skinnedMesh);
+    if (handle == InvalidHandle)
+        return handle;
+    registerPrimSource(prim, transformSource);
+    _handleTable[handle]->addPrim(prim);
+    return handle;
+}
+
+RenderableHandle
+Rasterizer::registerMeshBatch(const Scene::RenderMeshData& input,
+                              Material* material,
+                              TransformSource transformSource,
+                              const Scene::SkinnedMeshData* skinnedMesh,
+                              const Scene::RenderInstanceData* instances,
+                              const SceneBatchState& state) {
+    const auto& meshData = input.mesh;
     if (!material || !meshData || meshData->vertices.empty() ||
-        meshData->indices.empty() || !skinnedMesh.hasValidVertexSkinning())
+        meshData->indices.empty() ||
+        (skinnedMesh && !skinnedMesh->hasValidVertexSkinning()))
         return InvalidHandle;
 
-    InstancerKey key{meshData.get(), material, transformSource};
-    auto it = _instancers.find(key);
+    // Common batches keep their instance source; direct static draws also
+    // share matching policies. Skinned registrations retain independent poses.
+    InstancerKey key{meshData.get(), material, transformSource, instances};
+    auto it = _instancers.end();
+    if (!skinnedMesh) {
+        for (auto candidate = _instancers.lower_bound(key);
+             candidate != _instancers.end(); ++candidate) {
+            const auto& existing = candidate->first;
+            if (existing.mesh != key.mesh || existing.material != key.material ||
+                existing.transformSource != key.transformSource ||
+                existing.instances != instances)
+                break;
+            const auto& batch = candidate->second;
+            const SceneBatchState current{batch.isDoubleSided(),
+                                           batch.castsShadow(), batch.alphaMode(),
+                                           batch.alphaCutoff()};
+            if (!batch.hasSkinning() &&
+                (instances || transformSource == TransformSource::ExternalBuffer ||
+                 current == state)) {
+                it = candidate;
+                key = existing;
+                break;
+            }
+        }
+    }
     if (it == _instancers.end()) {
+        key.batchId = _nextBatchId++;
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, skinnedMesh, transformSource,
-                           material);
+        try {
+            if (skinnedMesh)
+                newIt->second.init(_graphicsDevice, *skinnedMesh,
+                                   transformSource, material);
+            else {
+                newIt->second.init(_graphicsDevice, *meshData, transformSource,
+                                   material);
+                _raycastMeshes.try_emplace(meshData.get(), meshData);
+            }
+            newIt->second.setDoubleSided(state.doubleSided);
+            newIt->second.setCastsShadow(state.castsShadow);
+            newIt->second.setAlphaMode(state.alphaMode, state.alphaCutoff);
+        } catch (...) {
+            _instancers.erase(newIt);
+            throw;
+        }
         it = newIt;
     }
-    registerPrimSource(prim, transformSource);
-    it->second.addPrim(prim);
-
     auto hIt = _handleMap.find(key);
     if (hIt == _handleMap.end()) {
-        RenderableHandle h = static_cast<RenderableHandle>(_handleTable.size());
+        RenderableHandle h;
+        if (_freeHandles.empty()) {
+            h = static_cast<RenderableHandle>(_handleTable.size());
+            _handleTable.push_back(&it->second);
+        } else {
+            h = _freeHandles.back();
+            _freeHandles.pop_back();
+            _handleTable[h] = &it->second;
+        }
         _handleMap[key] = h;
-        _handleTable.push_back(&it->second);
         return h;
     }
     return hIt->second;
@@ -186,58 +291,162 @@ Rasterizer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
 RenderableHandle Rasterizer::addRenderable(Material* material,
                                            Scene::Prim* prim,
                                            TransformSource transformSource) {
-    auto meshData = prim->resolveMeshData();
-    if (!material || !meshData || meshData->vertices.empty() ||
-        meshData->indices.empty())
+    if (!prim)
         return InvalidHandle;
-
-    InstancerKey key{meshData.get(), material, transformSource};
-    auto it = _instancers.find(key);
-    if (it == _instancers.end()) {
-        auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, *meshData, transformSource,
-                           material);
-        it = newIt;
+    const auto input = Scene::SceneRenderBridge::meshData(*prim);
+    SceneBatchState state;
+    if (auto component = prim->getRenderComponent())
+        state = {component->isDoubleSided(), component->castsShadow(),
+                 component->alphaMode(), component->alphaCutoff()};
+    if (transformSource == TransformSource::SceneGraph) {
+        for (const auto& [key, handle] : _handleMap) {
+            auto* batch = _handleTable[handle];
+            if (key.mesh != input.mesh.get() || key.material != material ||
+                key.transformSource != transformSource ||
+                !batch->hasGeometryUpdates())
+                continue;
+            const auto bridge = _sceneBridges.find(batch);
+            if (bridge == _sceneBridges.end() || !bridge->second->contains(*prim))
+                continue;
+            const SceneBatchState current{batch->isDoubleSided(),
+                                           batch->castsShadow(), batch->alphaMode(),
+                                           batch->alphaCutoff()};
+            if (state != current && bridge->second->size() > 1)
+                throw std::runtime_error(
+                    "cannot split render policies of a shared dynamic geometry batch");
+            batch->setDoubleSided(state.doubleSided);
+            batch->setCastsShadow(state.castsShadow);
+            batch->setAlphaMode(state.alphaMode, state.alphaCutoff);
+            return handle;
+        }
     }
+    const auto handle = registerMeshBatch(input, material, transformSource,
+                                           nullptr, nullptr, state);
+    if (handle == InvalidHandle)
+        return handle;
+
+    auto* instancer = _handleTable[handle];
+    const auto existing = _sceneBridges.find(instancer);
+    if (existing != _sceneBridges.end() && existing->second->contains(*prim))
+        return handle;
     registerPrimSource(prim, transformSource);
-    it->second.addPrim(prim);
-
-    auto hIt = _handleMap.find(key);
-    if (hIt == _handleMap.end()) {
-        RenderableHandle h = static_cast<RenderableHandle>(_handleTable.size());
-        _handleMap[key] = h;
-        _handleTable.push_back(&it->second);
-        return h;
+    if (transformSource == TransformSource::SceneGraph) {
+        auto& sceneBridge = _sceneBridges[instancer];
+        if (!sceneBridge) {
+            auto& owned = _legacySceneBridges[instancer];
+            owned = std::make_unique<Scene::SceneRenderBridge>();
+            sceneBridge = owned.get();
+        }
+        sceneBridge->add(*prim);
+        instancer->setSceneData(sceneBridge->instances());
+    } else {
+        instancer->addPrim(prim);
     }
-    return hIt->second;
+    return handle;
+}
+
+void Rasterizer::attachScenePrim(RenderableHandle handle, Scene::Prim& prim,
+                                 Scene::SceneRenderBridge& bridge) {
+    auto* instancer = _handleTable.at(handle);
+    auto& attached = _sceneBridges[instancer];
+    if (attached && attached != &bridge)
+        throw std::logic_error("Cannot mix direct Rasterizer and Renderer "
+                               "registration in one batch");
+    attached = &bridge;
+    registerPrimSource(&prim, instancer->transformSource());
+}
+
+RenderableHandle Rasterizer::registerSceneBatch(
+    const Scene::RenderMeshData& mesh, Material* material,
+    const Scene::RenderInstanceData& instances,
+    const Scene::SkinnedMeshData* skinnedMesh, TransformSource source) {
+    const auto handle =
+        registerMeshBatch(mesh, material, source, skinnedMesh, &instances);
+    if (handle != InvalidHandle) {
+        auto bridge = _sceneBridges.find(_handleTable[handle]);
+        if (bridge != _sceneBridges.end() &&
+            &bridge->second->instances() != &instances)
+            throw std::logic_error(
+                "Scene batch already has another instance source");
+        _handleTable[handle]->setSceneData(instances);
+    }
+    return handle;
+}
+
+void Rasterizer::removeSceneBatch(RenderableHandle handle) {
+    auto it = std::find_if(_handleMap.begin(), _handleMap.end(),
+                           [handle](const auto& entry) {
+                               return entry.second == handle;
+                           });
+    if (it == _handleMap.end())
+        return;
+    const auto key = it->first;
+    auto* instancer = _handleTable[handle];
+    _forwardPass.releaseBatch(*instancer);
+    _sceneBridges.erase(instancer);
+    _legacySceneBridges.erase(instancer);
+    _handleTable[handle] = nullptr;
+    _freeHandles.push_back(handle);
+    _handleMap.erase(it);
+    _instancers.erase(key);
+    const bool used = std::any_of(
+        _instancers.begin(), _instancers.end(),
+        [&](const auto& entry) { return entry.first.mesh == key.mesh; });
+    if (!used)
+        _raycastMeshes.erase(key.mesh);
+}
+
+void Rasterizer::invalidateSceneBatch(RenderableHandle handle) {
+    if (handle < _handleTable.size() && _handleTable[handle])
+        _forwardPass.releaseBatch(*_handleTable[handle]);
 }
 
 void Rasterizer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     unregisterPrimSource(prim, _handleTable[handle]->transformSource());
+    const auto input = _sceneBridges.find(_handleTable[handle]);
+    if (input != _sceneBridges.end() && prim) {
+        input->second->remove(*prim);
+        if (!input->second->empty())
+            return;
+    }
     _handleTable[handle]->removePrim(prim);
+    if (input == _sceneBridges.end() && _handleTable[handle]->hasSkinning() &&
+        !_handleTable[handle]->hasPrims())
+        removeSceneBatch(handle);
 }
 
 void Rasterizer::removePrim(Scene::Prim* prim) {
     if (!prim)
         return;
-    for (auto& [key, instancer] : _instancers)
+    for (auto it = _instancers.begin(); it != _instancers.end();) {
+        auto& [key, instancer] = *it++;
+        const auto input = _sceneBridges.find(&instancer);
+        if (input != _sceneBridges.end()) {
+            input->second->remove(*prim);
+            if (!input->second->empty())
+                continue;
+        }
         instancer.removePrim(prim);
+        if (input == _sceneBridges.end() && instancer.hasSkinning() &&
+            !instancer.hasPrims())
+            removeSceneBatch(_handleMap.at(key));
+    }
     _primSourceRegistrations.erase(prim);
 }
 
 void Rasterizer::updateRenderableTransforms(
     RenderableHandle handle, const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->updateFromTransforms(transforms, colors);
 }
 
 void Rasterizer::setRenderableExternalBuffer(RenderableHandle handle,
                                              const ExternalBufferDesc& desc) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->setExternalBuffer(desc);
 }
@@ -248,7 +457,7 @@ std::vector<Sim::GpuArrayView> Rasterizer::mapRenderableCudaTransformBuffers(
     std::vector<Backend::Buffer*> buffers;
     buffers.reserve(handles.size());
     for (auto handle : handles) {
-        if (handle >= _handleTable.size())
+        if (handle >= _handleTable.size() || !_handleTable[handle])
             throw std::out_of_range("invalid renderable handle for CUDA map");
         auto* instancer = _handleTable[handle];
         instancer->prepareDirectCudaTransforms(count);
@@ -269,7 +478,7 @@ void Rasterizer::unmapRenderableCudaTransformBuffers(
     std::vector<Backend::Buffer*> buffers;
     buffers.reserve(handles.size());
     for (auto handle : handles) {
-        if (handle >= _handleTable.size())
+        if (handle >= _handleTable.size() || !_handleTable[handle])
             throw std::out_of_range("invalid renderable handle for CUDA unmap");
         buffers.push_back(_handleTable[handle]->transformBuffer());
     }
@@ -278,28 +487,28 @@ void Rasterizer::unmapRenderableCudaTransformBuffers(
 
 void Rasterizer::setRenderableColors(RenderableHandle handle,
                                      const std::vector<glm::vec4>& colors) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->setColors(colors);
 }
 
 void Rasterizer::setRenderableDoubleSided(RenderableHandle handle,
                                           bool doubleSided) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->setDoubleSided(doubleSided);
 }
 
 void Rasterizer::setRenderableCastsShadow(RenderableHandle handle,
                                           bool castsShadow) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->setCastsShadow(castsShadow);
 }
 
 void Rasterizer::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
                                         float cutoff) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->setAlphaMode(mode, cutoff);
 }
@@ -311,41 +520,66 @@ void Rasterizer::setRenderableTexture(RenderableHandle handle,
 
 void Rasterizer::setRenderableTexture(RenderableHandle handle,
                                       Backend::Texture* tex, int slot) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->setTexture(tex, slot);
 }
 
-RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
-    RayPickResult best;
+RayPickResult Rasterizer::pickScreen(glm::vec2 ndc, const glm::mat4& view,
+                                     const glm::mat4& projection,
+                                     int width, int height) {
+    for (auto& [instancer, input] : _sceneBridges)
+        input->refreshSelection();
+    auto result = _pickingPass.pick(_handleTable, _shaderLibrary, view,
+                                    projection, ndc, width, height);
+    if (result.hit) {
+        const auto* instancer = _handleTable[result.handle];
+        const auto input = _sceneBridges.find(instancer);
+        if (input != _sceneBridges.end())
+            result.prim = input->second->resolve(
+                instancer->sceneInstanceId(result.instanceIndex));
+    }
+    return result;
+}
+
+RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
+    const auto hit = raycastHit(ray);
+    RayPickResult result;
+    static_cast<RenderPickHit&>(result) = hit;
+    if (hit.hit && hit.transformSource == TransformSource::SceneGraph)
+        result = resolvePick(hit);
+    return result;
+}
+
+RenderPickHit Rasterizer::raycastHit(const Geometry::Ray& ray) const {
+    if (!std::isfinite(glm::dot(ray.origin, ray.origin)) ||
+        !std::isfinite(glm::dot(ray.direction, ray.direction)) ||
+        glm::dot(ray.direction, ray.direction) == 0.0f)
+        throw std::invalid_argument("raycast requires a finite, nonzero ray");
+    RenderPickHit best;
     best.distance = std::numeric_limits<float>::infinity();
-    for (size_t handle = 0; handle < _handleTable.size(); ++handle) {
+    for (const auto& [instancer, input] : _sceneBridges)
+        input->refreshSelection();
+    for (const auto& [key, handle] : _handleMap) {
         const MeshInstancer* inst = _handleTable[handle];
-        if (!inst)
+        const auto mesh = _raycastMeshes.find(key.mesh);
+        if (!inst || mesh == _raycastMeshes.end())
             continue;
 
         int instanceIndex = -1;
         float distance = 0.0f;
         Geometry::AABB bounds;
-        Scene::Prim* prim = nullptr;
-        if (!inst->findRayIntersection(ray, instanceIndex, distance, &bounds,
-                                       &prim))
+        if (!inst->findRayIntersection(ray, mesh->second, instanceIndex,
+                                       distance, &bounds))
             continue;
-        if (prim) {
-            const auto selection = prim->getSelectionComponent();
-            if (selection && !selection->isPickable())
-                continue;
-        }
         if (distance >= best.distance)
             continue;
 
         best.hit = true;
+        best.sceneInstanceId = inst->sceneInstanceId(instanceIndex);
         best.handle = static_cast<RenderableHandle>(handle);
         best.instanceIndex = instanceIndex;
         best.transformSource = inst->transformSource();
-        best.prim = best.transformSource == TransformSource::SceneGraph
-                        ? prim
-                        : nullptr;
         best.distance = distance;
         best.position = ray.getPoint(distance);
         best.bounds = bounds;
@@ -363,10 +597,20 @@ bool Rasterizer::buildPrimSelection(Scene::Prim* prim,
 
         int instanceIndex = -1;
         Geometry::AABB bounds;
-        if (!inst->findPrimInstance(prim, instanceIndex, &bounds))
+        const auto input = _sceneBridges.find(inst);
+        if (input != _sceneBridges.end()) {
+            if (!prim)
+                continue;
+            instanceIndex = input->second->instanceIndex(*prim);
+            if (instanceIndex < 0)
+                continue;
+            bounds = inst->pickInstance(instanceIndex).bounds;
+        } else if (!inst->findPrimInstance(prim, instanceIndex, &bounds)) {
             continue;
+        }
 
         outSelection.hit = true;
+        outSelection.sceneInstanceId = inst->sceneInstanceId(instanceIndex);
         outSelection.handle = static_cast<RenderableHandle>(handle);
         outSelection.instanceIndex = instanceIndex;
         outSelection.transformSource = TransformSource::SceneGraph;
@@ -412,14 +656,14 @@ bool Rasterizer::setRenderableInstanceTransform(RenderableHandle handle,
 void Rasterizer::updateRenderableGeometry(
     RenderableHandle handle, const std::vector<glm::vec3>& positions,
     const std::vector<glm::vec3>& normals) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->updateGeometry(positions, normals);
 }
 
 void Rasterizer::updateRenderableSkinningMatrices(
     RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
     _handleTable[handle]->updateRenderableSkinningMatrices(boneMatrices);
 }
@@ -662,6 +906,8 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     _lightDirty = false;
 
     // Update all instancers (must run before shadow pass AND scene pass)
+    for (auto& [instancer, input] : _legacySceneBridges)
+        input->collect();
     for (auto& [key, inst] : _instancers)
         inst.update();
 }
@@ -931,7 +1177,35 @@ void Rasterizer::setSkybox(const std::vector<std::string>& paths,
 // -------------------------------------------------------------------------
 // Selection Mask Pipeline - target lifetime and command submission
 // -------------------------------------------------------------------------
-void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
+RayPickResult Rasterizer::resolvePick(const RenderPickHit& hit) const {
+    if (!hit.hit || hit.handle >= _handleTable.size())
+        return {};
+    const auto* instancer = _handleTable[hit.handle];
+    if (!instancer || instancer->transformSource() != hit.transformSource)
+        return {};
+
+    RayPickResult result;
+    static_cast<RenderPickHit&>(result) = hit;
+    const auto bridge = _sceneBridges.find(instancer);
+    if (hit.sceneInstanceId != 0) {
+        if (bridge == _sceneBridges.end())
+            return {};
+        result.prim = bridge->second->resolve(hit.sceneInstanceId);
+        result.instanceIndex =
+            bridge->second->instanceIndex(hit.sceneInstanceId, hit.instanceIndex);
+        if (!result.prim || result.instanceIndex < 0)
+            return {};
+    } else {
+        const int count = std::max(instancer->instanceCount(),
+                                    instancer->visibleCount());
+        if (hit.instanceIndex < 0 || hit.instanceIndex >= count)
+            return {};
+        result.prim = instancer->pickInstance(hit.instanceIndex).prim;
+    }
+    return result;
+}
+
+void Rasterizer::renderSelectionMaskPass(const RenderPickHit& selection,
                                          Backend::Framebuffer* target,
                                          int width, int height) {
     if (!target || !selection.hit || selection.handle >= _handleTable.size())
@@ -943,8 +1217,13 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
 
     if (width <= 0 || height <= 0)
         return;
+    int instanceIndex = selection.instanceIndex;
+    const auto input = _sceneBridges.find(inst);
+    if (input != _sceneBridges.end() && selection.sceneInstanceId != 0) {
+        instanceIndex = input->second->instanceIndex(selection.sceneInstanceId);
+    }
     auto prepared =
-        _selectionMaskPass.prepare(inst, selection.instanceIndex, target);
+        _selectionMaskPass.prepare(inst, instanceIndex, target);
     auto scope =
         _graphicsDevice->profileContext()->cpuScope("render/selection_mask");
     auto encoder = _graphicsDevice->createCommandEncoder();
@@ -1105,12 +1384,11 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
     glm::mat4 lightView = glm::lookAt(lightPos, frustumCenter, up);
     float minZ = std::numeric_limits<float>::max();
     float maxZ = std::numeric_limits<float>::lowest();
-    std::vector<glm::vec3> lightSpaceCorners;
-    lightSpaceCorners.reserve(8);
-    for (const auto& corner : corners) {
+    std::array<glm::vec3, 8> lightSpaceCorners;
+    for (size_t i = 0; i < lightSpaceCorners.size(); ++i) {
         glm::vec3 lightSpaceCorner =
-            glm::vec3(lightView * glm::vec4(corner, 1.0f));
-        lightSpaceCorners.push_back(lightSpaceCorner);
+            glm::vec3(lightView * glm::vec4(corners[i], 1.0f));
+        lightSpaceCorners[i] = lightSpaceCorner;
         minZ = std::min(minZ, lightSpaceCorner.z);
         maxZ = std::max(maxZ, lightSpaceCorner.z);
     }

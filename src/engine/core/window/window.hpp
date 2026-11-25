@@ -23,6 +23,7 @@ class Window
     Window();
     ~Window();
     void close();
+    // Creates the window and graphics context on first initialization.
     void init(int width, int height, bool headless = false);
     GLFWwindow* getGlfwWindow() { return _window; }
     void setVSync(bool enabled);

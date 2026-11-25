@@ -1,8 +1,9 @@
 #include "app.hpp"
 #include "asset/bvh_loader.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/backend/opengl/opengl_image_presenter.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
-#include "engine/graphics/renderer/post_processor.hpp"
+#include "engine/graphics/renderer/render_backend/native/native_render_extension.hpp"
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/render_component.hpp"
@@ -152,6 +153,12 @@ void App::registerCallbacks() {
                                GLFWCallbackWrapper::mouseButtonCallbackWrapper);
 }
 struct App::IO {
+    enum class LeftMouseAction { None, Select, Camera, Gizmo, Force };
+    LeftMouseAction leftMouseAction = LeftMouseAction::None;
+    double pressMouseX = 0.0;
+    double pressMouseY = 0.0;
+    glm::vec2 pickNDC{0.0f};
+    bool forcePickRequested = false;
     bool isMouseMiddleClicked = false;
     bool isMouseLeftClicked = false;
     bool isMouseRightClicked = false;
@@ -166,7 +173,7 @@ struct App::IO {
     bool isScreenshotKeyPressed = false; // t
     bool isEscKeyPressed = false;
     bool isSHIFTKeyPressed = false;
-    bool isPickMode = false; // left click + shift
+    bool isPickMode = false; // Force-drag hover callbacks.
 };
 
 struct App::RenderVariable {
@@ -187,6 +194,14 @@ void App::requireOwnerThread() const {
         throw std::runtime_error("App must be used on its creating thread");
 }
 
+double App::currentTimeSeconds() const {
+    if (_graphicsDevice)
+        return glfwGetTime();
+    return std::chrono::duration<double>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
 void App::close() {
     if (_closed)
         return;
@@ -202,7 +217,8 @@ void App::close() {
     if (auto* window = _window.getGlfwWindow())
         glfwMakeContextCurrent(window);
 
-    // Scene registrations and GL owners must be released while the context lives.
+    // Scene registrations and GL owners must be released while the context
+    // lives.
     _sceneRenderSystem.clear();
     _sceneRenderSystem.bind(nullptr);
     _sceneResourceManager.clear();
@@ -211,48 +227,79 @@ void App::close() {
     _interaction = InteractionController{};
     _panelManager.shutdown();
     _editorViewportPanel = nullptr;
+    _imagePresenter.reset();
     _renderer.release();
-    _rasterizer.reset();
-    _selectionOutlineProcessor.reset();
-    _sceneCameraPreviewPostProcessor.reset();
-    _postProcessor.reset();
-    _lastPresentedFramebuffer = nullptr;
-    _sceneRenderTarget.reset();
-    _sceneDrawTarget.reset();
-    _sceneClearTarget.reset();
-    _sceneMsaaDepthStencilView.reset();
-    _sceneResolveColorView.reset();
-    _sceneMsaaColorView.reset();
-    _sceneMsaaDepthStencil.reset();
-    _sceneMsaaColor.reset();
-    _sceneCameraPreviewFramebuffer.reset();
-    _selectionMaskFramebuffer.reset();
-    _framebuffer.reset();
+    _materials.clear();
+    _textures.clear();
     _graphicsDevice.reset();
-    GLFWCallbackWrapper::setApp(nullptr);
+    _profileContext.reset();
+    if (_window.getGlfwWindow())
+        GLFWCallbackWrapper::setApp(nullptr);
     _window.close();
+}
+
+Backend::Texture* App::loadTexture(const std::string& path, bool flip, bool srgb) {
+    requireOwnerThread();
+    if (!_initialized)
+        throw std::runtime_error("Initialize App before loading textures");
+    _renderer.native();
+    const auto resolved = std::filesystem::absolute(path).lexically_normal();
+    const auto key = std::make_tuple(resolved.string(), flip, srgb);
+    const auto found = _textures.find(key);
+    if (found != _textures.end())
+        return found->second.get();
+
+    auto texture = _renderer.device()->createTexture(
+        resolved.string(), flip, Backend::SamplerDesc{}, srgb);
+    if (!texture)
+        throw std::runtime_error("Failed to load texture: " + resolved.string());
+    Scene::TextureSourceResource source;
+    source.path = resolved.string();
+    source.flip = flip;
+    source.srgb = srgb;
+    const std::string uri = source.path + "#flip=" + std::to_string(flip) +
+                            "&srgb=" + std::to_string(srgb);
+    auto* result = texture.get();
+    _textures.emplace(key, std::move(texture));
+    _sceneResourceManager.registerTexture(resolved.filename().string(), result,
+                                          uri, std::move(source));
+    return result;
+}
+
+Material* App::rememberMaterial(std::unique_ptr<Material> material) {
+    requireOwnerThread();
+    if (!_initialized || !material)
+        throw std::invalid_argument(
+            "Material retention requires an initialized App and material");
+    auto* result = material.get();
+    _materials.push_back(std::move(material));
+    _sceneResourceManager.registerMaterial(
+        "Material_" + std::to_string(_materials.size()), result);
+    return result;
 }
 
 void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                      Backend::BackendType graphicsBackendType,
-                     Scene::BackendType sceneBackendType, bool headless) {
+                     Scene::BackendType sceneBackendType, bool headless,
+                     std::unique_ptr<RenderBackend> renderBackend) {
     requireOwnerThread();
     if (_closed)
         throw std::runtime_error("App is closed");
     if (_initialized)
         throw std::runtime_error("App is already initialized");
+    if (width <= 0 || height <= 0)
+        throw std::invalid_argument("App dimensions must be positive");
+    const bool customBackend = static_cast<bool>(renderBackend);
+    if (customBackend && (!headless || !hideUI) &&
+        !renderBackend->capabilities().screenPresentation &&
+        !renderBackend->capabilities().cudaImageOutput)
+        throw std::invalid_argument(
+            "Windowed render backend requires screen presentation or CUDA images");
     _width = width;
     _height = height;
     _hideUI = hideUI;
     _upAxis = upAxis;
 
-    // Initialize graphics device first
-    _graphicsDevice =
-        Backend::GraphicsFactory::createDevice(graphicsBackendType);
-    if (!_graphicsDevice) {
-        std::cerr << "Failed to create graphics device" << std::endl;
-        return;
-    }
     _scene = Scene::SceneFactory::createBackend(sceneBackendType);
     if (!_scene) {
         std::cerr << "Failed to create scene" << std::endl;
@@ -260,34 +307,37 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     }
     _sceneResourceManager.bindScene(_scene.get());
 
-    _window.init(_width, _height, headless);
-    if (_window.getGlfwWindow() == nullptr) {
-        std::cerr << "Failed to initialize window" << std::endl;
-        return;
+    // External GPU initialization must precede the OpenGL presentation context.
+    if (customBackend)
+        _renderer.initialize(std::move(renderBackend), _width, _height);
+
+    if (!customBackend || !headless || !hideUI) {
+        _graphicsDevice =
+            Backend::GraphicsFactory::createDevice(graphicsBackendType);
+        if (!_graphicsDevice)
+            throw std::runtime_error("Failed to create graphics device");
+        _window.init(_width, _height, headless);
+        if (_window.getGlfwWindow() == nullptr) {
+            std::cerr << "Failed to initialize window" << std::endl;
+            return;
+        }
+
+        _logicalWidth = _window.getLogicalWidth();
+        _logicalHeight = _window.getLogicalHeight();
+        registerCallbacks();
+        glfwGetFramebufferSize(_window.getGlfwWindow(), &_width, &_height);
+        glfwGetWindowSize(_window.getGlfwWindow(), &_logicalWidth,
+                          &_logicalHeight);
+        _uiScale.update(_window.getGlfwWindow());
+
+        // Initialize graphics device after OpenGL context is created
+        _graphicsDevice->initialize();
+        _profileContext = _graphicsDevice->profileContext();
+    } else {
+        _logicalWidth = _width;
+        _logicalHeight = _height;
+        _profileContext = std::make_shared<Backend::ProfileContext>();
     }
-
-    _logicalWidth = _window.getLogicalWidth();
-    _logicalHeight = _window.getLogicalHeight();
-    registerCallbacks();
-    glfwGetFramebufferSize(_window.getGlfwWindow(), &_width, &_height);
-    glfwGetWindowSize(_window.getGlfwWindow(), &_logicalWidth, &_logicalHeight);
-    _uiScale.update(_window.getGlfwWindow());
-
-    // Initialize graphics device after OpenGL context is created
-    _graphicsDevice->initialize();
-
-    Backend::FramebufferDesc sceneFramebufferDesc;
-    sceneFramebufferDesc.width = _width;
-    sceneFramebufferDesc.height = _height;
-    sceneFramebufferDesc.stencil = true;
-    // The legacy framebuffer owns only the resolved color used by post-process
-    // and readback. The RHI scene target owns the 4x MSAA attachments.
-    sceneFramebufferDesc.msaaSamples = 0;
-    sceneFramebufferDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
-    _framebuffer = _graphicsDevice->createFramebuffer(sceneFramebufferDesc);
-    rebuildSceneRenderTarget();
-    _selectionMaskFramebuffer =
-        _graphicsDevice->createFramebuffer({_width, _height, false, false, 0});
 
     glm::vec3 cameraPos, cameraTarget;
     if (_upAxis == UpAxis::Z) {
@@ -301,48 +351,55 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _camera.updateProjMatrix(_width, _height);
     _sceneCamera.init(cameraPos, cameraTarget, _upAxis);
     _sceneCamera.updateProjMatrix(_width, _height);
-    _fpsWindowStart = glfwGetTime();
+    _fpsWindowStart = currentTimeSeconds();
     _fpsWindowFrames = 0;
     _measuredRenderFPS = 0.0f;
-    _panelManager.init(this->getWindow());
-    _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
-    _panelManager.mergeIconFont(
-        KE::getAssetPath("fonts/IconFont/fa-solid-900.ttf"));
-    _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
-    auto viewportPanel = std::make_unique<ViewportPanel>(this, &_camera);
-    _editorViewportPanel = viewportPanel.get();
-    _panelManager.addPanel(std::move(viewportPanel));
-    auto cameraViewPanel = std::make_unique<CameraViewPanel>(this);
-    cameraViewPanel->setOpen(false);
-    _panelManager.addPanel(std::move(cameraViewPanel));
-    _panelManager.addPanel(std::make_unique<ScenePanel>(this));
-    _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
-    _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
-    _panelManager.addPanel(std::make_unique<InspectorPanel>(this));
+    if (_graphicsDevice) {
+        _panelManager.init(this->getWindow());
+        _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"),
+                               true);
+        _panelManager.mergeIconFont(
+            KE::getAssetPath("fonts/IconFont/fa-solid-900.ttf"));
+        _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
+        auto viewportPanel = std::make_unique<ViewportPanel>(this, &_camera);
+        _editorViewportPanel = viewportPanel.get();
+        _panelManager.addPanel(std::move(viewportPanel));
+        if (!customBackend) {
+            auto cameraViewPanel = std::make_unique<CameraViewPanel>(this);
+            cameraViewPanel->setOpen(false);
+            _panelManager.addPanel(std::move(cameraViewPanel));
+        }
+        _panelManager.addPanel(std::make_unique<ScenePanel>(this));
+        _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
+        _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
+        _panelManager.addPanel(std::make_unique<InspectorPanel>(this));
 
-    _graphicsDevice->setDepthTest(true);
-    _graphicsDevice->setStencilTest(false);
+        _graphicsDevice->setDepthTest(true);
+        _graphicsDevice->setStencilTest(false);
 
-    _rasterizer = std::make_unique<Rasterizer>(_graphicsDevice.get());
-    _postProcessor = std::make_unique<PostProcessor>();
-    _postProcessor->init(_graphicsDevice.get(), _width, _height);
-    _sceneCameraPreviewPostProcessor = std::make_unique<PostProcessor>();
-    _sceneCameraPreviewPostProcessor->init(_graphicsDevice.get(), _width,
-                                           _height);
-    _sceneCameraPreviewPostWidth = _width;
-    _sceneCameraPreviewPostHeight = _height;
-    _selectionOutlineProcessor = std::make_unique<SelectionOutlineProcessor>();
-    _selectionOutlineProcessor->init(_graphicsDevice.get(), _width, _height);
-    _renderer.bind(_graphicsDevice.get(), _rasterizer.get(),
-                   _postProcessor.get(), _selectionOutlineProcessor.get());
-    _renderer.setViewportSize(_width, _height);
-    _sceneRenderSystem.bind(&_renderer);
+        if (customBackend) {
+            _renderer.resizeFrame(_width, _height);
+            _renderer.profiler().bind(_profileContext, _graphicsDevice.get());
+        } else {
+            _renderer.initialize(*_graphicsDevice, _width, _height);
+        }
+        // External output (currently ovrtx) -> OpenGL window and viewport.
+        if (!_renderer.capabilities().screenPresentation)
+            _imagePresenter =
+                std::make_unique<Backend::OpenGLImagePresenter>(*_graphicsDevice);
+    } else {
+        _renderer.profiler().bind(_profileContext);
+    }
+    _renderWidth = _width;
+    _renderHeight = _height;
+    _renderer.bindSceneResources(_sceneResourceManager);
+    _sceneRenderSystem.bind(&_renderer, &_sceneResourceManager);
     registerBuiltinRenderResources();
 
     DirectionalLight defaultLight;
-    defaultLight.direction = (_upAxis == UpAxis::Z)
-                                 ? glm::normalize(glm::vec3(-0.2f, -0.5f, -1.0f))
-                                 : glm::normalize(glm::vec3(-0.5f, -1.0f, -0.2f));
+    defaultLight.direction =
+        (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(-0.2f, -0.5f, -1.0f))
+                               : glm::normalize(glm::vec3(-0.5f, -1.0f, -0.2f));
     if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
         lightPrim->setDirectionalLight(defaultLight);
     else
@@ -351,6 +408,8 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
 }
 
 void App::registerBuiltinRenderResources() {
+    if (!getRasterizer())
+        return;
     struct BuiltinShader {
         const char* name;
         const char* path;
@@ -409,7 +468,7 @@ void App::registerBuiltinRenderResources() {
         Scene::ShaderSourceResource resource;
         resource.stage = shader.stage;
         resource.language = Scene::ShaderLanguage::GLSL;
-        resource.source = _rasterizer->shaderLibrary().load(path);
+        resource.source = getRasterizer()->shaderLibrary().load(path);
         resource.entryPoint = "main";
         shaderHandles.emplace(shader.name,
                               _sceneResourceManager.registerShaderSource(
@@ -496,7 +555,8 @@ void App::registerBuiltinRenderResources() {
 void App::start(bool closeOnExit) {
     requireOwnerThread();
     if (_closed || !_initialized)
-        throw std::runtime_error("App must be initialized and open before start");
+        throw std::runtime_error(
+            "App must be initialized and open before start");
     if (_setupStarted)
         throw std::runtime_error("App.start can only be called once");
 
@@ -508,7 +568,7 @@ void App::start(bool closeOnExit) {
         _lastEventTime = -1.0;
         _fixedStepClock.reset();
         while (!shouldClose()) {
-            const double currentFrame = glfwGetTime();
+            const double currentFrame = currentTimeSeconds();
             const double deltaTime =
                 _renderVariable->lastFrameTime > 0.0
                     ? currentFrame - _renderVariable->lastFrameTime
@@ -522,7 +582,8 @@ void App::start(bool closeOnExit) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(
                         static_cast<int>((remaining - 0.001f) * 1000)));
                 }
-                glfwPollEvents();
+                if (_window.getGlfwWindow())
+                    glfwPollEvents();
                 continue;
             }
             updateAndDraw();
@@ -538,10 +599,12 @@ void App::start(bool closeOnExit) {
 
 bool App::shouldClose() {
     GLFWwindow* window = _window.getGlfwWindow();
-    return window == nullptr || glfwWindowShouldClose(window);
+    return _closed || !_initialized || _closeRequested ||
+           (window && glfwWindowShouldClose(window));
 }
 
 void App::requestClose() {
+    _closeRequested = true;
     GLFWwindow* window = _window.getGlfwWindow();
     if (window)
         glfwSetWindowShouldClose(window, true);
@@ -556,7 +619,7 @@ void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
 
 Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
                                                       float aspectOverride) {
-    if (!_graphicsDevice || !_rasterizer || width <= 1 || height <= 1)
+    if (!_graphicsDevice || !getRasterizer() || width <= 1 || height <= 1)
         return nullptr;
 
     Scene::Prim* prim = activeSceneCameraPrim();
@@ -566,45 +629,13 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
     if (!component || !component->isAttached())
         return nullptr;
 
-    if (!_sceneCameraPreviewFramebuffer) {
-        Backend::FramebufferDesc desc;
-        desc.width = width;
-        desc.height = height;
-        desc.stencil = true;
-        desc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
-        _sceneCameraPreviewFramebuffer =
-            _graphicsDevice->createFramebuffer(desc);
-    } else if (Backend::Texture* color =
-                   _sceneCameraPreviewFramebuffer->getColorTexture()) {
-        if (color->getWidth() != width || color->getHeight() != height)
-            _sceneCameraPreviewFramebuffer->resize(width, height);
-    }
-
     const float aspect = aspectOverride > 0.0f ? aspectOverride
                                                : static_cast<float>(width) /
                                                      static_cast<float>(height);
     const glm::mat4 view = component->viewMatrix();
     const glm::mat4 proj = component->projectionMatrix(aspect);
-    const RendererSettings& settings = getRenderer().settings();
-
     getRenderer().syncSceneLights(getScene());
-    getRenderer().renderSceneToFramebuffer(
-        view, proj, _sceneCameraPreviewFramebuffer.get(), width, height, true);
-    if (_sceneCameraPreviewPostProcessor) {
-        if (_sceneCameraPreviewPostWidth != width ||
-            _sceneCameraPreviewPostHeight != height) {
-            _sceneCameraPreviewPostProcessor->resize(width, height);
-            _sceneCameraPreviewPostWidth = width;
-            _sceneCameraPreviewPostHeight = height;
-        }
-        _sceneCameraPreviewPostProcessor->process(
-            _sceneCameraPreviewFramebuffer->getColorTexture(), settings.gamma,
-            settings.toneMapMode, settings.toneMapExposure, settings.bloom);
-        _graphicsDevice->setViewport(0, 0, _width, _height);
-        return _sceneCameraPreviewPostProcessor->getResult();
-    }
-
-    return _sceneCameraPreviewFramebuffer->getColorTexture();
+    return _renderer.renderCameraPreview(view, proj, width, height);
 }
 
 bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
@@ -612,18 +643,6 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
     Backend::Texture* rendered =
         renderActiveSceneCameraPreview(width, height, aspectOverride);
     if (!rendered || rendered->getWidth() <= 0 || rendered->getHeight() <= 0)
-        return false;
-
-    Backend::Framebuffer* source = nullptr;
-    if (_sceneCameraPreviewPostProcessor)
-        source = _sceneCameraPreviewPostProcessor->getOutputFramebuffer();
-    if (!source && _sceneCameraPreviewFramebuffer)
-        source = _sceneCameraPreviewFramebuffer.get();
-    if (!source)
-        return false;
-
-    Backend::Texture* color = source->getColorTexture();
-    if (!color || color->getWidth() <= 0 || color->getHeight() <= 0)
         return false;
 
     namespace fs = std::filesystem;
@@ -650,12 +669,12 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
          << std::setfill('0') << nowMs.count() << ".png";
     const fs::path outPath = outDir / name.str();
 
-    std::vector<uint8_t> pixels = source->readColorPixels(true);
-    if (pixels.empty())
+    auto image = _renderer.readCameraPreview(true);
+    if (image.pixels.empty())
         return false;
-    const bool ok = stbi_write_png(outPath.string().c_str(), color->getWidth(),
-                                   color->getHeight(), 3, pixels.data(),
-                                   color->getWidth() * 3) != 0;
+    const bool ok =
+        stbi_write_png(outPath.string().c_str(), image.width, image.height, 3,
+                       image.pixels.data(), image.width * 3) != 0;
     if (ok)
         fmt::print("Saved camera screenshot: {}\n", outPath.string());
     else
@@ -666,19 +685,21 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
 void App::processEvents() {
     requireOwnerThread();
     if (_closed || !_initialized)
-        throw std::runtime_error("App must be initialized and open before processing events");
+        throw std::runtime_error(
+            "App must be initialized and open before processing events");
     if (shouldClose())
         return;
+    if (!_window.getGlfwWindow())
+        return;
     {
-        auto scope = _graphicsDevice->profileContext()->cpuScope("event_poll");
+        auto scope = _profileContext->cpuScope("event_poll");
         glfwPollEvents();
     }
     if (shouldClose())
         return;
-    const double now = glfwGetTime();
-    _eventDeltaTime = _lastEventTime >= 0.0
-                          ? static_cast<float>(now - _lastEventTime)
-                          : 0.0f;
+    const double now = currentTimeSeconds();
+    _eventDeltaTime =
+        _lastEventTime >= 0.0 ? static_cast<float>(now - _lastEventTime) : 0.0f;
     _lastEventTime = now;
     processInput();
     processPlaybackHotkeys();
@@ -691,7 +712,8 @@ void App::drawFrame() { executeFrame(false); }
 void App::executeFrame(bool update) {
     requireOwnerThread();
     if (_closed || !_initialized)
-        throw std::runtime_error("App must be initialized and open before rendering");
+        throw std::runtime_error(
+            "App must be initialized and open before rendering");
     if (_inFrame)
         throw std::runtime_error("App cannot render a nested frame");
     struct FrameGuard {
@@ -705,9 +727,9 @@ void App::executeFrame(bool update) {
         metric = metric <= 0.0f ? valueMs : metric * 0.9f + valueMs * 0.1f;
     };
 
-    const double frameStart = glfwGetTime();
+    const double frameStart = currentTimeSeconds();
     GLFWwindow* window = _window.getGlfwWindow();
-    if (window == nullptr || glfwWindowShouldClose(window))
+    if (shouldClose())
         return;
 
     const bool automationFrame =
@@ -720,11 +742,16 @@ void App::executeFrame(bool update) {
     }
 
     auto profileFrame = getRenderer().profiler().frame(
-        _frameIndex, _graphicsDevice->getBackendType());
-    auto& profile = *_graphicsDevice->profileContext();
-    auto gpuFrame = _graphicsDevice->profileExternalScope("frame");
+        _frameIndex, _graphicsDevice
+                         ? std::make_optional(_graphicsDevice->getBackendType())
+                         : std::nullopt);
+    auto& profile = *_profileContext;
+    auto gpuFrame = _graphicsDevice
+                        ? _graphicsDevice->profileExternalScope("frame")
+                        : nullptr;
     if (profile.active()) {
-        if (_graphicsDevice->profilerCapabilities().externalTimestamps) {
+        if (_graphicsDevice &&
+            _graphicsDevice->profilerCapabilities().externalTimestamps) {
             profile.setMetadata("gpu_timing_exclusions",
                                 "present,cuda,worker_recording");
             profile.setMetadata("gpu_frame_semantics",
@@ -734,32 +761,44 @@ void App::executeFrame(bool update) {
         profile.setMetadata("height", std::to_string(_height));
         profile.setMetadata("vsync", getVSync() ? "true" : "false");
         profile.setMetadata("ui", _hideUI ? "false" : "true");
-        profile.setMetadata(
-            "window_visible",
-            glfwGetWindowAttrib(window, GLFW_VISIBLE) ? "true" : "false");
+        profile.setMetadata("window_visible",
+                            window && glfwGetWindowAttrib(window, GLFW_VISIBLE)
+                                ? "true"
+                                : "false");
         profile.setMetadata("render_hz", std::to_string(_renderHz));
         profile.setMetadata("pacing_coverage", "outside_frame_excluded");
         profile.setMetadata("frame_execution",
                             update ? "update_and_draw" : "draw_frame");
-        profile.setMetadata("tone_map_mode",
-                            std::to_string(static_cast<int>(
-                                getRenderer().settings().toneMapMode)));
-        profile.setMetadata(
-            "bloom", getRenderer().settings().bloom.enabled ? "true" : "false");
-        profile.setMetadata(
-            "scene_msaa", std::to_string(_sceneRenderTarget->getSampleCount()));
-        profile.setMetadata("shadow_distance",
-                            std::to_string(_rasterizer->getShadowDistance()));
-        profile.setMetadata("shadow_cascades",
-                            std::to_string(_rasterizer->getCascadeCount()));
-        profile.setMetadata("culling", _rasterizer->isFrustumCullingEnabled()
-                                           ? "true"
-                                           : "false");
-        profile.setMetadata("ui_layout", std::to_string(static_cast<int>(
-                                             _panelManager.getLayoutMode())));
+        if (getRasterizer()) {
+            profile.setMetadata("tone_map_mode",
+                                std::to_string(static_cast<int>(
+                                    getRenderer().settings().toneMapMode)));
+            profile.setMetadata("bloom", getRenderer().settings().bloom.enabled
+                                             ? "true"
+                                             : "false");
+            profile.setMetadata("scene_msaa",
+                                std::to_string(_renderer.sampleCount()));
+            profile.setMetadata(
+                "shadow_distance",
+                std::to_string(getRasterizer()
+                                   ? getRasterizer()->getShadowDistance()
+                                   : 0.0f));
+            profile.setMetadata(
+                "shadow_cascades",
+                std::to_string(
+                    getRasterizer() ? getRasterizer()->getCascadeCount() : 0));
+            profile.setMetadata(
+                "culling",
+                getRasterizer() && getRasterizer()->isFrustumCullingEnabled()
+                    ? "true"
+                    : "false");
+            profile.setMetadata("ui_layout",
+                                std::to_string(static_cast<int>(
+                                    _panelManager.getLayoutMode())));
+        }
     }
 
-    const double currentFrame = glfwGetTime();
+    const double currentFrame = currentTimeSeconds();
     const double frameDelta =
         _renderVariable->lastFrameTime > 0.0
             ? currentFrame - _renderVariable->lastFrameTime
@@ -770,13 +809,13 @@ void App::executeFrame(bool update) {
         profile.setMetadata("frame_interval_ms",
                             std::to_string(frameDelta * 1000.0));
 
-    const double updateStart = glfwGetTime();
+    const double updateStart = currentTimeSeconds();
     int fixedUpdateCount = 0;
     if (update) {
         processEvents();
         if (shouldClose())
             return;
-        const double now = glfwGetTime();
+        const double now = currentTimeSeconds();
         const double updateDelta =
             _lastUpdateTime >= 0.0 ? now - _lastUpdateTime : 0.0;
         _lastUpdateTime = now;
@@ -796,6 +835,13 @@ void App::executeFrame(bool update) {
         profile.setMetadata("fixed_update_count",
                             std::to_string(fixedUpdateCount));
 
+    if (_imagePresenter)
+        updateExternalRenderSize();
+    if (profile.active()) {
+        profile.setMetadata("render_width", std::to_string(_renderWidth));
+        profile.setMetadata("render_height", std::to_string(_renderHeight));
+    }
+
     const bool useSceneCameraForMainView =
         (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor) &&
         syncActiveSceneCameraView();
@@ -814,7 +860,7 @@ void App::executeFrame(bool update) {
     }
 
     // ImGui::NewFrame() must come before any ImGui widget calls
-    if (!_hideUI) {
+    if (!_hideUI || _showExitConfirmation) {
         _panelManager.preRender();
     }
 
@@ -822,110 +868,102 @@ void App::executeFrame(bool update) {
         auto scope = profile.cpuScope("simulation/pre_render");
         this->preRender();
     }
-    renderSelectedLightOverlay();
-    renderSelectedCameraOverlay();
-    const double updateEnd = glfwGetTime();
-    if (_rasterizer) {
-        auto sceneSync = profile.cpuScope("scene_sync");
-        getRenderer().syncSceneLights(getScene());
-        _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
-        sceneSync.end();
-        if (_mousePickRequested) {
-            const RayPickResult pick = selectablePick(pickMouse());
-            _mousePickRequested = false;
-            const glm::vec3 pickLookDir = useSceneCameraForMainView
-                                              ? _sceneCamera.getCameraLookDir()
-                                              : _camera.getCameraLookDir();
-            const RayPickResult interactionPick = pickAllowedForMode(
-                pick, _interaction.mode(), _externalForceDragEnabled);
-            if (_interaction.handlePick(interactionPick, pickLookDir)) {
-                onForceDragBegin(_interaction.forceDragPick(),
-                                 _interaction.forceDragPlanePoint());
-            }
-            onRayPicked(_interaction.lastPick());
-        }
-        if (_interaction.isForceDragActive()) {
-            glm::vec3 target;
-            if (_interaction.forceDragTarget(getMouseRay(), target))
-                onForceDragUpdate(_interaction.forceDragPick(), target);
-        }
-        if (_io->isPickMode) {
-            _interaction.handleHoverPick(pickMouse());
-            onRayPickHover(_interaction.lastPick());
-        }
-        Camera& shadowCamera =
-            useSceneCameraForMainView ? _sceneCamera : _camera;
-        _rasterizer->renderShadowMap(shadowCamera, _upAxis, _width, _height);
+    if (getRasterizer()) {
+        renderSelectedLightOverlay();
+        renderSelectedCameraOverlay();
     }
-    const RendererSettings& settings = getRenderer().settings();
-    const double renderStart = glfwGetTime();
-
-    const glm::vec4& color = settings.background.backgroundColor;
-    rebuildSceneClearTarget(color);
+    const double updateEnd = currentTimeSeconds();
     {
-        auto encoder = _graphicsDevice->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(
-            _sceneClearTarget.get(),
-            _graphicsDevice->profilePass("render/clear"));
-        pass->end();
-        auto commands = encoder->finish();
-        _graphicsDevice->submit(*commands);
+        auto sceneSync = profile.cpuScope("scene_sync");
+        _sceneRenderSystem.syncScene(*_scene, _sceneResourceManager);
+        _renderer.syncFrame(getScene(), _viewMatrix, _projectionMatrix);
     }
+    // Scene policy changes can move a selected object to another batch.
+    const auto& selection = _interaction.selection();
+    if (selection.hit && selection.prim &&
+        selection.transformSource == TransformSource::SceneGraph &&
+        selection.prim->hasRenderComponent() &&
+        selection.handle != InvalidHandle &&
+        _renderer.resolvePick(selection).prim != selection.prim) {
+        RayPickResult current;
+        if (_renderer.buildPrimSelection(*selection.prim, current))
+            _interaction.select(current);
+    }
+    if (_renderer.capabilities().screenPicking &&
+        (_mousePickRequested ||
+         (_io->isPickMode && !_renderer.hasPendingPick()))) {
+        _pickIsClick = _mousePickRequested;
+        _pickForceDrag = _io->forcePickRequested;
+        _pickLookDir = useSceneCameraForMainView
+                           ? _sceneCamera.getCameraLookDir()
+                           : _camera.getCameraLookDir();
+        _renderer.requestPick(_mousePickRequested ? _io->pickNDC
+                                                  : getMouseNDC());
+        _mousePickRequested = false;
+        _io->forcePickRequested = false;
+    }
+    if (!_renderer.capabilities().screenPicking) {
+        _mousePickRequested = false;
+        _io->forcePickRequested = false;
+    }
+    if (const auto response = _renderer.pollPick()) {
+        const RayPickResult mousePick =
+            _sceneRenderSystem.resolvePick(response->hit);
+        // A removed identity is stale, not an empty-space click.
+        if (!response->hit.hit ||
+            (mousePick.hit && isPickablePrim(mousePick.prim))) {
+            if (_pickIsClick) {
+                const RayPickResult pick = selectablePick(mousePick);
+                const bool forceDrag = _pickForceDrag && _io->isMouseLeftClicked;
+                const RayPickResult interactionPick =
+                    forceDrag ? pickAllowedForMode(pick, _interaction.mode(),
+                                                   _externalForceDragEnabled)
+                              : pick;
+                if (_interaction.handlePick(interactionPick, _pickLookDir,
+                                            forceDrag)) {
+                    onForceDragBegin(_interaction.forceDragPick(),
+                                     _interaction.forceDragPlanePoint());
+                }
+                onRayPicked(_interaction.lastPick());
+            }
+            if (_io->isPickMode) {
+                _interaction.handleHoverPick(mousePick);
+                onRayPickHover(_interaction.lastPick());
+            }
+        }
+    }
+    if (_interaction.isForceDragActive()) {
+        glm::vec3 target;
+        if (_interaction.forceDragTarget(getMouseRay(), target))
+            onForceDragUpdate(_interaction.forceDragPick(), target);
+    }
+    Camera& frameCamera = useSceneCameraForMainView ? _sceneCamera : _camera;
+    _renderer.prepareFrame(frameCamera, _upAxis);
+    const double renderStart = currentTimeSeconds();
 
+    _renderer.beginFrame();
     {
         auto scope = profile.cpuScope("render/scene");
-        coreRender(); // records ImGui widgets, no GL ImGui draw yet
+        coreRender();
         this->render();
     }
-    {
-        auto encoder = _graphicsDevice->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(
-            _sceneRenderTarget.get(),
-            _graphicsDevice->profilePass("render/final_resolve"));
-        pass->end();
-        auto commands = encoder->finish();
-        _graphicsDevice->submit(*commands);
-    }
-
-    Backend::Texture* finalSource = _framebuffer->getColorTexture();
-
-    if (_postProcessor && _selectionOutlineProcessor &&
-        _selectionOutlineProcessor->config().enabled &&
-        _selectionMaskFramebuffer && _rasterizer &&
-        _interaction.hasSelection() &&
-        _interaction.selection().handle != InvalidHandle &&
-        _interaction.selection().instanceIndex >= 0) {
-        _rasterizer->renderSelectionMaskPass(_interaction.selection(),
-                                             _selectionMaskFramebuffer.get(),
-                                             _width, _height);
-        _selectionOutlineProcessor->renderOutlineCompositePass(
-            _framebuffer->getColorTexture(),
-            _selectionMaskFramebuffer->getColorTexture());
-        finalSource = _selectionOutlineProcessor->getResult();
-    }
-
     const bool editorViewportMode =
         !_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor;
+    _renderer.endFrame(_renderer.capabilities().selectionOutline
+                           ? _interaction.selection()
+                           : RayPickResult{},
+                       !editorViewportMode &&
+                           _renderer.capabilities().screenPresentation);
 
-    if (_postProcessor) {
-        auto postScope = profile.cpuScope("render/post");
-        _postProcessor->process(finalSource, settings.gamma,
-                                settings.toneMapMode, settings.toneMapExposure,
-                                settings.bloom);
-        _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
+    // Copy external GPU output before the viewport samples it; no CPU readback.
+    if (_imagePresenter) {
+        const auto* image = _renderer.cudaImage();
+        if (!image)
+            throw std::runtime_error("Render backend returned no CUDA image");
+        _imagePresenter->upload(*image);
         if (!editorViewportMode) {
-            auto cpuBlit = profile.cpuScope("render/native_blit");
-            auto gpuBlit =
-                _graphicsDevice->profileExternalScope("render/native_blit");
-            _postProcessor->blitToScreen(_width, _height);
-        }
-    } else {
-        _lastPresentedFramebuffer = _framebuffer.get();
-        if (!editorViewportMode) {
-            auto cpuBlit = profile.cpuScope("render/native_blit");
-            auto gpuBlit =
-                _graphicsDevice->profileExternalScope("render/native_blit");
-            _framebuffer->blitToScreen(_width, _height);
+            auto scope = profile.cpuScope("presentation/blit");
+            _imagePresenter->present(_width, _height);
         }
     }
 
@@ -942,13 +980,17 @@ void App::executeFrame(bool update) {
     }
 
     // default framebuffer
-    if (!_hideUI) {
+    if (!_hideUI || _showExitConfirmation) {
         auto uiScope = profile.cpuScope("render/ui");
-        _panelManager.render();
-        renderShortcutHelp();
-        renderRecordingIndicator();
-        if (_panelManager.getLayoutMode() != UILayoutMode::Editor)
-            renderSelectionGizmo();
+        if (!_hideUI) {
+            _panelManager.render();
+            renderShortcutHelp();
+            renderRecordingIndicator();
+            if (!_showExitConfirmation &&
+                _panelManager.getLayoutMode() != UILayoutMode::Editor)
+                renderSelectionGizmo();
+        }
+        renderExitConfirmation();
         auto gpuUI = _graphicsDevice->profileExternalScope("render/ui");
         _panelManager.postRender();
     }
@@ -956,19 +998,20 @@ void App::executeFrame(bool update) {
         auto scope = profile.cpuScope("render/post_callback");
         this->postRender();
     }
-    if (_videoRecordingToggleRequested || _frameCaptureActive || automationFrame) {
+    if (_videoRecordingToggleRequested || _frameCaptureActive ||
+        automationFrame) {
         this->onFrameRenderedInternal();
         _videoRecordingToggleRequested = false;
     }
-    const double renderEnd = glfwGetTime();
+    const double renderEnd = currentTimeSeconds();
     // End the ordered GL interval before swap/VSync.
     gpuFrame.reset();
 
-    {
+    if (window) {
         auto scope = profile.cpuScope("present");
         glfwSwapBuffers(window);
     }
-    const double frameEnd = glfwGetTime();
+    const double frameEnd = currentTimeSeconds();
     ++_frameIndex;
 
     smoothMetric(_updateCPUTimeMs, updateEnd - updateStart);
@@ -977,7 +1020,7 @@ void App::executeFrame(bool update) {
     smoothMetric(_frameCPUTimeMs, frameEnd - frameStart);
 
     ++_fpsWindowFrames;
-    const double fpsNow = glfwGetTime();
+    const double fpsNow = currentTimeSeconds();
     const double fpsElapsed = fpsNow - _fpsWindowStart;
     if (fpsElapsed >= 1.0) {
         _measuredRenderFPS = static_cast<float>(_fpsWindowFrames / fpsElapsed);
@@ -1024,7 +1067,9 @@ bool App::isSimulationPaused() const { return _fixedStepClock.isPaused(); }
 
 void App::requestSimulationStep() { _fixedStepClock.requestSingleStep(); }
 
-bool App::consumeSimulationStep() { return _fixedStepClock.consumeSingleStep(); }
+bool App::consumeSimulationStep() {
+    return _fixedStepClock.consumeSingleStep();
+}
 
 void App::setSimulationHotkeysEnabled(bool enabled) {
     _simulationHotkeysEnabled = enabled;
@@ -1051,18 +1096,21 @@ void App::processPlaybackHotkeys() {
     _simulationStepKeyWasDown = stepKeyDown;
     if (!pausePressed && !spacePressed)
         return;
-    for (int key : {GLFW_KEY_LEFT_CONTROL, GLFW_KEY_RIGHT_CONTROL,
-                    GLFW_KEY_LEFT_ALT, GLFW_KEY_RIGHT_ALT,
-                    GLFW_KEY_LEFT_SUPER, GLFW_KEY_RIGHT_SUPER}) {
+    if (_showExitConfirmation)
+        return;
+    for (int key :
+         {GLFW_KEY_LEFT_CONTROL, GLFW_KEY_RIGHT_CONTROL, GLFW_KEY_LEFT_ALT,
+          GLFW_KEY_RIGHT_ALT, GLFW_KEY_LEFT_SUPER, GLFW_KEY_RIGHT_SUPER}) {
         if (glfwGetKey(window, key) == GLFW_PRESS)
             return;
     }
 
-    // Consume key edges even while editing, so held keys do not fire on focus loss.
+    // Consume key edges even while editing, so held keys do not fire on focus
+    // loss.
     if (!_hideUI && ImGui::GetCurrentContext()) {
         if (isKeyboardInputCaptured() || ImGui::IsAnyItemActive() ||
             ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId |
-                                          ImGuiPopupFlags_AnyPopupLevel))
+                                            ImGuiPopupFlags_AnyPopupLevel))
             return;
     }
     if (_playbackToggle) {
@@ -1084,32 +1132,27 @@ double App::getDroppedWallTime() const {
     return _fixedStepClock.getDroppedWallTime();
 }
 
-std::vector<uint8_t> App::readRgbPixels(bool flipY) {
+RenderImage App::readImage(bool flipY) {
     requireOwnerThread();
-    if (!_lastPresentedFramebuffer)
-        throw std::runtime_error("No completed scene frame is available");
-    return _lastPresentedFramebuffer->readColorPixels(flipY);
+    return _renderer.readImage(flipY);
+}
+
+std::vector<uint8_t> App::readRgbPixels(bool flipY) {
+    return readImage(flipY).pixels;
 }
 
 std::vector<uint8_t> App::readRgbPixelsResized(int width, int height,
                                                bool flipY) {
     requireOwnerThread();
-    if (width <= 0 || height <= 0)
-        throw std::invalid_argument("Capture width and height must be positive");
-    if (!_lastPresentedFramebuffer)
-        throw std::runtime_error("No completed scene frame is available");
-    return _lastPresentedFramebuffer->readColorPixelsResized(width, height, flipY);
+    return _renderer.readImageResized(width, height, flipY).pixels;
 }
 
 bool App::writePixelsPNG(const std::string& path, bool flipY) {
-    auto pixels = this->readRgbPixels(flipY);
-    if (pixels.empty())
+    auto image = readImage(flipY);
+    if (image.pixels.empty())
         return false;
-    const auto* colorTexture = _lastPresentedFramebuffer->getColorTexture();
-    // If fail, stbi_write_png returns 0
-    return stbi_write_png(path.c_str(), colorTexture->getWidth(),
-                          colorTexture->getHeight(), 3, pixels.data(),
-                          colorTexture->getWidth() * 3) != 0;
+    return stbi_write_png(path.c_str(), image.width, image.height, 3,
+                          image.pixels.data(), image.width * 3) != 0;
 }
 
 bool App::writeScreenshotFrame() {
@@ -1204,8 +1247,8 @@ void App::renderShortcutHelp() {
         shortcut("Mouse wheel", "Dolly Camera");
 
         section("Interaction");
-        shortcut("Shift + Left click", "Select Object");
-        shortcut("Shift + Left drag", "Force Drag");
+        shortcut("Left click", "Select / Clear Selection");
+        shortcut("Shift + Left drag", "Apply Force (Force Mode)");
         shortcut("Edit mode gizmo", "Transform Object");
         shortcut("Escape", "Cancel / Close");
 
@@ -1232,9 +1275,32 @@ void App::renderShortcutHelp() {
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 
 Backend::Texture* App::getPresentedTexture() {
-    return _lastPresentedFramebuffer
-               ? _lastPresentedFramebuffer->getColorTexture()
-               : nullptr;
+    return _imagePresenter ? _imagePresenter->texture()
+                           : _renderer.presentedTexture();
+}
+
+void App::updateExternalRenderSize() {
+    int width = _width, height = _height;
+    if (!_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor) {
+        if (!_editorViewportPanel || !_editorViewportPanel->isOpen())
+            return;
+        // Use the previous UI layout; resize only before rendering the next frame.
+        const ImVec2 size = _editorViewportPanel->contentSize();
+        if (size.x <= 1.0f || size.y <= 1.0f ||
+            _logicalWidth <= 0 || _logicalHeight <= 0)
+            return;
+        width = std::max(1, static_cast<int>(std::lround(
+                                size.x * _width / _logicalWidth)));
+        height = std::max(1, static_cast<int>(std::lround(
+                                 size.y * _height / _logicalHeight)));
+    }
+    if (width == _renderWidth && height == _renderHeight)
+        return;
+    _renderer.resizeFrame(width, height);
+    _renderWidth = width;
+    _renderHeight = height;
+    _camera.updateProjMatrix(width, height);
+    _sceneCamera.updateProjMatrix(width, height);
 }
 
 void App::setCameraMoveSpeed(float speed) {
@@ -1242,113 +1308,14 @@ void App::setCameraMoveSpeed(float speed) {
 }
 
 void App::coreRender() {
-    if (_rasterizer) {
-        _rasterizer->setWireframeEnabled(_renderWireframe);
-        getRenderer().applyBackgroundSettings();
-        _rasterizer->render(_viewMatrix, _projectionMatrix,
-                            _sceneDrawTarget.get());
-    }
+    if (_initialized)
+        _renderer.renderScene(_viewMatrix, _projectionMatrix, _renderWireframe);
 }
 
-void App::rebuildSceneRenderTarget() {
-    if (!_graphicsDevice || !_framebuffer || _width <= 0 || _height <= 0)
-        return;
-
-    _sceneRenderTarget.reset();
-    _sceneDrawTarget.reset();
-    _sceneClearTarget.reset();
-    _sceneMsaaDepthStencilView.reset();
-    _sceneResolveColorView.reset();
-    _sceneMsaaColorView.reset();
-    _sceneMsaaDepthStencil.reset();
-    _sceneMsaaColor.reset();
-
-    Backend::TextureResourceDesc colorDesc;
-    colorDesc.extent = {static_cast<uint32_t>(_width),
-                        static_cast<uint32_t>(_height), 1};
-    colorDesc.format = Backend::TextureFormat::RGBA16Float;
-    colorDesc.usage = Backend::TextureUsage::RenderAttachment;
-    colorDesc.sampleCount = 4;
-    colorDesc.label = "main_scene_msaa_color";
-    _sceneMsaaColor = _graphicsDevice->createTexture(colorDesc);
-
-    Backend::TextureResourceDesc depthDesc;
-    depthDesc.extent = colorDesc.extent;
-    depthDesc.format = Backend::TextureFormat::Depth24Stencil8;
-    depthDesc.usage = Backend::TextureUsage::RenderAttachment;
-    depthDesc.sampleCount = 4;
-    depthDesc.label = "main_scene_msaa_depth_stencil";
-    _sceneMsaaDepthStencil = _graphicsDevice->createTexture(depthDesc);
-
-    Backend::TextureViewDesc colorViewDesc;
-    colorViewDesc.format = Backend::TextureFormat::RGBA16Float;
-    colorViewDesc.label = "main_scene_msaa_color_view";
-    _sceneMsaaColorView = _graphicsDevice->createTextureView(
-        _sceneMsaaColor.get(), colorViewDesc);
-
-    Backend::TextureViewDesc resolveViewDesc;
-    resolveViewDesc.format = Backend::TextureFormat::RGBA16Float;
-    resolveViewDesc.label = "main_scene_resolve_color_view";
-    _sceneResolveColorView = _graphicsDevice->createTextureView(
-        _framebuffer->getColorTexture(), resolveViewDesc);
-
-    Backend::TextureViewDesc depthViewDesc;
-    depthViewDesc.format = Backend::TextureFormat::Depth24Stencil8;
-    depthViewDesc.aspect = Backend::TextureAspect::All;
-    depthViewDesc.label = "main_scene_msaa_depth_stencil_view";
-    _sceneMsaaDepthStencilView = _graphicsDevice->createTextureView(
-        _sceneMsaaDepthStencil.get(), depthViewDesc);
-
-    Backend::RenderPassDesc passDesc;
-    passDesc.label = "main_scene_msaa_pass";
-    passDesc.colorAttachments = {{_sceneMsaaColorView.get(),
-                                  _sceneResolveColorView.get(),
-                                  Backend::LoadOp::Load,
-                                  Backend::StoreOp::Store,
-                                  {}}};
-    passDesc.depthStencilAttachment =
-        Backend::DepthStencilAttachmentDesc{_sceneMsaaDepthStencilView.get(),
-                                            Backend::LoadOp::Load,
-                                            Backend::StoreOp::Store,
-                                            1.0f,
-                                            Backend::LoadOp::Load,
-                                            Backend::StoreOp::Store,
-                                            0};
-    _sceneRenderTarget = _graphicsDevice->createRenderTarget(passDesc);
-
-    passDesc.label = "main_scene_msaa_draw_pass";
-    passDesc.colorAttachments[0].resolveTarget = nullptr;
-    _sceneDrawTarget = _graphicsDevice->createRenderTarget(passDesc);
-}
+void App::rebuildSceneRenderTarget() { _renderer.rebuildSceneRenderTarget(); }
 
 void App::rebuildSceneClearTarget(const glm::vec4& clearColor) {
-    if (!_sceneMsaaColorView || !_sceneMsaaDepthStencilView)
-        return;
-    if (_sceneClearTarget) {
-        const auto& current =
-            _sceneClearTarget->getDesc().colorAttachments.front().clearValue;
-        if (current.r == clearColor.r && current.g == clearColor.g &&
-            current.b == clearColor.b && current.a == clearColor.a)
-            return;
-    }
-
-    Backend::RenderPassDesc passDesc;
-    passDesc.label = "main_scene_clear_pass";
-    passDesc.colorAttachments = {
-        {_sceneMsaaColorView.get(),
-         nullptr,
-         Backend::LoadOp::Clear,
-         Backend::StoreOp::Store,
-         {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
-    passDesc.depthStencilAttachment =
-        Backend::DepthStencilAttachmentDesc{_sceneMsaaDepthStencilView.get(),
-                                            Backend::LoadOp::Clear,
-                                            Backend::StoreOp::Store,
-                                            1.0f,
-                                            Backend::LoadOp::Clear,
-                                            Backend::StoreOp::Store,
-                                            0};
-    _sceneClearTarget = _graphicsDevice->createRenderTarget(passDesc);
+    _renderer.rebuildSceneClearTarget(clearColor);
 }
 
 Scene::Prim* App::defaultDirectionalLightPrim() {
@@ -1390,12 +1357,20 @@ bool App::syncActiveSceneCameraView() {
     return true;
 }
 
-void App::checkError() { _graphicsDevice->checkError(); }
+void App::checkError() {
+    if (!_graphicsDevice)
+        throw std::runtime_error(
+            "Graphics device checks require the Native renderer");
+    _graphicsDevice->checkError();
+}
 
 RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
                                     TransformSource transformSource) {
     if (!prim)
         return InvalidHandle;
+    if (!getRasterizer())
+        throw std::runtime_error("Batch handles require Native rendering; use "
+                                 "SceneRenderSystem registration");
     auto component =
         _sceneRenderSystem.addRenderable(*prim, material, transformSource);
     _sceneResourceManager.invalidateUsageCache();
@@ -1795,134 +1770,106 @@ void App::updateRenderableSkinningMatrices(RenderableHandle handle,
 }
 
 void App::logDebugLines(const std::string& path,
-                        const std::vector<glm::vec3>& starts,
-                        const std::vector<glm::vec3>& ends,
-                        const std::vector<glm::vec4>& colors, float width,
-                        bool hidden, bool overlay) {
-    if (_rasterizer)
-        _rasterizer->logDebugLines(path, starts, ends, colors, width, hidden,
-                                 overlay);
+                       const std::vector<glm::vec3>& starts,
+                       const std::vector<glm::vec3>& ends,
+                       const std::vector<glm::vec4>& colors, float width,
+                       bool hidden, bool overlay) {
+    _renderer.debugDraw().logLines(path, starts, ends, colors, width, hidden,
+                                  overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::mat4& transform,
-                       float length, float width, bool hidden, bool overlay) {
-    if (_rasterizer)
-        _rasterizer->logDebugAxes(path, transform, length, width, hidden, overlay);
+                      float length, float width, bool hidden, bool overlay) {
+    _renderer.debugDraw().logAxes(path, transform, length, width, hidden,
+                                 overlay);
 }
 
 void App::logDebugAxes(const std::string& path, const glm::vec3& origin,
-                       const glm::vec3& xAxis, const glm::vec3& yAxis,
-                       const glm::vec3& zAxis, float length, float width,
-                       bool hidden, bool overlay) {
-    if (_rasterizer)
-        _rasterizer->logDebugAxes(path, origin, xAxis, yAxis, zAxis, length,
-                                  width, hidden, overlay);
+                      const glm::vec3& xAxis, const glm::vec3& yAxis,
+                      const glm::vec3& zAxis, float length, float width,
+                      bool hidden, bool overlay) {
+    _renderer.debugDraw().logAxes(path, origin, xAxis, yAxis, zAxis, length,
+                                 width, hidden, overlay);
 }
 
 void App::clearDebugLines(const std::string& path) {
-    if (_rasterizer)
-        _rasterizer->clearDebugLines(path);
+    _renderer.debugDraw().clearLines(path);
 }
 
 void App::logDebugPoints(const std::string& path,
-                         const std::vector<glm::vec3>& points,
-                         const std::vector<glm::vec4>& colors, float size,
-                         bool hidden, bool overlay) {
-    if (_rasterizer)
-        _rasterizer->logDebugPoints(path, points, colors, size, hidden,
-                                    overlay);
+                        const std::vector<glm::vec3>& points,
+                        const std::vector<glm::vec4>& colors, float size,
+                        bool hidden, bool overlay) {
+    _renderer.debugDraw().logPoints(path, points, colors, size, hidden,
+                                   overlay);
 }
 
 void App::clearDebugPoints(const std::string& path) {
-    if (_rasterizer)
-        _rasterizer->clearDebugPoints(path);
+    _renderer.debugDraw().clearPoints(path);
 }
 
 void App::setDebugVisible(const std::string& path, bool visible) {
-    if (_rasterizer)
-        _rasterizer->setDebugVisible(path, visible);
+    _renderer.debugDraw().setVisible(path, visible);
 }
 
 void App::removeDebug(const std::string& path) {
-    if (_rasterizer)
-        _rasterizer->removeDebug(path);
+    _renderer.debugDraw().remove(path);
 }
 
-void App::removeAllDebug() {
-    if (_rasterizer)
-        _rasterizer->removeAllDebug();
-}
+void App::removeAllDebug() { _renderer.debugDraw().removeAll(); }
 
 void App::setWorldText(const std::string& path, const WorldTextDesc& desc) {
-    if (_rasterizer)
-        _rasterizer->setWorldText(path, desc);
+    _renderer.textDraw().setWorldText(path, desc);
 }
 
 void App::setWorldTextString(const std::string& path, std::string text) {
-    if (_rasterizer)
-        _rasterizer->setWorldTextString(path, std::move(text));
+    _renderer.textDraw().setWorldString(path, std::move(text));
 }
 
 void App::setWorldTextPosition(const std::string& path,
                                const glm::vec3& position) {
-    if (_rasterizer)
-        _rasterizer->setWorldTextPosition(path, position);
+    _renderer.textDraw().setWorldPosition(path, position);
 }
 
 void App::setWorldTextHidden(const std::string& path, bool hidden) {
-    if (_rasterizer)
-        _rasterizer->setWorldTextHidden(path, hidden);
+    _renderer.textDraw().setWorldHidden(path, hidden);
 }
 
 void App::removeWorldText(const std::string& path) {
-    if (_rasterizer)
-        _rasterizer->removeWorldText(path);
+    _renderer.textDraw().removeWorldText(path);
 }
 
-void App::clearWorldText() {
-    if (_rasterizer)
-        _rasterizer->clearWorldText();
-}
+void App::clearWorldText() { _renderer.textDraw().clearWorldText(); }
 
 void App::setScreenText(const std::string& path, const ScreenTextDesc& desc) {
-    if (_rasterizer)
-        _rasterizer->setScreenText(path, desc);
+    _renderer.textDraw().setScreenText(path, desc);
 }
 
 void App::setScreenTextString(const std::string& path, std::string text) {
-    if (_rasterizer)
-        _rasterizer->setScreenTextString(path, std::move(text));
+    _renderer.textDraw().setScreenString(path, std::move(text));
 }
 
 void App::setScreenTextPosition(const std::string& path,
                                 const glm::vec2& position) {
-    if (_rasterizer)
-        _rasterizer->setScreenTextPosition(path, position);
+    _renderer.textDraw().setScreenPosition(path, position);
 }
 
 void App::setScreenTextHidden(const std::string& path, bool hidden) {
-    if (_rasterizer)
-        _rasterizer->setScreenTextHidden(path, hidden);
+    _renderer.textDraw().setScreenHidden(path, hidden);
 }
 
 void App::removeScreenText(const std::string& path) {
-    if (_rasterizer)
-        _rasterizer->removeScreenText(path);
+    _renderer.textDraw().removeScreenText(path);
 }
 
-void App::clearScreenText() {
-    if (_rasterizer)
-        _rasterizer->clearScreenText();
-}
+void App::clearScreenText() { _renderer.textDraw().clearScreenText(); }
 
 void App::setSkybox(const std::string& path) {
-    if (_rasterizer)
-        _rasterizer->setSkybox(path, _upAxis);
+    _renderer.native().rasterizer().setSkybox(path, _upAxis);
 }
 
 void App::setSkybox(const std::vector<std::string>& paths) {
-    if (_rasterizer)
-        _rasterizer->setSkybox(paths, _upAxis);
+    _renderer.native().rasterizer().setSkybox(paths, _upAxis);
 }
 
 //////////////// Call backs
@@ -1936,24 +1883,13 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glfwGetWindowSize(window, &_logicalWidth, &_logicalHeight);
     _uiScale.update(window);
     _graphicsDevice->setViewport(0, 0, _width, _height);
-    _camera.updateProjMatrix(_width, _height);
-    _sceneCamera.updateProjMatrix(_width, _height);
-    if (_framebuffer) {
-        _framebuffer->resize(_width, _height);
-        rebuildSceneRenderTarget();
+    if (!_imagePresenter) {
+        _camera.updateProjMatrix(_width, _height);
+        _sceneCamera.updateProjMatrix(_width, _height);
+        _renderer.resizeFrame(_width, _height);
+        _renderWidth = _width;
+        _renderHeight = _height;
     }
-    if (_selectionMaskFramebuffer)
-        _selectionMaskFramebuffer->resize(_width, _height);
-    if (_postProcessor)
-        _postProcessor->resize(_width, _height);
-    if (_sceneCameraPreviewPostProcessor) {
-        _sceneCameraPreviewPostProcessor->resize(_width, _height);
-        _sceneCameraPreviewPostWidth = _width;
-        _sceneCameraPreviewPostHeight = _height;
-    }
-    if (_selectionOutlineProcessor)
-        _selectionOutlineProcessor->resize(_width, _height);
-    _renderer.setViewportSize(_width, _height);
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
@@ -1983,6 +1919,13 @@ void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
     _io->mouseX = xpos;
     _io->mouseY = ypos;
+    if (_io->leftMouseAction == IO::LeftMouseAction::Select) {
+        const double dx = xpos - _io->pressMouseX;
+        const double dy = ypos - _io->pressMouseY;
+        // Logical pixels keep click tolerance independent of framebuffer DPI.
+        if (dx * dx + dy * dy > 16.0)
+            _io->leftMouseAction = IO::LeftMouseAction::Camera;
+    }
     if (_io->isMouseLeftClicked == true || _io->isMouseMiddleClicked == true ||
         _io->isMouseRightClicked == true) {
         _io->deltaMouseX += _io->mouseX - _io->prevMouseX;
@@ -1998,16 +1941,44 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
     _io->deltaMouseY = 0;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         _io->isMouseLeftClicked = true;
+        _io->pressMouseX = _io->mouseX;
+        _io->pressMouseY = _io->mouseY;
+        _io->leftMouseAction = IO::LeftMouseAction::None;
         const bool shiftPressed =
             (mods & GLFW_MOD_SHIFT) != 0 ||
             glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-        if (!shouldBlockMouseInput() && shiftPressed) {
-            _mousePickRequested = true;
-            _io->isPickMode = true;
+        if (!shouldBlockMouseInput()) {
+            if (!_hideUI && _interaction.hasEditableSelection() &&
+                (_gizmo.isOver() || _gizmo.isUsing())) {
+                _io->leftMouseAction = IO::LeftMouseAction::Gizmo;
+            } else if (shiftPressed &&
+                       _interaction.mode() == InteractionMode::Force) {
+                _io->leftMouseAction = IO::LeftMouseAction::Force;
+                _io->forcePickRequested = true;
+                _io->pickNDC = getMouseNDC();
+                _mousePickRequested = true;
+                _io->isPickMode = true;
+            } else if (!shiftPressed &&
+                       !(mods &
+                         (GLFW_MOD_CONTROL | GLFW_MOD_ALT | GLFW_MOD_SUPER))) {
+                _io->leftMouseAction = IO::LeftMouseAction::Select;
+            }
         }
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        const bool gizmoCaptured = !_hideUI &&
+                                   _interaction.hasEditableSelection() &&
+                                   (_gizmo.isOver() || _gizmo.isUsing());
+        if (_io->leftMouseAction == IO::LeftMouseAction::Select &&
+            !shouldBlockMouseInput() && !gizmoCaptured) {
+            _io->pickNDC = getMouseNDC();
+            _mousePickRequested = true;
+        }
+        // A press and release between frames must not leave a force drag
+        // active.
+        _io->forcePickRequested = false;
+        _io->leftMouseAction = IO::LeftMouseAction::None;
         _io->isMouseLeftClicked = false;
         _io->isPickMode = false;
         if (_interaction.isForceDragActive()) {
@@ -2025,6 +1996,45 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
         _io->isMouseRightClicked = false;
 }
 
+void App::renderExitConfirmation() {
+    if (!_showExitConfirmation)
+        return;
+
+    constexpr const char* title = "Exit Confirmation";
+    const bool opening = !ImGui::IsPopupOpen(title);
+    if (opening)
+        ImGui::OpenPopup(title);
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
+                            ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal(title, nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("Are you sure you want to exit?");
+        ImGui::Spacing();
+        const float buttonWidth = 100.0f;
+        const float buttonsWidth =
+            buttonWidth * 2 + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetCursorPosX(
+            ImGui::GetCursorPosX() +
+            std::max(0.0f,
+                     (ImGui::GetContentRegionAvail().x - buttonsWidth) * 0.5f));
+        const bool yes = ImGui::Button("Yes", ImVec2(buttonWidth, 0));
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        const bool no = ImGui::Button("No", ImVec2(buttonWidth, 0));
+        const bool enter = ImGui::IsKeyPressed(ImGuiKey_Enter, false) ||
+                           ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false);
+        const bool escape =
+            !opening && ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+        if (yes || enter || no || escape) {
+            ImGui::CloseCurrentPopup();
+            _showExitConfirmation = false;
+            if (yes || enter)
+                requestClose();
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void App::processInput() {
     // Capture accumulated deltas, reset for next frame.
     double deltaMouseX = _io->deltaMouseX;
@@ -2033,6 +2043,11 @@ void App::processInput() {
     _io->deltaMouseY = 0;
 
     GLFWwindow* window = this->getWindow();
+    const bool escPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+    const bool escapePressed = escPressed && !_io->isEscKeyPressed;
+    _io->isEscKeyPressed = escPressed;
+    if (_showExitConfirmation)
+        return;
 
     // Hide UI
     bool hPressed = glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS;
@@ -2066,12 +2081,38 @@ void App::processInput() {
         _io->isPickMode = false;
     }
 
+    const bool uiOwnsEscape =
+        !_hideUI &&
+        (ImGui::GetIO().WantTextInput || ImGui::IsAnyItemActive() ||
+         ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId |
+                                         ImGuiPopupFlags_AnyPopupLevel));
+    if (escapePressed && !uiOwnsEscape) {
+        _renderer.cancelPick();
+        _mousePickRequested = false;
+        _io->leftMouseAction = IO::LeftMouseAction::None;
+        _io->isPickMode = false;
+        bool endedForceDrag = false;
+        if (_interaction.cancelActiveInteraction(endedForceDrag)) {
+            if (endedForceDrag)
+                onForceDragEnd();
+        } else {
+            if (_hideUI) {
+                // Hidden UI has no ImGui frames to consume queued key events.
+                auto& io = ImGui::GetIO();
+                io.ClearEventsQueue();
+                io.ClearInputKeys();
+                io.ClearInputMouse();
+            }
+            _showExitConfirmation = true;
+        }
+        return;
+    }
+
     // Let ImGui own mouse input except over the editor viewport image.
     if (shouldBlockMouseInput()) {
         return;
     }
-    float cameraSpeed =
-        static_cast<float>(_cameraMoveSpeed * _eventDeltaTime);
+    float cameraSpeed = static_cast<float>(_cameraMoveSpeed * _eventDeltaTime);
     float scaleDistance = _camera.getCamToLookDistance();
     glm::vec3 cameraPos = _camera.getCameraPos();
     glm::vec3 cameraFront = _camera.getCameraLookDir();
@@ -2079,23 +2120,12 @@ void App::processInput() {
     glm::vec3 cameraRight = _camera.getCameraRightDir();
     glm::vec3 globalUp = _camera.getUpVector();
 
-    bool escPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
-    if (escPressed && !_io->isEscKeyPressed) {
-        bool endedForceDrag = false;
-        if (_interaction.cancelActiveInteraction(endedForceDrag)) {
-            if (endedForceDrag)
-                onForceDragEnd();
-        } else {
-            requestClose();
-        }
-    }
-    _io->isEscKeyPressed = escPressed;
-
-    if (_gizmo.isUsing())
+    if (_gizmo.isUsing() || _io->leftMouseAction == IO::LeftMouseAction::Gizmo)
         return;
 
     // look at specifc target or // look at forward direction
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             glm::vec3 nextCameraPos = cameraPos + cameraSpeed * cameraUp;
             glm::vec3 nextCameraFront =
@@ -2116,7 +2146,8 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             glm::vec3 nextCameraPos = cameraPos - cameraSpeed * cameraUp;
             glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos;
@@ -2133,7 +2164,8 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             cameraPos -= cameraSpeed * cameraRight;
         } else {
@@ -2145,7 +2177,8 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled &&
+        glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             cameraPos += cameraSpeed * cameraRight;
         } else {
@@ -2158,7 +2191,8 @@ void App::processInput() {
         _camera.setCameraPos(cameraPos);
     }
 
-    if (_io->isMouseLeftClicked && !_io->isSHIFTKeyPressed) {
+    if (_io->leftMouseAction == IO::LeftMouseAction::Camera &&
+        !_io->isSHIFTKeyPressed) {
         // Orbit cam
         float dx = deltaMouseX * 0.1f;
         float dy = deltaMouseY * 0.1f;
@@ -2243,6 +2277,10 @@ bool App::isEditorViewportInputActive() const {
 }
 
 bool App::shouldBlockMouseInput() const {
+    if (_showExitConfirmation)
+        return true;
+    if (_hideUI)
+        return false;
     if (_editorViewportPanel &&
         _editorViewportPanel->viewGuizmoCapturesMouse()) {
         return true;
@@ -2251,6 +2289,8 @@ bool App::shouldBlockMouseInput() const {
 }
 
 bool App::isKeyboardInputCaptured() const {
+    if (_showExitConfirmation)
+        return true;
     if (_hideUI || !ImGui::GetCurrentContext())
         return false;
     const auto& io = ImGui::GetIO();
@@ -2300,15 +2340,17 @@ Geometry::Ray App::getMouseRay() {
     return Geometry::Ray(worldNear, glm::normalize(worldFar - worldNear));
 }
 
-RayPickResult App::rayPick(const Geometry::Ray& ray) const {
-    RayPickResult result =
-        _rasterizer ? _rasterizer->rayPick(ray) : RayPickResult{};
+RayPickResult App::raycast(const Geometry::Ray& ray) const {
+    RayPickResult result = _sceneRenderSystem.raycast(ray);
     if (result.hit && result.prim && !isPickablePrim(result.prim))
         return RayPickResult{};
     return result;
 }
 
-RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
+RayPickResult App::pickMouse() {
+    return _renderer.native().rasterizer().pickScreen(
+        getMouseNDC(), _viewMatrix, _projectionMatrix, _width, _height);
+}
 
 bool App::setActiveSceneCamera(Scene::Prim* prim) {
     if (!prim || prim->getType() != Scene::PrimType::Camera)
@@ -2325,17 +2367,13 @@ bool App::setActiveSceneCamera(Scene::Prim* prim) {
 void App::clearActiveSceneCamera() { _activeSceneCameraPath.clear(); }
 
 void App::selectPrim(Scene::Prim* prim) {
+    _renderer.cancelPick();
     if (!prim || !isSelectablePrim(prim)) {
         _interaction.clearSelection();
         return;
     }
 
-    RayPickResult selection;
-    if (!_rasterizer || !_rasterizer->buildPrimSelection(prim, selection)) {
-        selection.hit = true;
-        selection.transformSource = TransformSource::SceneGraph;
-        selection.prim = prim;
-    }
+    const RayPickResult selection = _sceneRenderSystem.buildPrimSelection(*prim);
     _interaction.setLastPick(selection);
     _interaction.select(selection);
     onRayPicked(selection);
@@ -2377,7 +2415,7 @@ bool App::setPickTransform(const RayPickResult& result,
 }
 
 void App::renderSelectedLightOverlay() {
-    if (_hideUI || !_rasterizer || !_interaction.hasSelection()) {
+    if (_hideUI || !getRasterizer() || !_interaction.hasSelection()) {
         clearDebugLines(SelectedLightOverlayPath);
         return;
     }
@@ -2406,23 +2444,23 @@ void App::renderSelectedLightOverlay() {
 
     switch (component->type()) {
     case Scene::LightType::Directional: {
-        const Scene::DirectionalLight light = evaluateWorldLight(
-            component->directionalLight(), world);
+        const Scene::DirectionalLight light =
+            evaluateWorldLight(component->directionalLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, origin, 0.15f, 24);
         Scene::DebugGeometry::appendDirectionArrowWire(starts, ends, origin,
                                                        light.direction, 2.0f);
         break;
     }
     case Scene::LightType::Point: {
-        const Scene::PointLight light = evaluateWorldLight(
-            component->pointLight(), world);
+        const Scene::PointLight light =
+            evaluateWorldLight(component->pointLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, light.position,
                                                light.range);
         break;
     }
     case Scene::LightType::Spot: {
-        const Scene::SpotLight light = evaluateWorldLight(
-            component->spotLight(), world);
+        const Scene::SpotLight light =
+            evaluateWorldLight(component->spotLight(), world);
         Scene::DebugGeometry::appendSphereWire(starts, ends, origin, 0.08f, 16);
         Scene::DebugGeometry::appendConeWire(starts, ends, light.position,
                                              light.direction, light.range,
@@ -2444,8 +2482,8 @@ void App::renderSelectedLightOverlay() {
         clearDebugLines(SelectedLightOverlayPath);
         return;
     }
-    _rasterizer->logDebugLines(SelectedLightOverlayPath, starts, ends, {color},
-                               1.5f, false, true);
+    getRasterizer()->logDebugLines(SelectedLightOverlayPath, starts, ends,
+                                   {color}, 1.5f, false, true);
 }
 
 void App::renderSelectedCameraOverlay() {
@@ -2525,7 +2563,8 @@ void App::renderSelectionGizmo() {
 
 void App::renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                                const ImVec2& rectSize, ImDrawList* drawList) {
-    if (_hideUI || !_interaction.hasEditableSelection() ||
+    if (_hideUI || _showExitConfirmation ||
+        !_interaction.hasEditableSelection() ||
         (_editorViewportPanel &&
          _editorViewportPanel->viewGuizmoCapturesMouse()))
         return;
@@ -2538,6 +2577,8 @@ void App::renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                                    rectSize.x, rectSize.y, drawList)) {
         setPickTransform(_interaction.selection(), transform);
     }
+    if (_io->isMouseLeftClicked && _gizmo.isUsing())
+        _io->leftMouseAction = IO::LeftMouseAction::Gizmo;
 }
 
 } // namespace KE

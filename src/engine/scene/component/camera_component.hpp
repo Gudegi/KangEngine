@@ -14,8 +14,7 @@ enum class CameraProjectionType {
     Orthographic,
 };
 
-// Runtime authored camera state attached to a Camera prim. Prim owns
-// identity/path/transform; CameraComponent owns projection settings.
+// Owns camera projection settings; position and orientation come from Prim transforms.
 class CameraComponent : public ComponentBase {
   public:
     CameraProjectionType projectionType() const;

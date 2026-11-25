@@ -4,6 +4,7 @@
 #include "engine/graphics/renderer/mesh_instancer.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/shader_library.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
 #include "utils/asset_path.hpp"
 
 #include <array>
@@ -84,8 +85,9 @@ void ForwardPass::registerPipeline(RasterPipelineKey key,
     }
 }
 
-Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
-                                                    bool transparent) {
+Backend::GraphicsPipeline*
+ForwardPass::pipelineFor(const MeshInstancer& inst, bool transparent,
+                         const Scene::RenderMaterialData& input) {
     RasterPipelineKey key;
     if (!_passSignature)
         throw std::logic_error(
@@ -96,11 +98,10 @@ Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
     key.transparent = transparent;
     key.doubleSided = inst.isDoubleSided();
 
-    const Material* material = inst.material();
-    if (material->isUnlit()) {
+    if (input.unlit) {
         key.family = RasterPipelineFamily::UnlitColor;
-    } else if (material->shadingModel() == MaterialShadingModel::Color) {
-        switch (material->colorStyle()) {
+    } else if (input.shadingModel == MaterialShadingModel::Color) {
+        switch (input.colorStyle) {
         case ColorStyle::Textured:
             key.family = RasterPipelineFamily::TexturedColor;
             break;
@@ -117,9 +118,9 @@ Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
             key.family = RasterPipelineFamily::Color;
             break;
         }
-    } else if (material->shadingModel() == MaterialShadingModel::Phong) {
+    } else if (input.shadingModel == MaterialShadingModel::Phong) {
         key.family = RasterPipelineFamily::Phong;
-    } else if (material->shadingModel() == MaterialShadingModel::PBR) {
+    } else if (input.shadingModel == MaterialShadingModel::PBR) {
         key.family = RasterPipelineFamily::Pbr;
     } else {
         key.family = RasterPipelineFamily::Color;
@@ -168,7 +169,8 @@ void ForwardPass::configureMaterialBindings(
 
 Backend::BindGroup*
 ForwardPass::updatePhongMaterial(PhongMaterial& material,
-                                 const MeshInstancer& inst) {
+                                 const MeshInstancer& inst,
+                                 const Scene::RenderMaterialData& input) {
     struct alignas(16) Params {
         glm::vec4 ambientShininess;
         glm::vec4 diffuseAlphaCutoff;
@@ -186,9 +188,9 @@ ForwardPass::updatePhongMaterial(PhongMaterial& material,
         resources.params = _device->createBuffer(desc);
     }
     const Params params{
-        glm::vec4(material.ambient, material.shininess),
-        glm::vec4(material.diffuse, inst.alphaCutoff()),
-        glm::vec4(material.specular,
+        glm::vec4(input.ambient, input.shininess),
+        glm::vec4(glm::vec3(input.baseColor), inst.alphaCutoff()),
+        glm::vec4(input.specular,
                   static_cast<float>(static_cast<int>(inst.alphaMode()))),
         glm::vec4(material.diffuseMap ? 1.0f : 0.0f,
                   material.specularMap ? 1.0f : 0.0f,
@@ -229,8 +231,9 @@ ForwardPass::updatePhongMaterial(PhongMaterial& material,
     return resources.bindGroup.get();
 }
 
-Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
-                                                   const MeshInstancer& inst) {
+Backend::BindGroup*
+ForwardPass::updatePbrMaterial(PBRMaterial& material, const MeshInstancer& inst,
+                               const Scene::RenderMaterialData& input) {
     struct alignas(16) Params {
         glm::vec4 baseColor;
         glm::vec4 factors;
@@ -250,10 +253,10 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
         resources.params = _device->createBuffer(desc);
     }
     const Params params{
-        material.baseColor,
-        glm::vec4(material.metallic, material.roughness,
-                  material.emissiveStrength, inst.alphaCutoff()),
-        glm::vec4(material.emissiveColor,
+        input.baseColor,
+        glm::vec4(input.metallic, input.roughness,
+                  input.emissiveStrength, inst.alphaCutoff()),
+        glm::vec4(input.emissiveColor,
                   static_cast<float>(static_cast<int>(inst.alphaMode()))),
         glm::vec4(material.baseColorTexture ? 1.0f : 0.0f,
                   material.normalTexture ? 1.0f : 0.0f,
@@ -302,6 +305,18 @@ Backend::BindGroup* ForwardPass::updatePbrMaterial(PBRMaterial& material,
         resources.textureHandles = handles;
     }
     return resources.bindGroup.get();
+}
+
+void ForwardPass::releaseBatch(const MeshInstancer& inst) {
+    _unlitResources.erase(&inst);
+    _texturedColorResources.erase(&inst);
+    const Material* material = inst.material();
+    if (!material)
+        return;
+    if (material->shadingModel() == MaterialShadingModel::PBR)
+        _pbrResources.erase(static_cast<const PBRMaterial*>(material));
+    else if (material->shadingModel() == MaterialShadingModel::Phong)
+        _phongResources.erase(static_cast<const PhongMaterial*>(material));
 }
 
 Backend::BindGroup*
@@ -354,19 +369,19 @@ ForwardPass::updateTexturedColorMaterial(const MeshInstancer& inst) {
     return resources.bindGroup.get();
 }
 
-Backend::BindGroup* ForwardPass::updateUnlitMaterial(const MeshInstancer& inst) {
+Backend::BindGroup* ForwardPass::updateUnlitMaterial(
+    const MeshInstancer& inst, const Scene::RenderMaterialData& input) {
     const Material* material = inst.material();
     UnlitResources::Params values;
+    values.baseColor = input.baseColor;
     Backend::Texture* baseTexture = nullptr;
     Backend::Texture* opacityTexture = nullptr;
     if (material->shadingModel() == MaterialShadingModel::Phong) {
         const auto* phong = static_cast<const PhongMaterial*>(material);
-        values.baseColor = glm::vec4(phong->diffuse, 1.0f);
         baseTexture = phong->diffuseMap;
         opacityTexture = phong->alphaMap;
     } else if (material->shadingModel() == MaterialShadingModel::PBR) {
         const auto* pbr = static_cast<const PBRMaterial*>(material);
-        values.baseColor = pbr->baseColor;
         baseTexture = pbr->baseColorTexture;
         opacityTexture = pbr->opacityTexture;
     } else {
@@ -423,20 +438,19 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
     prepared.ownedBindGroups.reserve(drawables.size());
     for (MeshInstancer* inst : drawables) {
         Material* material = inst->material();
+        const auto input = Scene::SceneRenderBridge::materialData(*material);
         const bool colorMaterial =
-            material->shadingModel() == MaterialShadingModel::Color;
+            input.shadingModel == MaterialShadingModel::Color;
         const bool textured =
-            colorMaterial && material->colorStyle() == ColorStyle::Textured;
+            colorMaterial && input.colorStyle == ColorStyle::Textured;
         const bool checkerboard =
-            colorMaterial &&
-            material->colorStyle() == ColorStyle::Checkerboard;
+            colorMaterial && input.colorStyle == ColorStyle::Checkerboard;
         const bool debugChecker =
-            colorMaterial &&
-            material->colorStyle() == ColorStyle::DebugChecker;
+            colorMaterial && input.colorStyle == ColorStyle::DebugChecker;
 
         PreparedDraw draw;
         draw.instancer = inst;
-        draw.pipeline = pipelineFor(*inst, transparent);
+        draw.pipeline = pipelineFor(*inst, transparent, input);
 
         if (inst->hasSkinning()) {
             Backend::BindGroupDesc skinDesc;
@@ -450,34 +464,33 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
                 _device->createBindGroup(skinDesc));
             draw.skinBindGroup = prepared.ownedBindGroups.back().get();
 
-            if (material->isUnlit()) {
+            if (input.unlit) {
                 draw.kind = DrawKind::SkinnedMaterial;
-                draw.materialBindGroup = updateUnlitMaterial(*inst);
+                draw.materialBindGroup = updateUnlitMaterial(*inst, input);
             } else if (textured) {
                 draw.kind = DrawKind::SkinnedMaterial;
-                draw.materialBindGroup =
-                    updateTexturedColorMaterial(*inst);
+                draw.materialBindGroup = updateTexturedColorMaterial(*inst);
                 draw.normalMapped =
                     inst->textureAtSlot(RendererTextureSlot::Normal) != nullptr;
             } else if (debugChecker) {
                 draw.kind = DrawKind::SkinnedMaterial;
             } else if (colorMaterial) {
                 draw.kind = DrawKind::SkinnedForward;
-            } else if (material->shadingModel() ==
-                       MaterialShadingModel::Phong) {
+            } else if (input.shadingModel == MaterialShadingModel::Phong) {
                 auto* phong = static_cast<PhongMaterial*>(material);
                 draw.kind = DrawKind::SkinnedMaterial;
-                draw.materialBindGroup = updatePhongMaterial(*phong, *inst);
+                draw.materialBindGroup =
+                    updatePhongMaterial(*phong, *inst, input);
                 draw.normalMapped = phong->normalMap != nullptr;
             } else {
                 auto* pbr = static_cast<PBRMaterial*>(material);
                 draw.kind = DrawKind::SkinnedMaterial;
-                draw.materialBindGroup = updatePbrMaterial(*pbr, *inst);
+                draw.materialBindGroup = updatePbrMaterial(*pbr, *inst, input);
                 draw.normalMapped = pbr->normalTexture != nullptr;
             }
-        } else if (material->isUnlit()) {
+        } else if (input.unlit) {
             draw.kind = DrawKind::Material;
-            draw.materialBindGroup = updateUnlitMaterial(*inst);
+            draw.materialBindGroup = updateUnlitMaterial(*inst, input);
         } else if (debugChecker) {
             draw.kind = DrawKind::Material;
         } else if (checkerboard) {
@@ -488,15 +501,15 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
             draw.materialBindGroup = updateTexturedColorMaterial(*inst);
             draw.normalMapped =
                 inst->textureAtSlot(RendererTextureSlot::Normal) != nullptr;
-        } else if (material->shadingModel() == MaterialShadingModel::Phong) {
+        } else if (input.shadingModel == MaterialShadingModel::Phong) {
             auto* phong = static_cast<PhongMaterial*>(material);
             draw.kind = DrawKind::Material;
-            draw.materialBindGroup = updatePhongMaterial(*phong, *inst);
+            draw.materialBindGroup = updatePhongMaterial(*phong, *inst, input);
             draw.normalMapped = phong->normalMap != nullptr;
-        } else if (material->shadingModel() == MaterialShadingModel::PBR) {
+        } else if (input.shadingModel == MaterialShadingModel::PBR) {
             auto* pbr = static_cast<PBRMaterial*>(material);
             draw.kind = DrawKind::Material;
-            draw.materialBindGroup = updatePbrMaterial(*pbr, *inst);
+            draw.materialBindGroup = updatePbrMaterial(*pbr, *inst, input);
             draw.normalMapped = pbr->normalTexture != nullptr;
         }
         prepared.draws.push_back(draw);
@@ -701,7 +714,7 @@ void ForwardPass::initializeResources(
     Backend::SamplerDesc materialSamplerDesc;
     materialSamplerDesc.wrapU = Backend::TextureWrap::Repeat;
     materialSamplerDesc.wrapV = Backend::TextureWrap::Repeat;
-    materialSamplerDesc.minFilter = Backend::TextureFilter::Linear;
+    materialSamplerDesc.minFilter = Backend::TextureFilter::LinearMipmapLinear;
     materialSamplerDesc.magFilter = Backend::TextureFilter::Linear;
     materialSamplerDesc.label = "forward_material_sampler";
     _materialSampler = createSampler(materialSamplerDesc);

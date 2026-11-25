@@ -9,7 +9,6 @@ Run with::
 
 from __future__ import annotations
 
-import argparse
 import importlib.util
 import os
 from pathlib import Path
@@ -18,6 +17,7 @@ import time
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine.adapters.mimickit import load_articulation_motion
 
 
@@ -81,8 +81,8 @@ class KangEngineMimicKitMotionApp(ke.App):
         from kangengine.adapters.physx import PhysXMotionAdapter
 
         self.set_camera_view([3.5, -5.5, 2.4], [0.0, 0.0, 0.9])
-        self.materials = self.create_standard_materials()
-        self.scene.add_ground(scale=20.0, material=self.materials.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.scene.add_ground(scale=20.0, material=self.standard_materials.ground)
         self.configure_timing(
             ke.SimulationTimingConfig(
                 render_hz=60.0,
@@ -115,7 +115,7 @@ class KangEngineMimicKitMotionApp(ke.App):
             str(self.mjcf_path),
             path="/Robot",
             order="DFS",
-            material=self.materials.pbr,
+            material=self.standard_materials.pbr,
             color=np.array([0.2, 0.55, 1.0, 1.0], dtype=np.float32),
         )
         self.playback_time = 0.0
@@ -160,7 +160,10 @@ class KangEngineMimicKitMotionApp(ke.App):
 
 def _run_ke(mjcf_path: Path, motion, layout, args) -> None:
     app = KangEngineMimicKitMotionApp(mjcf_path, motion, layout, args)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z, headless=args.headless)
+    app.initialize(
+        args.width, args.height, False, ke.UpAxis.Z, headless=args.headless,
+        renderer=args.renderer,
+    )
     app.start()
 
 
@@ -251,7 +254,7 @@ def _run_mujoco(mjcf_path: Path, motion, layout, args) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--backend", choices=("ke", "newton", "mujoco"), default="ke")
     parser.add_argument("--robot", choices=tuple(_ROBOT_PRESETS), default="g1")
     parser.add_argument("--mimickit-root", type=Path, default=_default_mimickit_root())
@@ -266,6 +269,8 @@ def main() -> None:
     parser.add_argument("--frames", type=int, default=0)
     parser.add_argument("--show-joints", action="store_true")
     args = parser.parse_args()
+    if args.backend != "ke" and args.renderer != "native":
+        parser.error("--renderer applies only to --backend ke")
 
     mimickit_root = args.mimickit_root.expanduser().resolve()
     mjcf_relative, motion_directory, default_motion = _ROBOT_PRESETS[args.robot]

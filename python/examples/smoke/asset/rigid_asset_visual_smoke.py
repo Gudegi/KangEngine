@@ -1,5 +1,6 @@
 """Render shared rigid assets, independent resets, and textured dynamic props."""
 
+import argparse
 import math
 import tempfile
 from contextlib import contextmanager, nullcontext
@@ -723,7 +724,8 @@ def main(device="cpu"):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    args = parser.parse_args()
     _standalone_visual()
-    main()
-    if torch.cuda.is_available():
-        main("cuda")
+    main(args.device)

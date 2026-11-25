@@ -9,12 +9,6 @@ namespace KE {
 namespace Scene {
 
 // Broad editor interaction category for a Prim.
-//
-// This is intentionally editor/interaction metadata, not render identity.
-// Runtime selection state still belongs to App/InteractionController because it
-// can be viewport-specific. SelectionComponent only answers whether this Prim
-// is allowed to participate in picking, selection, manipulation, and force
-// drag.
 enum class InteractionKind {
     ScenePrim,
     SimBody,
@@ -23,6 +17,10 @@ enum class InteractionKind {
     Resource,
 };
 
+// Stores interaction permissions, object IDs, and tags for a Prim.
+// Permissions cover picking, selection, manipulation, and force dragging.
+// Current selection stays in App/InteractionController because it can differ
+// between viewports.
 class SelectionComponent : public ComponentBase {
   public:
     bool isPickable() const { return _pickable; }

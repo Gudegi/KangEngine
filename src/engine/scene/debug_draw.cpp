@@ -287,7 +287,8 @@ std::shared_ptr<RenderComponent> DebugDraw::logLineComponent(
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    auto component = app->getSceneRenderSystem().addRenderable(*prim, material);
+    auto component = app->getSceneRenderSystem().addRenderable(
+        *prim, material, TransformSource::ExternalBuffer);
     if (!component)
         return nullptr;
 
@@ -319,7 +320,8 @@ RenderableHandle DebugDraw::logLines(App* app, Material* material,
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    RenderableHandle handle = app->addRenderable(material, prim);
+    RenderableHandle handle =
+        app->addRenderable(material, prim, TransformSource::ExternalBuffer);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
@@ -397,7 +399,8 @@ std::shared_ptr<RenderComponent> DebugDraw::logArrowComponent(
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    auto component = app->getSceneRenderSystem().addRenderable(*prim, material);
+    auto component = app->getSceneRenderSystem().addRenderable(
+        *prim, material, TransformSource::ExternalBuffer);
     if (!component)
         return nullptr;
 
@@ -429,7 +432,8 @@ RenderableHandle DebugDraw::logArrows(App* app, Material* material,
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    RenderableHandle handle = app->addRenderable(material, prim);
+    RenderableHandle handle =
+        app->addRenderable(material, prim, TransformSource::ExternalBuffer);
     if (handle == InvalidHandle)
         return InvalidHandle;
 

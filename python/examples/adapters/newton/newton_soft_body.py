@@ -11,13 +11,12 @@ particles and particle constraints.
 
 from __future__ import annotations
 
-import argparse
-
+from kangengine.utils._example_args import render_example_parser
 from kangengine.adapters.newton import ViewerKE
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument("--width", type=int, default=1600)
     parser.add_argument("--height", type=int, default=900)
     parser.add_argument("--headless", action="store_true")
@@ -94,6 +93,7 @@ def main():
         height=args.height,
         headless=args.headless,
         allow_cuda_readback=args.allow_cuda_readback,
+        renderer=args.renderer,
     )
     viewer.show_ground = False
     viewer.app.scene.add_ground("/Ground", scale=20.0)

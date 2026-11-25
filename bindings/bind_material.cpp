@@ -128,9 +128,14 @@ void bind_material(py::module& m) {
 
     py::class_<Material, std::shared_ptr<Material>>(
         m, "Material", "Base class for renderer materials.")
+        .def("clone", [](const Material& material) {
+            return std::shared_ptr<Material>(material.clone());
+        }, "Copy parameters while sharing texture references.")
         .def_property("unlit", &Material::isUnlit, &Material::setUnlit,
                       "Display base color and textures without lighting.")
         .def("set_unlit", &Material::setUnlit, py::arg("enabled") = true)
+        .def_readwrite("texture_resources", &Material::textureResources,
+                       "Scene-local source texture handles by slot; assign a dictionary.")
         .def_readwrite("texture_paths", &Material::texturePaths,
                        "Source texture paths keyed by texture slot. Reading "
                        "returns a copy; assign a dictionary to update paths.")
@@ -151,7 +156,15 @@ void bind_material(py::module& m) {
         .def(py::init<ColorStyle>(),
              py::arg("style") = ColorStyle::Untextured)
         .def("set_style", &ColorMaterial::setStyle, py::arg("style"))
-        .def_property_readonly("style", &ColorMaterial::colorStyle);
+        .def_property_readonly("style", &ColorMaterial::colorStyle)
+        .def("set_base_color_texture", &ColorMaterial::setBaseColorTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_normal_texture", &ColorMaterial::setNormalTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def_readwrite("base_color_texture", &ColorMaterial::baseColorTexture,
+                       py::return_value_policy::reference)
+        .def_readwrite("normal_texture", &ColorMaterial::normalTexture,
+                       py::return_value_policy::reference);
 
     m.attr("VertexColorStyle") = m.attr("ColorStyle");
     m.attr("VertexColorMaterial") = m.attr("ColorMaterial");

@@ -5,40 +5,34 @@
 #include "engine/graphics/material/pbrMaterials.hpp"
 #include "engine/graphics/material/phongMaterials.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/scene/render/render_material_data.hpp"
+#include "engine/scene/component/resource_component.hpp"
 
 #include <glm/glm.hpp>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 namespace KE {
-
-enum class MaterialShadingModel {
-    Color,
-    Phong,
-    PBR,
-    Custom,
-    VertexColor = Color,
-};
-
-enum class ColorStyle {
-    Untextured,
-    Textured,
-    Checkerboard,
-    DebugChecker,
-    Unlit,
-};
 
 class Material {
   private:
     bool _unlit = false;
 
   public:
+    // Scene-local source texture handles, resolved by render adapters.
+    std::unordered_map<std::string, Scene::ResourceHandle> textureResources;
     // Source files are resolved into scene-local textures by the owning App.
     std::unordered_map<std::string, std::string> texturePaths;
     // Per-slot decoding for deferred textures. Defaults to false (linear).
     std::unordered_map<std::string, bool> textureSrgb;
 
     virtual ~Material() = default;
+    // Copy parameters while sharing non-owned texture references.
+    virtual std::unique_ptr<Material> clone() const {
+        throw std::runtime_error("This material does not support cloning");
+    }
     bool isUnlit() const { return _unlit; }
     virtual void setUnlit(bool enabled = true) { _unlit = enabled; }
     virtual bool hasNormalMap() const { return false; }
@@ -62,6 +56,27 @@ class ColorMaterial : public Material {
     explicit ColorMaterial(ColorStyle style = ColorStyle::Untextured) {
         setStyle(style);
     }
+    std::unique_ptr<Material> clone() const override {
+        return std::make_unique<ColorMaterial>(*this);
+    }
+
+    Backend::Texture* baseColorTexture = nullptr;
+    Backend::Texture* normalTexture = nullptr;
+
+    ColorMaterial* setBaseColorTexture(Backend::Texture* texture) {
+        baseColorTexture = texture;
+        return this;
+    }
+    ColorMaterial* setNormalTexture(Backend::Texture* texture) {
+        normalTexture = texture;
+        return this;
+    }
+    bool hasNormalMap() const override { return normalTexture != nullptr; }
+    Backend::Texture* alphaTexture() const override {
+        return isUnlit() || _style == ColorStyle::Textured ? baseColorTexture
+                                                           : nullptr;
+    }
+
     MaterialShadingModel shadingModel() const override {
         return MaterialShadingModel::Color;
     }
@@ -85,6 +100,9 @@ using VertexColorMaterial = ColorMaterial;
 class PhongMaterial : public Material {
   public:
     PhongMaterial() = default;
+    std::unique_ptr<Material> clone() const override {
+        return std::make_unique<PhongMaterial>(*this);
+    }
 
     // Properties
     glm::vec3 ambient = glm::vec3(0.1f);
@@ -164,6 +182,9 @@ class PhongMaterial : public Material {
 class PBRMaterial : public Material {
   public:
     PBRMaterial() = default;
+    std::unique_ptr<Material> clone() const override {
+        return std::make_unique<PBRMaterial>(*this);
+    }
 
     glm::vec4 baseColor = glm::vec4(1.0f);
     float metallic = 0.0f;

@@ -2,7 +2,9 @@
 #define _RASTERIZER_HPP_
 
 #include "engine/graphics/renderer/render_pipeline.hpp"
+#include "engine/graphics/renderer/render_backend/render_backend.hpp"
 #include "engine/graphics/renderer/selection_mask_pass.hpp"
+#include "engine/graphics/renderer/picking_pass.hpp"
 #include "engine/graphics/renderer/shader_library.hpp"
 #include "engine/graphics/renderer/forward_pass.hpp"
 #include "engine/graphics/renderer/shadow_pass.hpp"
@@ -14,6 +16,7 @@
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include "engine/scene/render/scene_render_bridge.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/types/camera.hpp"
 #include "geometry/bounds.hpp"
@@ -34,11 +37,13 @@
 
 namespace KE {
 
+namespace Scene { struct RenderLightData; }
+
 // ---------------------------------------------------------------------------
 // Two-source transform ownership
 //
 // Source A — SceneGraph-driven
-//   addRenderable(material, prim) → instancer polls Prim attributes every frame
+//   addRenderable(material, prim) -> scene input collects Prim state for batches
 //   Use for: static geometry, any object the scene graph owns
 //
 // Source B — ExternalBuffer-driven
@@ -59,6 +64,17 @@ class Rasterizer : public RenderPipeline {
     static constexpr int MaxShadowCascades = 4;
 
   private:
+    friend class NativeRenderSystem;
+    friend class Renderer;
+    void attachScenePrim(RenderableHandle handle, Scene::Prim& prim,
+                         Scene::SceneRenderBridge& bridge);
+    RenderableHandle
+    registerSceneBatch(const Scene::RenderMeshData& mesh, Material* material,
+                       const Scene::RenderInstanceData& instances,
+                       const Scene::SkinnedMeshData* skinnedMesh = nullptr,
+                       TransformSource source = TransformSource::SceneGraph);
+    void removeSceneBatch(RenderableHandle handle);
+    void invalidateSceneBatch(RenderableHandle handle);
     // =====================================================================
     // Scene Mesh Pipelines - batching and renderable registration
     // =====================================================================
@@ -67,18 +83,36 @@ class Rasterizer : public RenderPipeline {
         const Scene::MeshData* mesh;
         Material* material;
         TransformSource transformSource;
+        const Scene::RenderInstanceData* instances = nullptr;
+        size_t batchId = 0;
         bool operator<(const InstancerKey& o) const {
             if (mesh != o.mesh)
                 return mesh < o.mesh;
             if (material != o.material)
                 return material < o.material;
-            return transformSource < o.transformSource;
+            if (transformSource != o.transformSource)
+                return transformSource < o.transformSource;
+            if (instances != o.instances)
+                return std::less<const Scene::RenderInstanceData*>{}(
+                    instances, o.instances);
+            return batchId < o.batchId;
         }
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
+    // Native compatibility adapter; Prim access stays outside static GPU batches.
+    std::unordered_map<const MeshInstancer*, Scene::SceneRenderBridge*>
+        _sceneBridges;
+    // Only direct Rasterizer registrations own/collect bridges here.
+    std::unordered_map<const MeshInstancer*,
+                       std::unique_ptr<Scene::SceneRenderBridge>>
+        _legacySceneBridges;
+    // Retain immutable sources with the render batches; build BVHs on query.
+    std::map<const Scene::MeshData*, Geometry::MeshBVH> _raycastMeshes;
 
     std::map<InstancerKey, RenderableHandle> _handleMap;
     std::vector<MeshInstancer*> _handleTable;
+    std::vector<RenderableHandle> _freeHandles;
+    size_t _nextBatchId = 1;
     struct PrimSourceRegistrations {
         // To specify which track is in the Scene panel
         uint32_t sceneGraph = 0;
@@ -88,6 +122,13 @@ class Rasterizer : public RenderPipeline {
         _primSourceRegistrations;
     void registerPrimSource(Scene::Prim* prim, TransformSource source);
     void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
+    // Native resource creation consumes source data, never a Prim.
+    RenderableHandle
+    registerMeshBatch(const Scene::RenderMeshData& input, Material* material,
+                      TransformSource source,
+                      const Scene::SkinnedMeshData* skinnedMesh = nullptr,
+                      const Scene::RenderInstanceData* instances = nullptr,
+                      const SceneBatchState& state = {});
 
     struct RenderHookEntry {
         RenderHookHandle handle = InvalidRenderHook;
@@ -142,6 +183,7 @@ class Rasterizer : public RenderPipeline {
     // Selection Mask Pipeline - opaque, alpha-mask, and skinned variants
     // =====================================================================
     SelectionMaskPass _selectionMaskPass;
+    PickingPass _pickingPass;
 
     // Shadow configuration and per-frame cascade state.
     float _shadowRadius = 3.0f;
@@ -244,6 +286,7 @@ class Rasterizer : public RenderPipeline {
     }
     const std::vector<SpotLight>& getSpotLights() const { return _spotLights; }
     void setRectLights(std::vector<RectLightInstance> lights);
+    void setSceneLights(const Scene::RenderLightData& lights);
     void setDomeRadiance(glm::vec3 radiance) { _domeRadiance = radiance; }
 
     // =====================================================================
@@ -348,7 +391,14 @@ class Rasterizer : public RenderPipeline {
                               TextureRole role);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
-    RayPickResult rayPick(const Geometry::Ray& ray) const;
+    // CPU triangle query: excludes skinning, dynamic geometry and GPU transforms.
+    RayPickResult raycast(const Geometry::Ray& ray) const;
+    RenderPickHit raycastHit(const Geometry::Ray& ray) const;
+    RayPickResult rayPick(const Geometry::Ray& ray) const {
+        return raycast(ray);
+    }
+    RayPickResult pickScreen(glm::vec2 ndc, const glm::mat4& view,
+                              const glm::mat4& projection, int width, int height);
     bool getRenderableInstanceTransform(RenderableHandle handle,
                                         int instanceIndex,
                                         glm::mat4& outTransform) const;
@@ -387,6 +437,8 @@ class Rasterizer : public RenderPipeline {
                         float size = 6.0f, bool hidden = false,
                         bool overlay = false);
     void clearDebugPoints(const std::string& path);
+    RenderDebugDraw& debugDraw() { return _debugRenderer; }
+    RenderTextDraw& textDraw() { return _textRenderer; }
     void setDebugVisible(const std::string& path, bool visible);
     void removeDebug(const std::string& path);
     void removeAllDebug();
@@ -427,7 +479,8 @@ class Rasterizer : public RenderPipeline {
                             RayPickResult& outSelection) const;
     bool getPrimTransformSource(const Scene::Prim* prim,
                                 TransformSource& outSource) const;
-    void renderSelectionMaskPass(const RayPickResult& selection,
+    RayPickResult resolvePick(const RenderPickHit& hit) const;
+    void renderSelectionMaskPass(const RenderPickHit& selection,
                                  Backend::Framebuffer* target, int width,
                                  int height);
 };

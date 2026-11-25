@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import argparse
 import math
 from pathlib import Path
 
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys
 
 
@@ -597,7 +597,7 @@ class MjcfDofControlApp(ke.App):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = render_example_parser()
     parser.add_argument(
         "mjcf_path",
         nargs="?",
@@ -619,7 +619,7 @@ def main():
         order = args.order
 
     app = CliMjcfDofControlApp(args.mjcf_path)
-    app.initialize(args.width, args.height, False, ke.UpAxis.Z)
+    app.initialize(args.width, args.height, False, ke.UpAxis.Z, renderer=args.renderer)
     app.start()
 
 

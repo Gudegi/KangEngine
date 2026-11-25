@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, TypeVar
 
-from kangengine.render import Texture
+from kangengine.render import Texture, TextureSource
 
 class PhongMaterialType(Enum):
     """Built-in Blinn-Phong material preset."""
@@ -60,7 +60,11 @@ class ColorStyle(Enum):
 
 class NativeMaterial:
     """Native renderer material base used for advanced interop."""
+    def clone(self) -> NativeMaterial:
+        """Copy parameters while sharing texture references."""
+        ...
     texture_paths: dict[str, str]
+    texture_resources: dict[str, int]
     texture_srgb: dict[str, bool]
     unlit: bool
     def set_unlit(self, enabled: bool = True) -> None:
@@ -69,6 +73,14 @@ class NativeMaterial:
 
 class NativeColorMaterial(NativeMaterial):
     """Native color material used for advanced interop."""
+    base_color_texture: Texture | None
+    normal_texture: Texture | None
+    def set_base_color_texture(self, texture: Texture | None) -> NativeColorMaterial:
+        """Set the non-owned base-color texture."""
+        ...
+    def set_normal_texture(self, texture: Texture | None) -> NativeColorMaterial:
+        """Set the non-owned tangent-space normal texture."""
+        ...
 
 class NativePhongMaterial(NativeMaterial):
     """Native Phong material used for advanced interop."""
@@ -79,6 +91,9 @@ class NativePBRMaterial(NativeMaterial):
 class Material:
     """Base facade wrapping a native renderer material."""
     def __init__(self, native: NativeMaterial) -> None: ...
+    def clone(self) -> Material:
+        """Copy material parameters while sharing textures in the same App."""
+        ...
     @property
     def unlit(self) -> bool:
         """Display base color and textures without lighting; defaults to False."""
@@ -99,6 +114,12 @@ class Material:
     @texture_paths.setter
     def texture_paths(self, value: dict[str, str]) -> None: ...
     @property
+    def texture_resources(self) -> dict[str, int]:
+        """Scene-local texture source handles by material slot; assign a dictionary."""
+        ...
+    @texture_resources.setter
+    def texture_resources(self, value: dict[str, int]) -> None: ...
+    @property
     def texture_srgb(self) -> dict[str, bool]:
         """sRGB decoding by texture-path slot. Defaults to False (linear)."""
         ...
@@ -114,6 +135,24 @@ class ColorMaterial(Material):
         ...
     def set_style(self, style: ColorStyle) -> ColorMaterial:
         """Set the rendering style and return this material."""
+        ...
+    @property
+    def base_color_texture(self) -> Texture | TextureSource | None:
+        """Optional color texture shared by this material's objects."""
+        ...
+    @base_color_texture.setter
+    def base_color_texture(self, texture: Texture | TextureSource | None) -> None: ...
+    @property
+    def normal_texture(self) -> Texture | TextureSource | None:
+        """Optional linear tangent-space normal texture."""
+        ...
+    @normal_texture.setter
+    def normal_texture(self, texture: Texture | TextureSource | None) -> None: ...
+    def set_base_color_texture(self, texture: Texture | TextureSource | None) -> ColorMaterial:
+        """Set the color texture and return this material."""
+        ...
+    def set_normal_texture(self, texture: Texture | TextureSource | None) -> ColorMaterial:
+        """Set the normal texture and return this material."""
         ...
 
 class PhongMaterial(Material):
@@ -147,29 +186,29 @@ class PhongMaterial(Material):
     @shininess.setter
     def shininess(self, value: float) -> None: ...
     @property
-    def diffuse_map(self) -> Texture | None:
+    def diffuse_map(self) -> Texture | TextureSource | None:
         """Optional diffuse texture."""
         ...
     @diffuse_map.setter
-    def diffuse_map(self, texture: Texture | None) -> None: ...
+    def diffuse_map(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def specular_map(self) -> Texture | None:
+    def specular_map(self) -> Texture | TextureSource | None:
         """Optional specular texture."""
         ...
     @specular_map.setter
-    def specular_map(self, texture: Texture | None) -> None: ...
+    def specular_map(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def alpha_map(self) -> Texture | None:
+    def alpha_map(self) -> Texture | TextureSource | None:
         """Optional alpha-mask texture, such as OBJ ``map_d``."""
         ...
     @alpha_map.setter
-    def alpha_map(self, texture: Texture | None) -> None: ...
+    def alpha_map(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def normal_map(self) -> Texture | None:
+    def normal_map(self) -> Texture | TextureSource | None:
         """Optional tangent-space normal map."""
         ...
     @normal_map.setter
-    def normal_map(self, texture: Texture | None) -> None: ...
+    def normal_map(self, texture: Texture | TextureSource | None) -> None: ...
     def set_ambient(self, ambient: Any) -> PhongMaterial:
         """Set the ambient factor and return this material."""
         ...
@@ -182,16 +221,16 @@ class PhongMaterial(Material):
     def set_shininess(self, shininess: float) -> PhongMaterial:
         """Set the highlight exponent and return this material."""
         ...
-    def set_diffuse_map(self, texture: Texture | None) -> PhongMaterial:
+    def set_diffuse_map(self, texture: Texture | TextureSource | None) -> PhongMaterial:
         """Set the diffuse map and return this material."""
         ...
-    def set_specular_map(self, texture: Texture | None) -> PhongMaterial:
+    def set_specular_map(self, texture: Texture | TextureSource | None) -> PhongMaterial:
         """Set the specular map and return this material."""
         ...
-    def set_alpha_map(self, texture: Texture | None) -> PhongMaterial:
+    def set_alpha_map(self, texture: Texture | TextureSource | None) -> PhongMaterial:
         """Set the alpha map and return this material."""
         ...
-    def set_normal_map(self, texture: Texture | None) -> PhongMaterial:
+    def set_normal_map(self, texture: Texture | TextureSource | None) -> PhongMaterial:
         """Set the normal map and return this material."""
         ...
 
@@ -232,59 +271,59 @@ class PBRMaterial(Material):
     @emissive_strength.setter
     def emissive_strength(self, value: float) -> None: ...
     @property
-    def base_color_texture(self) -> Texture | None:
+    def base_color_texture(self) -> Texture | TextureSource | None:
         """Optional base-color texture."""
         ...
     @base_color_texture.setter
-    def base_color_texture(self, texture: Texture | None) -> None: ...
+    def base_color_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def normal_texture(self) -> Texture | None:
+    def normal_texture(self) -> Texture | TextureSource | None:
         """Optional tangent-space normal texture."""
         ...
     @normal_texture.setter
-    def normal_texture(self, texture: Texture | None) -> None: ...
+    def normal_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def metallic_roughness_texture(self) -> Texture | None:
+    def metallic_roughness_texture(self) -> Texture | TextureSource | None:
         """Optional packed metallic-roughness texture."""
         ...
     @metallic_roughness_texture.setter
-    def metallic_roughness_texture(self, texture: Texture | None) -> None: ...
+    def metallic_roughness_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def metallic_texture(self) -> Texture | None:
+    def metallic_texture(self) -> Texture | TextureSource | None:
         """Optional single-channel metallic texture."""
         ...
     @metallic_texture.setter
-    def metallic_texture(self, texture: Texture | None) -> None: ...
+    def metallic_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def roughness_texture(self) -> Texture | None:
+    def roughness_texture(self) -> Texture | TextureSource | None:
         """Optional single-channel roughness texture."""
         ...
     @roughness_texture.setter
-    def roughness_texture(self, texture: Texture | None) -> None: ...
+    def roughness_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def ao_texture(self) -> Texture | None:
+    def ao_texture(self) -> Texture | TextureSource | None:
         """Optional ambient-occlusion texture."""
         ...
     @ao_texture.setter
-    def ao_texture(self, texture: Texture | None) -> None: ...
+    def ao_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def orm_texture(self) -> Texture | None:
+    def orm_texture(self) -> Texture | TextureSource | None:
         """Optional packed occlusion-roughness-metallic texture."""
         ...
     @orm_texture.setter
-    def orm_texture(self, texture: Texture | None) -> None: ...
+    def orm_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def emissive_texture(self) -> Texture | None:
+    def emissive_texture(self) -> Texture | TextureSource | None:
         """Optional emissive texture."""
         ...
     @emissive_texture.setter
-    def emissive_texture(self, texture: Texture | None) -> None: ...
+    def emissive_texture(self, texture: Texture | TextureSource | None) -> None: ...
     @property
-    def opacity_texture(self) -> Texture | None:
+    def opacity_texture(self) -> Texture | TextureSource | None:
         """Linear red-channel opacity mask overriding the base-color texture alpha."""
         ...
     @opacity_texture.setter
-    def opacity_texture(self, texture: Texture | None) -> None: ...
+    def opacity_texture(self, texture: Texture | TextureSource | None) -> None: ...
     def set_base_color(self, base_color: Any) -> PBRMaterial:
         """Set the base-color factor and return this material."""
         ...
@@ -300,31 +339,31 @@ class PBRMaterial(Material):
     def set_emissive_strength(self, emissive_strength: float) -> PBRMaterial:
         """Set the emissive strength and return this material."""
         ...
-    def set_base_color_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_base_color_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the base-color texture and return this material."""
         ...
-    def set_normal_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_normal_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the normal texture and return this material."""
         ...
-    def set_metallic_roughness_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_metallic_roughness_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the packed metallic-roughness texture and return this material."""
         ...
-    def set_metallic_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_metallic_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the metallic texture and return this material."""
         ...
-    def set_roughness_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_roughness_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the roughness texture and return this material."""
         ...
-    def set_ao_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_ao_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the ambient-occlusion texture and return this material."""
         ...
-    def set_orm_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_orm_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the packed ORM texture and return this material."""
         ...
-    def set_emissive_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_emissive_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the emissive texture and return this material."""
         ...
-    def set_opacity_texture(self, texture: Texture | None) -> PBRMaterial:
+    def set_opacity_texture(self, texture: Texture | TextureSource | None) -> PBRMaterial:
         """Set the red-channel opacity mask and return this material."""
         ...
 

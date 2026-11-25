@@ -15,7 +15,9 @@ struct Plane {
     glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
     float distance = 0.0f;
 
-    float signedDistance(const glm::vec3& point) const;
+    float signedDistance(const glm::vec3& point) const {
+        return glm::dot(normal, point) + distance;
+    }
 };
 
 struct AABB {
@@ -24,11 +26,21 @@ struct AABB {
 
     static AABB empty();
 
-    bool isValid() const;
-    glm::vec3 center() const;
-    glm::vec3 extents() const;
-    void expand(const glm::vec3& point);
-    void expand(const AABB& other);
+    bool isValid() const {
+        return min.x <= max.x && min.y <= max.y && min.z <= max.z;
+    }
+    glm::vec3 center() const { return (min + max) * 0.5f; }
+    glm::vec3 extents() const { return (max - min) * 0.5f; }
+    void expand(const glm::vec3& point) {
+        min = glm::min(min, point);
+        max = glm::max(max, point);
+    }
+    void expand(const AABB& other) {
+        if (!other.isValid())
+            return;
+        expand(other.min);
+        expand(other.max);
+    }
 };
 
 struct Sphere {

@@ -23,11 +23,19 @@ void bind_scene_render(py::module& m) {
             "Return the number of registered render components.")
         .def("is_registered", &KE::Scene::SceneRenderSystem::isRegistered,
              py::arg("component"),
-             "Return whether a render component owns renderer resources.")
-        .def("_handle", &KE::Scene::SceneRenderSystem::handle,
-             py::arg("component"),
-             "Return the renderer batch handle for internal bridges; "
-             "unregistered components return InvalidHandle.")
+             "Return whether a render component is registered with this system.")
+        .def(
+            "_handle",
+            [](const KE::Scene::SceneRenderSystem& self,
+               const KE::Scene::RenderComponent& component,
+               bool required) -> py::object {
+                const auto handle = self.handle(component, required);
+                if (!required && handle == KE::InvalidHandle)
+                    return py::none();
+                return py::cast(handle);
+            },
+            py::arg("component"), py::kw_only(), py::arg("required") = true,
+            "Return the execution batch handle; required=False allows None.")
         .def("shares_batch", &KE::Scene::SceneRenderSystem::sharesBatch,
              py::arg("first"), py::arg("second"),
              "Return whether two components share one renderer batch without "
@@ -47,23 +55,22 @@ void bind_scene_render(py::module& m) {
              "it to the matching renderer batch. ExternalBuffer renderables "
              "reject dynamic material replacement.")
         .def(
-            "set_texture",
+            "set_batch_texture",
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,
                KE::Backend::Texture* texture, KE::TextureRole role) {
-                self.setTexture(component, texture, role);
+                self.setBatchTexture(component, texture, role);
             },
             py::arg("component"), py::arg("texture"), py::arg("role"),
-            "Set a texture by material role through component registration.")
+            "Override a Native ColorMaterial texture for the entire batch.")
         .def(
-            "set_texture",
+            "set_batch_texture",
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,
                KE::Backend::Texture* texture,
-               int slot) { self.setTexture(component, texture, slot); },
+               int slot) { self.setBatchTexture(component, texture, slot); },
             py::arg("component"), py::arg("texture"), py::arg("slot") = 0,
-            "Set a texture by raw renderer slot through component "
-            "registration.")
+            "Override a raw texture slot for the entire Native batch.")
         .def("set_external_buffer",
              &KE::Scene::SceneRenderSystem::setExternalBuffer,
              py::arg("component"), py::arg("descriptor"),
@@ -101,8 +108,8 @@ void bind_scene_render(py::module& m) {
             },
             py::arg("component"), py::arg("transforms"),
             py::arg("colors") = py::none(),
-            "Update instanced transforms and optional colors through "
-            "component registration.")
+            "Update CPU world matrices in column-major order and optional "
+            "colors.")
         .def(
             "update_geometry",
             [](KE::Scene::SceneRenderSystem& self,
@@ -135,6 +142,10 @@ void bind_scene_render(py::module& m) {
             },
             py::arg("component"), py::arg("bone_matrices"),
             "Update skinned bone matrices through component registration.");
+
+    // TODO: Remove this alias after callers migrate to set_batch_texture().
+    scene.attr("SceneRenderSystem").attr("set_texture") =
+        scene.attr("SceneRenderSystem").attr("set_batch_texture");
 
     py::class_<KE::Scene::DebugDraw>(
         scene, "DebugDraw",

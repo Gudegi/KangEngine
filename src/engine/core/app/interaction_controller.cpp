@@ -9,6 +9,7 @@
 namespace KE {
 
 bool GizmoController::isUsing() const { return ImGuizmo::IsUsing(); }
+bool GizmoController::isOver() const { return ImGuizmo::IsOver(); }
 
 bool GizmoController::manipulateTransform(Camera& camera, glm::mat4& transform,
                                           float x, float y, float width,

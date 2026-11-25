@@ -1,13 +1,16 @@
 # Scene Lighting
 
-Create lights as prims under `/lights`, then use the prim to position, rotate,
+Create lights as prims, then use the prim to position, rotate,
 scale or hide them. Changes appear on the next rendered frame.
+`/lights` is a convenient group; lights may also belong to other scene hierarchies.
 
 Examples assume `import kangengine as ke` and run in `App.setup()`, using
 `self.scene`. The manual examples use **Y-up**, with one scene unit treated as
 one meter. The USD example keeps the imported stage's axes and units.
 
 ## Choose a light
+
+The following limits describe Native rendering.
 
 | Type | Typical use | Direction | Visible light limit | Shadows | Materials |
 | --- | --- | --- | --- | --- | --- |
@@ -19,11 +22,11 @@ one meter. The USD example keeps the imported stage's axes and units.
 
 Point, Spot and Rect do not illuminate `common` or Phong materials. For them,
 use a [PBR material](MATERIALS_TEXTURES.md#create-a-pbr-material).
-Dome currently supplies uniform ambient illumination, not an HDRI background
+Dome in Native supplies uniform ambient illumination, not an HDRI background
 or environment reflections.
 
-Directional, Point and Spot use the first eligible lights encountered under
-`/lights`; excess lights are ignored. Lights are selected depth-first through
+Native Directional, Point and Spot use the first eligible lights encountered;
+excess lights are ignored. Lights are selected depth-first through
 the scene hierarchy, in creation order within each parent, without sorting by
 distance or brightness. More than 16 eligible Rect lights raises an error. Hidden or
 inactive lights, including those under hidden or inactive parents, are excluded.
@@ -87,11 +90,16 @@ previously applied to light getter results; those results are now local.
 intensity multiplier; their values are not interchangeable with USD light
 intensity. Rect and Dome additionally expose exposure and color temperature.
 
-The manual examples use a viewing exposure of 1:
+Use `set_exposure()` to scale brightness before tone mapping.
+The multiplier defaults to 1; 0 produces black output.
 
 ```python
-self.set_tone_map(mode=ke.render.ToneMapMode.ACES_NARKOWICZ, exposure=1.0)
+self.set_exposure(exposure=1.0)
 ```
+
+`set_tone_map()` and `set_gamma()` are Native-only.
+On Native, both exposure multipliers apply when tone mapping is enabled.
+With tone mapping off, only `set_exposure()` applies.
 
 The example intensities are starting values for these dimensions and distances,
 not universal presets. For a manually authored scene, fix viewing exposure,
@@ -220,7 +228,7 @@ orientation remain on the prim.
 - `color_temperature` uses kelvin when `enable_color_temperature` is true.
 - `diffuse` and `specular` scale the corresponding lighting contributions.
 
-Sharp specular highlights may show artifacts. Light textures and emission
+In Native, sharp specular highlights may show artifacts. Light textures and emission
 shaping are not supported. Objects between a panel and a surface do not block
 its light.
 
@@ -237,7 +245,7 @@ light.intensity = 0.2
 sky.set_dome_light(light=light)
 ```
 
-Color, intensity, exposure and color temperature work as described above.
+In Native, color, intensity, exposure and color temperature work as described above.
 `diffuse` scales the illumination; `specular` and `normalize` have no effect.
 All Dome contributions add to the directional light's `ambient`. Set `ambient`
 to zero if only the Domes should provide fill.
@@ -305,15 +313,15 @@ renderers: tone mapping, shadows and indirect lighting also affect the result.
 Directional lights support shadows. For a mesh created with
 `self.scene.add_mesh()`, use `mesh.set_casts_shadow(enabled=True)` to include it
 as a shadow caster. See [Mesh rendering options](MATERIALS_TEXTURES.md#mesh-rendering-options).
-Point, Spot and Rect shadows are not supported, even when a mesh has shadow
+In Native, Point, Spot and Rect shadows are not supported, even when a mesh has shadow
 casting enabled. Directional ambient and Dome fill remain unshadowed, so high
 fill values can make directional shadows look faint.
 
 ## If the scene is too dark or too bright
 
 - Check the material first: Point, Spot and Rect require PBR or PBR ground.
-- Check that the light is under `/lights` and that neither it nor a parent is
-  hidden or inactive. Check the count limits before adding more lights.
+- Check that neither the light nor a parent is hidden or inactive.
+  Check the count limits before adding more lights.
 - Check directions against the table, including the scene's up-axis. Rect
   emits from only one side. Check Point/Spot `range` against the scene units.
 - Check the default directional light. It may be hidden, or it may still be

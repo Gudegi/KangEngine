@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui, keys, terrain
 
 
@@ -283,7 +284,7 @@ class ProceduralTerrainViewer(ke.App):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="View Python-generated terrain.")
+    parser = render_example_parser(description="View Python-generated terrain.")
     parser.add_argument(
         "--type",
         default="mixed",
@@ -323,7 +324,10 @@ def main():
         collision_test=not args.no_collision_test,
         test_bodies_per_type=args.test_bodies_per_type,
     )
-    app.initialize(args.window_width, args.window_height, False, ke.UpAxis.Y)
+    app.initialize(
+        args.window_width, args.window_height, False, ke.UpAxis.Y,
+        renderer=args.renderer,
+    )
     app.start()
 
 

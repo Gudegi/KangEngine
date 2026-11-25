@@ -114,8 +114,16 @@ Switching from Phong to PBR does not automatically convert `diffuse` and
 is open. Loading the same file with the same `flip` and `srgb` settings reuses
 the texture. `flip=True` (the default) flips the image vertically.
 
+For ImGui images, use `App.load_ui_texture()`. A window graphics device is required.
+
 Use `srgb=True` for color images stored as sRGB. Images storing surface data,
 such as normals, roughness, or metallic values, use `srgb=False` (the default).
+
+For generated images, use `App.create_texture(pixels, srgb=True)`. `pixels`
+must be a contiguous `uint8` NumPy array with shape `(height, width, 3)` for RGB
+or `(height, width, 4)` for RGBA. It copies the source; later edits to the array
+do not change the texture. Create and assign a new texture to replace it.
+The `flip` and `srgb` settings match `load_texture()`.
 
 Phong example:
 
@@ -220,6 +228,11 @@ Use double-sided rendering for surfaces that must be visible from both sides.
 Use `AlphaMode.MASK` for fully visible or fully transparent cutouts, and
 `AlphaMode.BLEND` for partial transparency.
 
+These options apply per object for SceneGraph rendering and to the whole batch
+for ExternalBuffer rendering. Shared dynamic geometry cannot be split by changing
+one object's options after vertex updates; configure its options before updating
+vertices.
+
 ## Color materials
 
 `ColorMaterial` uses an object's color and optional colors stored at each vertex.
@@ -227,9 +240,13 @@ Choose a style for plain color, an image texture, or a checkerboard:
 
 ```python
 plain: ke.material.ColorMaterial = self.create_color_material()
+
 textured: ke.material.ColorMaterial = self.create_color_material(
     style=ke.material.ColorStyle.TEXTURED,
 )
+textured.base_color_texture = self.load_texture(path="textures/color.png", srgb=True)
+textured.normal_texture = self.load_texture(path="textures/normal.png", srgb=False)
+
 checker: ke.material.ColorMaterial = self.create_color_material(
     style=ke.material.ColorStyle.CHECKERBOARD,
 )
@@ -240,13 +257,44 @@ debug_checker: ke.material.ColorMaterial = self.create_color_material(
 
 `DEBUG_CHECKER` draws a grid to reveal stretched or missing texture coordinates (UVs).
 
+Unlit rendering also samples `base_color_texture`.
+
+Texture changes affect every object sharing the material. To change one object,
+assign a copy with independent parameters and shared textures:
+
+```python
+copied_material: ke.material.Material = material.clone()
+mesh.set_material(material=copied_material)
+```
+
+`mesh.set_batch_texture()` is a Native ColorMaterial override for the entire batch;
+it takes precedence over the material texture. `set_texture()` remains its
+compatibility alias. Use material fields for Phong and PBR textures.
+
 `VertexColorMaterial`, `VertexColorStyle`, and `create_vertex_color_material()`
 remain aliases of `ColorMaterial`, `ColorStyle`, and `create_color_material()`.
 
 ## Per-vertex colors
 
-The `color` passed to `scene.add_mesh()` tints the whole object. For a separate
-color at each vertex, pass `[N, 3]` **linear RGB** values when creating the mesh.
+The `color` passed to `scene.add_mesh()` multiplies the material color for that
+object without modifying the shared material. `prim.set_display_color()` changes
+RGB while preserving alpha; `prim.set_display_color_alpha()` changes RGBA.
+
+Basic surface RGB is multiplied per channel in linear space:
+
+| Material | Surface RGB before lighting |
+| --- | --- |
+| `ColorMaterial` (plain) | object color × vertex color |
+| `ColorMaterial` (textured) | texture color × object color × vertex color |
+| `PhongMaterial` | `diffuse` × `diffuse_map` RGB × object color × vertex color |
+| `PBRMaterial` | `base_color.rgb` × `base_color_texture` RGB × object color × vertex color |
+
+Missing colors or textures act as white. Lighting, specular highlights, and
+emission are calculated separately. Alpha follows the material's opacity inputs
+and the mesh's alpha mode.
+
+For a separate color at each vertex, pass `[N, 3]` **linear RGB** values when
+creating the mesh.
 The vertex array is `[N, 3]` and triangle indices are `[M, 3]`:
 
 ```python
@@ -283,7 +331,7 @@ and the material values below:
 
 | Material | Material color used |
 | --- | --- |
-| ColorMaterial | Base-color texture, when assigned to the surface |
+| ColorMaterial | `base_color_texture` |
 | PhongMaterial | `diffuse` × `diffuse_map` |
 | PBRMaterial | `base_color` × `base_color_texture` |
 

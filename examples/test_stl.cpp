@@ -170,8 +170,7 @@ class MyApp : public App {
             stlPrim->setMeshData(stlMeshPtr);
 
             // 색상과 초기 변환 설정
-            stlPrim->setAttribute("primvars:displaycolorAlpha",
-                                  glm::vec4(0.8f, 0.4f, 0.1f, 1.0f));
+            stlPrim->setDisplayColorAlpha(glm::vec4(0.8f, 0.4f, 0.1f, 1.0f));
             stlPrim->setLocalScale(glm::vec3(10.f));
             stlPrim->setLocalTranslation(glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -195,8 +194,7 @@ class MyApp : public App {
                 getScene()->definePrim("/obj_mesh", Scene::PrimType::Mesh);
             objPrim->setMeshData(objMeshPtr);
 
-            objPrim->setAttribute("primvars:displaycolorAlpha",
-                                  glm::vec4(0.2f, 0.6f, 0.9f, 1.0f));
+            objPrim->setDisplayColorAlpha(glm::vec4(0.2f, 0.6f, 0.9f, 1.0f));
             objPrim->setLocalScale(glm::vec3(1.f));
             objPrim->setLocalTranslation(
                 glm::vec3(2.0f, 1.0f, 0.0f)); // STL 옆에 배치

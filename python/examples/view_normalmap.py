@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import kangengine as ke
+from kangengine.utils._example_args import render_example_parser
 from kangengine import imgui
 
 
@@ -23,15 +24,12 @@ def brickwall_dir() -> Path:
 class BrickwallNormalMapViewer(ke.App):
     def setup(self):
         self.normal_maps_enabled = True
-        device = self.get_renderer().device()
         materials = self.create_standard_materials()
         self.ground_material = materials.ground
 
         root = brickwall_dir()
-        self.diffuse_texture = device.create_texture(str(root / "brickwall.jpg"), True)
-        self.normal_texture = device.create_texture(
-            str(root / "brickwall_normal.jpg"), True
-        )
+        self.diffuse_texture = self.load_texture(path=root / "brickwall.jpg")
+        self.normal_texture = self.load_texture(path=root / "brickwall_normal.jpg")
         self.wall_material = self.create_phong_material(
             diffuse_map=self.diffuse_texture,
             normal_map=self.normal_texture,
@@ -43,8 +41,6 @@ class BrickwallNormalMapViewer(ke.App):
             self.wall_material,
             color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
         )
-        self.wall_view.set_texture(self.diffuse_texture, 0)
-        self.wall_view.set_texture(self.normal_texture, 5)
         self.wall_view.set_double_sided(True)
 
         ground_view = self.scene.add_mesh(
@@ -92,6 +88,7 @@ class BrickwallNormalMapViewer(ke.App):
 
 
 if __name__ == "__main__":
+    args = render_example_parser(description=__doc__).parse_args()
     app = BrickwallNormalMapViewer()
-    app.initialize(1280, 720, False, ke.UpAxis.Y)
+    app.initialize(1280, 720, False, ke.UpAxis.Y, renderer=args.renderer)
     app.start()
