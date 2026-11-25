@@ -1912,7 +1912,8 @@ class App(_NativeApp):
         ovrtx supports skinning, CPU deformation, CPU/CUDA instances, picking,
         and built-in Color/Phong/PBR materials with unlit and alpha masking.
         Standard checker ground uses a filtered texture; Phong ground and grid
-        emission are unsupported. Alpha blending and DebugChecker are unsupported.
+        emission are unsupported. Lit PBR BLEND uses USD opacity; unlit/color
+        fading and DebugChecker are unsupported.
         Its window requires CUDA–OpenGL interop on the same GPU.
         Use ``headless=True, hide_ui=True`` for CPU image output
         without a window. CUDA instance inputs also require ``cuda-bindings``.

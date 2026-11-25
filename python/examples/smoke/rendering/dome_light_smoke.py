@@ -13,11 +13,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "rendering"))
 from static_scene_renderer import build_scene
 
 
-def write_environment(path, reverse=False):
+def write_environment(path, reverse=False, *, poles=False):
     # Linear RGBE values above one exercise HDR loading without an external asset.
     pixels = np.empty((16, 32, 4), dtype=np.uint8)
     pixels[:, :16] = (128, 8, 8, 130)
     pixels[:, 16:] = (8, 8, 128, 130)
+    if poles:
+        pixels[:8] = (128, 8, 8, 130)
+        pixels[8:] = (8, 8, 128, 130)
     if reverse:
         pixels = pixels[:, ::-1]
     path.write_bytes(b"#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 16 +X 32\n" + pixels.tobytes())
@@ -91,13 +94,28 @@ def main():
             light.texture_format = "latlong"
             dome.set_dome_light(light)
             textured = capture()
-            parent.set_local_rotation_axis_angle(axis=ke.Vec3(0, 0, 1), angle_radians=math.pi)
+            parent.set_local_rotation_axis_angle(axis=ke.Vec3(0, 1, 0), angle_radians=math.pi)
             rotated = capture()
             assert np.abs(rotated[:24] - textured[:24]).mean() > 10
             light.texture_path = str(replacement)
             dome.set_dome_light(light)
             replaced = capture()
             assert np.abs(replaced[:24] - rotated[:24]).mean() > 10
+
+            # The HDRI top is +Y locally; a +90-degree X rotation makes it +Z.
+            poles = Path(directory) / "poles.hdr"
+            write_environment(poles, poles=True)
+            light.texture_path = str(poles)
+            dome.set_dome_light(light)
+            scene.remove_prim("/group")
+            camera = scene.get_prim_at_path("/camera")
+            for angle in (0, math.pi / 2):
+                parent.set_local_rotation_axis_angle(ke.Vec3(1, 0, 0), angle)
+                for offset, channel in ((math.pi / 2, 0), (-math.pi / 2, 2)):
+                    camera.set_local_rotation_axis_angle(ke.Vec3(1, 0, 0), angle + offset)
+                    color = capture()[50:78, 50:78].mean(axis=(0, 1))
+                    assert color[channel] > color[2 - channel] + 50, (angle, offset, color)
+
             light.texture_path = str(Path(directory) / "missing.hdr")
             dome.set_dome_light(light)
             try:

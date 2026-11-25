@@ -73,6 +73,11 @@ def _base_color_texture(item):
     )
 
 
+def _opacity_texture(item):
+    textures = item["textures"]
+    return textures.get("opacity_texture", textures.get("alpha_map"))
+
+
 class OvrtxSceneAdapter:
     def __init__(self, width, height):
         self._resolution = (width, height)
@@ -428,7 +433,7 @@ def Xform "Batch" {{
         textures = item["textures"]
         color = _base_color_texture(item)
         normal = textures.get("normal_texture", textures.get("normal_map"))
-        alpha = textures.get("alpha_map")
+        alpha = _opacity_texture(item)
         unlit = item["material"]["unlit"]
         # Unlit already uses the emission channel for base color.
         emissive = textures.get("emissive_texture") if not unlit else None
@@ -457,6 +462,8 @@ def Xform "Batch" {{
         for name, source in (
             ("Texture", color), ("Normal", normal),
             ("Alpha", alpha), ("Emissive", emissive),
+            ("Metallic", textures.get("metallic_texture") if not unlit else None),
+            ("Roughness", textures.get("roughness_texture") if not unlit else None),
         ):
             if source is None:
                 continue
@@ -492,6 +499,13 @@ def Xform "Batch" {{
             connections += f"normal3f inputs:normal.connect = <{root}/Material/Normal.outputs:rgb>\n"
         if emissive:
             connections += f"color3f inputs:emissiveColor.connect = <{root}/Material/Emissive.outputs:rgb>\n"
+        if not unlit:
+            for attribute in ("metallic", "roughness"):
+                if attribute + "_texture" in textures:
+                    connections += (
+                        f"float inputs:{attribute}.connect = "
+                        f"<{root}/Material/{attribute.title()}.outputs:r>\n"
+                    )
         if item["alpha_mode"] and (alpha or color):
             source = "Alpha.outputs:r" if alpha else "Texture.outputs:a"
             connections += (
@@ -750,7 +764,7 @@ def SkelRoot "Batch" {{
                 "ovrtx does not support per-instance alpha blending; use AlphaMode.MASK or Native"
             )
         # TODO: Document in the OVRTX guide: base-color/alpha textures require a shared tint.
-        if _base_color_texture(item) is not None or "alpha_map" in item["textures"]:
+        if _base_color_texture(item) is not None or _opacity_texture(item) is not None:
             if len(instance_colors) > 1 and not np.all(
                 instance_colors == instance_colors[0]
             ):
@@ -787,10 +801,11 @@ def SkelRoot "Batch" {{
         color = np.asarray(value["base_color"]) * item["color"]
         textures = item["textures"]
         textured = _base_color_texture(item) is not None
+        alpha = _opacity_texture(item)
         shader = path + "/Material/Shader"
         unlit = value["unlit"]
         instanced = "count" in item and item["skin"] is None
-        if instanced and (textured or "alpha_map" in textures):
+        if instanced and (textured or alpha):
             if len(item["colors"]):
                 color *= item["colors"][0]
             instanced = False
@@ -815,6 +830,12 @@ def SkelRoot "Batch" {{
             ("roughness", roughness),
             ("specularColor", [0, 0, 0] if unlit else value["specular"]),
         ):
+            if not unlit and attribute + "_texture" in textures:
+                self._write(
+                    path + "/Material/" + attribute.title(), "inputs:scale",
+                    [data, data, data, 1],
+                )
+                continue
             self._write(
                 shader,
                 "inputs:" + attribute,
@@ -842,10 +863,10 @@ def SkelRoot "Batch" {{
                     semantic=ovstage.AttributeSemantic.COLOR,
                 )
         if not instanced and (
-            not item["alpha_mode"] or not (textured or "alpha_map" in textures)
+            not item["alpha_mode"] or not (textured or alpha)
         ):
             self._write(shader, "inputs:opacity", color[3] if item["alpha_mode"] else 1)
-        if not instanced and "alpha_map" in textures:
+        if not instanced and alpha:
             self._write(path + "/Material/Alpha", "inputs:scale", [color[3]] * 4)
         self._write(
             shader,
@@ -1077,6 +1098,14 @@ def {schema} "Light"{shaping} {{
             oriented[:3, :3] = np.column_stack((x, np.cross(z, x), z))
             oriented[:3, 3] = world[:3, 3]
             world = oriented
+        elif kind == "dome":
+            # OVRTX 0.7 uses a +Z texture pole; UsdLux DomeLight defines +Y.
+            world = world @ np.array([
+                [1, 0, 0, 0],
+                [0, 0, 1, 0],
+                [0, -1, 0, 0],
+                [0, 0, 0, 1],
+            ])
         self._matrix(path, world)
         color = light.color
         self._write(

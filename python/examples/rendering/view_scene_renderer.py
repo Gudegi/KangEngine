@@ -35,6 +35,12 @@ class SceneRendererApp(ke.App):
         self.set_fixed_update_hz(update_hz=60)
         self.set_ui_layout_mode(mode=ke.UILayoutMode.EDITOR)
         self.set_camera_view(position=[18, 16, 24], target=[0, 1, 0])
+
+        # Match displayed gray under each renderer's default output processing.
+        gray = (177 / 255) ** 2.2 if self.render_backend == "native" else 0.3
+        self.gray_background = (gray, gray, gray, 1.0)
+        self.set_background_color(color=self.gray_background)
+
         light = ke.scene.DirectionalLight()
         light.direction = ke.Vec3(-0.5, -1, -0.4)
         light.intensity = 3
@@ -417,7 +423,7 @@ class SceneRendererApp(ke.App):
             if changed:
                 self.set_exposure(exposure=self.exposure)
             if ke.imgui.button("Gray background"):
-                self.set_background_color(color=rgba(ke.ColorType.LIGHT_GRAY))
+                self.set_background_color(color=self.gray_background)
             changed, self.checker_enabled = ke.imgui.checkbox("Checker ground", self.checker_enabled)
             if changed:
                 self.set_checker_ground(self.checker_enabled)

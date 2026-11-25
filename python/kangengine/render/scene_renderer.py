@@ -14,8 +14,10 @@ def _validate_frame(frame, texture_paths, validated_meshes):
             raise ValueError(f'{item["path"]}: use built-in materials and texture_resources')
         if material["model"] == "color" and material["style"] == 3:
             raise ValueError("Scene renderer does not support DebugChecker materials")
-        if item["alpha_mode"] == 2 or (item["alpha_mode"] == 0 and item["color"][3] < 1):
-            raise ValueError("Scene renderer does not support AlphaMode.BLEND; USD opacity is transmission, not alpha blending")
+        if item["alpha_mode"] == 2 and (material["model"] != "pbr" or material["unlit"]):
+            raise ValueError("AlphaMode.BLEND requires lit PBR for USD opacity; color fading is unsupported")
+        if item["alpha_mode"] == 0 and item["color"][3] < 1:
+            raise ValueError("Implicit display-alpha blending is unsupported; use an explicit alpha mode")
         if item["mesh_id"] not in validated_meshes:
             if item["mesh"].colors:
                 raise ValueError("Scene renderer does not yet support vertex colors")
@@ -23,7 +25,8 @@ def _validate_frame(frame, texture_paths, validated_meshes):
         for slot, texture in item["textures"].items():
             if slot not in (
                 "base_color_texture", "diffuse_map", "normal_texture", "normal_map",
-                "alpha_map", "emissive_texture",
+                "alpha_map", "opacity_texture", "emissive_texture",
+                "metallic_texture", "roughness_texture",
             ):
                 raise ValueError(f"Scene renderer does not yet support texture slot {slot}")
             if texture["pixels"] is not None:
@@ -39,8 +42,10 @@ class SceneRenderer:
 
     Both backends accept opaque lit PBR triangle meshes, base-color textures
     from files or pixel arrays, scene lights, and a perspective camera. OVRTX
-    also accepts Color/Phong materials, unlit, alpha masking, and normal maps.
-    Alpha blending and checker materials are unsupported. Register a new source
+    also accepts Color/Phong materials, unlit, alpha masking, and normal,
+    emissive, metallic, and roughness maps.
+    OVRTX interprets lit PBR BLEND as USD opacity, not color fading.
+    Checker materials are unsupported. Register a new source
     resource to replace source geometry or an image. App owns runtime skinning
     and instances.
     The session retains its scene and resource manager. Use on its creating

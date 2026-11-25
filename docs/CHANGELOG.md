@@ -25,6 +25,8 @@
 - Support Color/Phong materials, unlit, alpha masking, normal maps, and textures
   from pixel arrays.
 - Support PBR emissive textures, including color and strength updates.
+- Support PBR metallic and roughness textures, including factor updates.
+- Interpret lit PBR alpha blending as USD opacity on ovrtx.
 
 **Added**
 
@@ -57,6 +59,7 @@
 
 **Fixed**
 
+- Use mipmap filtering for Native materials to reduce texture aliasing.
 - Release skinned GPU buffers when their surfaces are removed.
 - Improve registration time for large numbers of static objects.
 - Disable gizmo editing for externally positioned debug geometry.

@@ -141,6 +141,32 @@ def main():
         material.texture_resources = {}
         material.emissive_strength = 0
 
+        original_metallic = material.metallic
+        material.metallic = 1.0
+        for attribute in ("metallic", "roughness"):
+            original = getattr(material, attribute)
+            setattr(material, attribute, 1.0)
+            for _ in range(16 if args.renderer == "ovrtx" else 1):
+                plain = renderer.render().astype(float)
+            slot = attribute + "_texture"
+            material.texture_resources = {slot: resources.register_texture_source(
+                attribute.title(), str(texture_path), srgb=False)}
+            if args.renderer == "native":
+                try:
+                    renderer.render()
+                except ValueError as error:
+                    assert "base-color texture sources only" in str(error), error
+                else:
+                    raise AssertionError("unsupported Native snapshot texture was accepted")
+            else:
+                for _ in range(16):
+                    mapped = renderer.render().astype(float)
+                difference = np.abs(mapped - plain).mean()
+                assert difference > 1, (attribute, difference)
+            material.texture_resources = {}
+            setattr(material, attribute, original)
+        material.metallic = original_metallic
+
         light_prim = scene.get_prim_at_path("/light")
         light = light_prim.get_directional_light()
         light.color = ke.Vec3(0.1, 0.1, 1)

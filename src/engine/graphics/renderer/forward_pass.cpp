@@ -714,7 +714,7 @@ void ForwardPass::initializeResources(
     Backend::SamplerDesc materialSamplerDesc;
     materialSamplerDesc.wrapU = Backend::TextureWrap::Repeat;
     materialSamplerDesc.wrapV = Backend::TextureWrap::Repeat;
-    materialSamplerDesc.minFilter = Backend::TextureFilter::Linear;
+    materialSamplerDesc.minFilter = Backend::TextureFilter::LinearMipmapLinear;
     materialSamplerDesc.magFilter = Backend::TextureFilter::Linear;
     materialSamplerDesc.label = "forward_material_sampler";
     _materialSampler = createSampler(materialSamplerDesc);

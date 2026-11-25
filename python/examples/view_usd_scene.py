@@ -9,6 +9,10 @@ import numpy as np
 
 import kangengine as ke
 from kangengine.utils._example_args import render_example_parser
+from kangengine.utils.math import (
+    quat_wxyz_from_rotation_vector_numpy,
+    quat_wxyz_multiply_numpy,
+)
 from kangengine import asset, imgui, render
 
 
@@ -48,7 +52,7 @@ class USDSceneViewer(ke.App):
         self.light_prims = []
         self._configure_lighting()
         self.camera_keyboard_enabled = False
-        self.set_camera_move_speed(1.5 * self.units_per_meter)
+        self.set_camera_move_speed(15.0 * self.units_per_meter)
         self.bounds_min, self.bounds_max = _compute_bounds(self.meshes)
         self._reset_camera()
 
@@ -84,8 +88,11 @@ class USDSceneViewer(ke.App):
                 normal_mapped_count += 1
             view.set_double_sided(self.double_sided or mesh.double_sided)
             if mesh.opacity_threshold > 0:
-                view.set_alpha_mode(render.AlphaMode.MASK, cutoff=mesh.opacity_threshold)
+                view.set_alpha_mode(
+                    render.AlphaMode.MASK, cutoff=mesh.opacity_threshold
+                )
             elif mesh.base_color[3] < 1 or mesh.opacity_texture_path:
+                # Preserve USD opacity; Native blends, OVRTX uses USD transparency.
                 view.set_alpha_mode(render.AlphaMode.BLEND)
             self.mesh_views.append(view)
 
@@ -138,7 +145,12 @@ class USDSceneViewer(ke.App):
         imgui.text(f"meshes: {len(self.mesh_views)}")
         imgui.text(f"textures: {len(self.textures)}")
         imgui.text(f"normal maps: {len(self.normal_texture_bindings)}")
-        imgui.text(f"USD lights: {len(self.light_prims)}")
+        imgui.text(f"USD lights: {len(self.result.lights)}")
+        if self.light_prims and not self.result.lights:
+            lighting = "Sun + ambient"
+            if self.render_backend == "ovrtx":
+                lighting += " + HDRI"
+            imgui.text(f"Lighting: {lighting}")
         if self.light_prims:
             changed_exposure, self.exposure_compensation = imgui.slider_float(
                 "Exposure compensation (stops)", self.exposure_compensation, -8.0, 8.0
@@ -184,6 +196,9 @@ class USDSceneViewer(ke.App):
                 self.light_prims.append(prim)
             self._apply_exposure()
             return
+        if Path(self.usd_file).resolve().parent == SPONZA_USD.resolve().parent:
+            self._configure_sponza_lighting()
+            return
         direction = (
             (0.35, 0.45, -0.82)
             if self.result.up_axis == ke.UpAxis.Z
@@ -194,8 +209,49 @@ class USDSceneViewer(ke.App):
         self.set_light_intensity(1.15)
         self.set_light_ambient(ke.Vec3(0.42, 0.40, 0.36))
 
+    def _configure_sponza_lighting(self):
+        # The bundled USD omits lights; share sunlight and ambient across renderers.
+        z_up = self.result.up_axis == ke.UpAxis.Z
+        # Match the supplied HDRI's sun elevation without tilting its horizon.
+        elevation = math.radians(74.6)
+        height, horizontal = math.sin(elevation), math.cos(elevation)
+        direction = (0, horizontal, -height) if z_up else (0, -height, -horizontal)
+        self.set_light_direction(direction=ke.Vec3(*direction))
+        self.set_light_color(color=ke.Vec3(1, 1, 1))
+        self.set_light_intensity(intensity=3.0)
+        # A small ambient fill approximates the reference's shaded surfaces.
+        self.set_light_ambient(ambient=ke.Vec3(0.1, 0.1, 0.1))
+        self.light_prims.append(
+            self.scene.get_prim_at_path("/lights/default_directional")
+        )
+
+        if self.render_backend == "ovrtx":
+            light: ke.scene.DomeLight = ke.scene.DomeLight()
+            light.texture_path = str(
+                Path(self.usd_file).parent / "textures/kloppenheim_05_4k.hdr"
+            )
+            light.texture_format = "latlong"
+            light.intensity = 6.0
+            environment: ke.scene.Prim = self.scene.define_prim(
+                path="/lights/environment",
+                prim_type=ke.scene.PrimType.LIGHT,
+            )
+            environment.set_dome_light(light=light)
+            # Align this HDRI's sun azimuth with the shared directional light.
+            rotation = quat_wxyz_from_rotation_vector_numpy([0, math.radians(125.8), 0])
+            if z_up:
+                rotation = quat_wxyz_multiply_numpy(
+                    quat_wxyz_from_rotation_vector_numpy([math.pi / 2, 0, 0]),
+                    rotation,
+                )
+            environment.set_local_quat_wxyz(quat_wxyz=rotation)
+            self.light_prims.append(environment)
+
+        self.camera_exposure = 2.0
+        self._apply_exposure()
+
     def _apply_exposure(self):
-        exposure = self.camera_exposure * 2.0 ** self.exposure_compensation
+        exposure = self.camera_exposure * 2.0**self.exposure_compensation
         if self.render_backend == "native":
             self.set_tone_map(mode=render.ToneMapMode.ACES_NARKOWICZ, exposure=exposure)
         else:
@@ -305,7 +361,10 @@ def _parse_usd_or_explain(usd_file: str, scale: float):
 def main():
     parser = render_example_parser()
     parser.add_argument("usd_file", type=Path, nargs="?", default=SPONZA_USD)
-    parser.add_argument("--scale", type=float, default=1.0)
+    parser.add_argument(
+        "--scale", type=float,
+        help="Mesh scale (default: 0.01 for bundled Sponza, 1 otherwise).",
+    )
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--ground", action="store_true")
@@ -316,14 +375,22 @@ def main():
     if not usd_file.exists():
         raise FileNotFoundError(usd_file)
 
+    scale = args.scale
+    if scale is None:
+        # Load Sponza in meters to match Native's default shadow range.
+        scale = 0.01 if usd_file.parent == SPONZA_USD.resolve().parent else 1.0
+
     app = USDSceneViewer(
         usd_file,
-        args.scale,
+        scale,
         show_ground=args.ground,
         double_sided=args.double_sided,
     )
     app.initialize(
-        width=args.width, height=args.height, hide_ui=False, up_axis=app.result.up_axis,
+        width=args.width,
+        height=args.height,
+        hide_ui=False,
+        up_axis=app.result.up_axis,
         renderer=args.renderer,
     )
     app.start()
