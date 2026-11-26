@@ -542,6 +542,18 @@ RayPickResult Rasterizer::pickScreen(glm::vec2 ndc, const glm::mat4& view,
     return result;
 }
 
+Backend::Texture* Rasterizer::renderInspection(const glm::mat4& view,
+                                              const glm::mat4& projection,
+                                              int width, int height,
+                                              const RenderViewSettings& settings) {
+    if (!_inspectionPass) {
+        _inspectionPass = std::make_unique<PickingPass>();
+        _inspectionPass->initialize(_graphicsDevice);
+    }
+    return _inspectionPass->inspect(_handleTable, _shaderLibrary, view, projection,
+                                    width, height, settings);
+}
+
 RayPickResult Rasterizer::raycast(const Geometry::Ray& ray) const {
     const auto hit = raycastHit(ray);
     RayPickResult result;

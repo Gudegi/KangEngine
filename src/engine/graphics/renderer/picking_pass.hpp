@@ -2,6 +2,7 @@
 
 #include "engine/graphics/renderer/render_pass_base.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/graphics/renderer/render_backend/render_view.hpp"
 
 #include <array>
 #include <glm/mat4x4.hpp>
@@ -23,16 +24,26 @@ class PickingPass : public RenderPassBase {
                        ShaderLibrary& shaders, const glm::mat4& view,
                        const glm::mat4& projection, glm::vec2 ndc, int width,
                        int height);
+    Backend::Texture* inspect(const std::vector<MeshInstancer*>& instancers,
+                              ShaderLibrary& shaders, const glm::mat4& view,
+                              const glm::mat4& projection, int width,
+                              int height, const RenderViewSettings& settings);
 
   private:
     void initializeResources();
+    void resizeTarget(int width, int height, bool inspection);
+    RayPickResult draw(const std::vector<MeshInstancer*>& instancers,
+                       ShaderLibrary& shaders, const glm::mat4& view,
+                       const glm::mat4& projection, glm::vec2 ndc, int width,
+                       int height, const RenderViewSettings& settings);
     Backend::GraphicsPipeline* pipeline(ShaderLibrary& shaders, bool skinned,
-                                        bool textured, bool doubleSided);
+                                        bool textured, bool doubleSided,
+                                        bool inspection);
 
     std::array<std::unique_ptr<Backend::BindGroupLayout>, 4> _layouts;
     std::unique_ptr<Backend::BindGroupLayout> _emptyLayout;
     std::array<std::unique_ptr<Backend::PipelineLayout>, 4> _pipelineLayouts;
-    std::array<std::unique_ptr<Backend::GraphicsPipeline>, 8> _pipelines;
+    std::array<std::unique_ptr<Backend::GraphicsPipeline>, 16> _pipelines;
     std::unique_ptr<Backend::Buffer> _camera;
     std::unique_ptr<Backend::BindGroup> _frame;
     std::unique_ptr<Backend::Sampler> _sampler;
@@ -41,6 +52,7 @@ class PickingPass : public RenderPassBase {
     std::unique_ptr<Backend::TextureView> _colorView;
     std::unique_ptr<Backend::TextureView> _depthView;
     std::unique_ptr<Backend::RenderTarget> _target;
+    int _width = 0, _height = 0;
 };
 
 } // namespace KE

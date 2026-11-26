@@ -2323,7 +2323,7 @@ void ViewportPanel::buildPanel() {
 
     if (_app) {
         const ImGuiStyle& style = ImGui::GetStyle();
-        constexpr int toolboxSlots = 5;
+        constexpr int toolboxSlots = 3;
         const float margin = style.ItemSpacing.x;
         const float toolButtonSize =
             ImGui::GetFrameHeight() + style.FramePadding.x * 2.0f;

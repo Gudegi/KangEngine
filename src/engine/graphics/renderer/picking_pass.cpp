@@ -40,7 +40,7 @@ void PickingPass::initializeResources() {
     }
 
     BufferDesc buffer;
-    buffer.size = sizeof(glm::mat4);
+    buffer.size = 2 * sizeof(glm::mat4) + sizeof(glm::vec4);
     buffer.usage = BufferUsage::Uniform | BufferUsage::CopyDst;
     buffer.label = "picking_camera";
     _camera = _device->createBuffer(buffer);
@@ -53,11 +53,21 @@ void PickingPass::initializeResources() {
     sampler.magFilter = TextureFilter::Linear;
     sampler.wrapU = sampler.wrapV = TextureWrap::Repeat;
     _sampler = _device->createSampler(sampler);
+}
 
+void PickingPass::resizeTarget(int width, int height, bool inspection) {
+    using namespace Backend;
+    if (_width == width && _height == height)
+        return;
+    _target.reset();
+    _colorView.reset();
+    _depthView.reset();
     TextureResourceDesc texture;
-    texture.extent = {1, 1, 1};
-    texture.usage = TextureUsage::RenderAttachment | TextureUsage::CopySrc;
-    texture.format = TextureFormat::RGBA8Unorm;
+    texture.extent = {uint32_t(width), uint32_t(height), 1};
+    texture.usage = TextureUsage::RenderAttachment | TextureUsage::CopySrc |
+                    TextureUsage::TextureBinding;
+    texture.format =
+        inspection ? TextureFormat::RGBA16Float : TextureFormat::RGBA8Unorm;
     _color = _device->createTexture(texture);
     texture.format = TextureFormat::Depth32Float;
     _depth = _device->createTexture(texture);
@@ -77,14 +87,17 @@ void PickingPass::initializeResources() {
     depth.depthLoadOp = LoadOp::Clear;
     target.depthStencilAttachment = depth;
     _target = _device->createRenderTarget(target);
+    _width = width;
+    _height = height;
 }
 
 Backend::GraphicsPipeline* PickingPass::pipeline(ShaderLibrary& shaders,
                                                  bool skinned, bool textured,
-                                                 bool doubleSided) {
+                                                 bool doubleSided,
+                                                 bool inspection) {
     using namespace Backend;
-    auto& result = _pipelines[(skinned ? 4 : 0) | (textured ? 2 : 0) |
-                              (doubleSided ? 1 : 0)];
+    auto& result = _pipelines[(inspection ? 8 : 0) | (skinned ? 4 : 0) |
+                              (textured ? 2 : 0) | (doubleSided ? 1 : 0)];
     if (result)
         return result.get();
     GraphicsPipelineDesc desc;
@@ -92,6 +105,10 @@ Backend::GraphicsPipeline* PickingPass::pipeline(ShaderLibrary& shaders,
     desc.shader.name = "picking";
     std::string vs = shaders.load(getAssetPath("shaders/rhi/picking.vs"));
     std::string fs = shaders.load(getAssetPath("shaders/rhi/picking.fs"));
+    if (inspection) {
+        vs.insert(vs.find('\n') + 1, "#define KE_INSPECTION\n");
+        fs.insert(fs.find('\n') + 1, "#define KE_INSPECTION\n");
+    }
     if (skinned)
         vs.insert(vs.find('\n') + 1, "#define KE_SKINNED\n");
     if (textured)
@@ -133,7 +150,8 @@ Backend::GraphicsPipeline* PickingPass::pipeline(ShaderLibrary& shaders,
     }
     desc.primitive.cullMode = doubleSided ? CullMode::None : CullMode::Back;
     desc.depthStencil = DepthStencilState{};
-    desc.colorTargets = {{TextureFormat::RGBA8Unorm}};
+    desc.colorTargets = {
+        {inspection ? TextureFormat::RGBA16Float : TextureFormat::RGBA8Unorm}};
     result = _device->createGraphicsPipeline(desc);
     return result.get();
 }
@@ -142,13 +160,32 @@ RayPickResult PickingPass::pick(const std::vector<MeshInstancer*>& instancers,
                                 ShaderLibrary& shaders, const glm::mat4& view,
                                 const glm::mat4& projection, glm::vec2 ndc,
                                 int width, int height) {
+    return draw(instancers, shaders, view, projection, ndc, width, height, {});
+}
+
+Backend::Texture*
+PickingPass::inspect(const std::vector<MeshInstancer*>& instancers,
+                     ShaderLibrary& shaders, const glm::mat4& view,
+                     const glm::mat4& projection, int width, int height,
+                     const RenderViewSettings& settings) {
+    draw(instancers, shaders, view, projection, {}, width, height, settings);
+    return _color.get();
+}
+
+RayPickResult PickingPass::draw(const std::vector<MeshInstancer*>& instancers,
+                                ShaderLibrary& shaders, const glm::mat4& view,
+                                const glm::mat4& projection, glm::vec2 ndc,
+                                int width, int height,
+                                const RenderViewSettings& settings) {
     using namespace Backend;
+    const bool inspection = settings.mode != RenderViewMode::RGB;
     if (width <= 0 || height <= 0 || !std::isfinite(ndc.x) ||
         !std::isfinite(ndc.y) || ndc.x < -1 || ndc.x >= 1 || ndc.y <= -1 ||
         ndc.y > 1)
         return {};
-    if (!_target)
+    if (!_camera)
         initializeResources();
+    resizeTarget(inspection ? width : 1, inspection ? height : 1, inspection);
 
     // Crop one viewport pixel into a 1x1 target; retain the original depth
     // mapping.
@@ -160,8 +197,13 @@ RayPickResult PickingPass::pick(const std::vector<MeshInstancer*>& instancers,
     crop[1][1] = float(height);
     crop[3][0] = -ndc.x * width;
     crop[3][1] = -ndc.y * height;
-    const glm::mat4 vp = crop * projection * view;
-    _camera->setData(&vp, sizeof(vp));
+    struct CameraParams {
+        glm::mat4 viewProjection;
+        glm::mat4 view;
+        glm::vec4 depthRange;
+    } camera{(inspection ? glm::mat4(1) : crop) * projection * view, view,
+             glm::vec4(settings.depthMax, 0, 0, 0)};
+    _camera->setData(&camera, sizeof(camera));
 
     struct Draw {
         MeshInstancer* instancer;
@@ -181,7 +223,7 @@ RayPickResult PickingPass::pick(const std::vector<MeshInstancer*>& instancers,
         auto* inst = instancers[handle];
         if (!inst)
             continue;
-        auto instances = inst->preparePickInstances();
+        auto instances = inst->preparePickInstances(!inspection);
         if (!instances.count)
             continue;
         if (nextId + instances.count >
@@ -203,13 +245,15 @@ RayPickResult PickingPass::pick(const std::vector<MeshInstancer*>& instancers,
             texture = inst->textureAtSlot(RendererTextureSlot::BaseColor);
         if (!useAlpha)
             texture = nullptr;
-        draw.pipeline = pipeline(shaders, inst->hasSkinning(),
-                                 texture != nullptr, inst->isDoubleSided());
+        draw.pipeline =
+            pipeline(shaders, inst->hasSkinning(), texture != nullptr,
+                     inst->isDoubleSided(), inspection);
         struct Params {
             glm::uvec4 ids;
             glm::vec4 alpha;
         } params;
-        params.ids = {draw.firstId, 0, 0, 0};
+        params.ids = {draw.firstId, uint32_t(settings.mode), uint32_t(handle),
+                      0};
         params.alpha = {
             inst->alphaMode() == AlphaMode::Mask ? inst->alphaCutoff() : -1.0f,
             inst->alphaMaskUsesRedChannel() ? 1.0f : 0.0f, 1.0f, 0.0f};
@@ -246,8 +290,8 @@ RayPickResult PickingPass::pick(const std::vector<MeshInstancer*>& instancers,
 
     auto encoder = _device->createCommandEncoder();
     auto pass = encoder->beginRenderPass(_target.get());
-    pass->setViewport(0, 0, 1, 1);
-    pass->setScissor(0, 0, 1, 1);
+    pass->setViewport(0, 0, _width, _height);
+    pass->setScissor(0, 0, _width, _height);
     pass->setPolygonMode(PolygonMode::Fill);
     for (const auto& draw : draws) {
         pass->setPipeline(draw.pipeline);
@@ -263,6 +307,8 @@ RayPickResult PickingPass::pick(const std::vector<MeshInstancer*>& instancers,
     pass->end();
     auto commands = encoder->finish();
     _device->submit(*commands);
+    if (inspection)
+        return {};
     const auto color = _device->readTexture(_colorView.get());
     uint32_t id = 0;
     for (uint32_t i = 0; i < 4; ++i)

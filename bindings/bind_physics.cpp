@@ -7,8 +7,12 @@
 #include <pybind11/stl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <limits>
+#include <unordered_map>
+#include <unordered_set>
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_PHYSX
@@ -23,6 +27,7 @@
 #include "physics/material_utils.hpp"
 #include "physics/physics.hpp"
 #include <extensions/PxRigidBodyExt.h>
+#include <geometry/PxMeshQuery.h>
 #endif
 
 namespace py = pybind11;
@@ -30,8 +35,32 @@ namespace py = pybind11;
 #ifdef KANGENGINE_USE_PHYSX
 namespace {
 
+std::vector<physx::PxRigidActor*> inspectionActors(KE::PhysicsWorld& world) {
+    using namespace physx;
+
+    auto* scene = world.getScene();
+    const auto flags =
+        PxActorTypeFlag::eRIGID_STATIC | PxActorTypeFlag::eRIGID_DYNAMIC;
+    std::vector<PxActor*> actors(scene->getNbActors(flags));
+    scene->getActors(flags, actors.data(), static_cast<PxU32>(actors.size()));
+    std::vector<PxRigidActor*> result;
+    for (auto* actor : actors)
+        result.push_back(static_cast<PxRigidActor*>(actor));
+
+    std::vector<PxArticulationReducedCoordinate*> articulations(
+        scene->getNbArticulations());
+    scene->getArticulations(articulations.data(),
+                            static_cast<PxU32>(articulations.size()));
+    for (auto* articulation : articulations) {
+        std::vector<PxArticulationLink*> links(articulation->getNbLinks());
+        articulation->getLinks(links.data(), static_cast<PxU32>(links.size()));
+        result.insert(result.end(), links.begin(), links.end());
+    }
+    return result;
+}
+
 py::list queryShapeInfo(const std::vector<KE::Physics::QueryShape>& shapes,
-                       bool includeMeshData) {
+                       bool includeMeshData, bool includeActorPose = true) {
     py::list result;
     for (const auto& shape : shapes) {
         py::dict row;
@@ -43,7 +72,8 @@ py::list queryShapeInfo(const std::vector<KE::Physics::QueryShape>& shapes,
             return std::array<float, 7>{p.p.x, p.p.y, p.p.z, p.q.x, p.q.y, p.q.z, p.q.w};
         };
         row["local_pose"] = poseValues(shape.localPose);
-        row["actor_pose"] = poseValues(shape.actorPose);
+        row["actor_pose"] = includeActorPose ? py::cast(poseValues(shape.actorPose))
+                                             : py::none();
         const auto& g = shape.geometry;
         using namespace physx;
         const auto type = g.getType();
@@ -106,13 +136,66 @@ py::list queryShapeInfo(const std::vector<KE::Physics::QueryShape>& shapes,
             row["column_scale"] = h.columnScale;
             row["rows"] = h.heightField->getNbRows();
             row["columns"] = h.heightField->getNbColumns();
-            row["mesh_data_available"] = false;
+            row["mesh_data_available"] = includeMeshData;
+            if (includeMeshData) {
+                const PxU32 rows = h.heightField->getNbRows();
+                const PxU32 columns = h.heightField->getNbColumns();
+                std::vector<std::array<float, 3>> vertices(size_t(rows) * columns);
+                std::vector<std::array<PxU32, 3>> triangles;
+                // PhysX supplies cooked tessellation, holes, and scaled local vertices.
+                for (PxU32 r = 0; r + 1 < rows; ++r) {
+                    for (PxU32 c = 0; c + 1 < columns; ++c) {
+                        for (PxU32 side = 0; side < 2; ++side) {
+                            const PxU32 id = 2 * (r * columns + c) + side;
+                            if (h.heightField->getTriangleMaterialIndex(id) ==
+                                PxHeightFieldMaterial::eHOLE)
+                                continue;
+                            PxTriangle triangle;
+                            std::array<PxU32, 3> ids;
+                            PxMeshQuery::getTriangle(h, PxTransform(PxIdentity), id,
+                                                     triangle, ids.data());
+                            for (int corner = 0; corner < 3; ++corner) {
+                                const auto& point = triangle.verts[corner];
+                                vertices.at(ids[corner]) = {point.x, point.y, point.z};
+                            }
+                            triangles.push_back(ids);
+                        }
+                    }
+                }
+                row["vertices"] = std::move(vertices);
+                row["triangles"] = std::move(triangles);
+            }
         } else {
             row["type"] = "unsupported";
         }
         result.append(row);
     }
     return result;
+}
+
+void appendCollisionGeometry(const PxRigidActor& actor, int bodyIdx,
+                             int environmentIdx,
+                             std::vector<KE::Physics::QueryShape>& snapshot,
+                             bool readActorPose = true) {
+    std::vector<PxShape*> shapes(actor.getNbShapes());
+    actor.getShapes(shapes.data(), static_cast<PxU32>(shapes.size()));
+    for (size_t shapeIdx = 0; shapeIdx < shapes.size(); ++shapeIdx) {
+        const auto& shape = *shapes[shapeIdx];
+        if (!(shape.getFlags() & PxShapeFlag::eSIMULATION_SHAPE))
+            continue;
+
+        KE::Physics::QueryShape row;
+        row.geometry.storeAny(shape.getGeometry());
+        row.localPose = shape.getLocalPose();
+        row.actorPose =
+            readActorPose ? actor.getGlobalPose() : PxTransform(PxIdentity);
+        row.bodyIdx = bodyIdx;
+        row.environmentIdx = environmentIdx;
+        row.shapeIdx = static_cast<int>(shapeIdx);
+        row.name = actor.getName() ? actor.getName()
+                                   : (bodyIdx < 0 ? "static" : "dynamic");
+        snapshot.push_back(row);
+    }
 }
 
 py::tuple collisionShapeLayoutToPy(
@@ -1081,6 +1164,345 @@ void bind_physics(py::module& m) {
         "PhysX simulation world for rigid bodies and articulations.")
         .def(py::init<PhysicsConfig>(), py::arg("config") = PhysicsConfig{},
              "Create a physics world from configuration.")
+        .def(
+            "get_static_collision_geometry",
+            [](PhysicsWorld& world) {
+                auto* scene = world.getScene();
+                const auto flags = PxActorTypeFlag::eRIGID_STATIC;
+                std::vector<PxActor*> actors(scene->getNbActors(flags));
+                scene->getActors(flags, actors.data(),
+                                 static_cast<PxU32>(actors.size()));
+                std::vector<Physics::QueryShape> snapshot;
+                for (size_t actorIdx = 0; actorIdx < actors.size();
+                     ++actorIdx) {
+                    const auto& actor =
+                        *static_cast<PxRigidStatic*>(actors[actorIdx]);
+                    appendCollisionGeometry(
+                        actor, -1, static_cast<int>(actorIdx), snapshot);
+                }
+                return queryShapeInfo(snapshot, true);
+            },
+            "Copy static simulation shapes between completed physics steps.")
+        .def_property_readonly(
+            "_cpu_collision_poses_available",
+            [](const PhysicsWorld& world) { return !world.isGpuEnabled(); })
+        .def_property_readonly("_contact_reports_enabled",
+                               &PhysicsWorld::contactReportsEnabled)
+        .def_property_readonly("_contact_dt", &PhysicsWorld::contactDt)
+        .def_property_readonly(
+            "_contact_revision",
+            [](const PhysicsWorld& world) {
+                const auto* scene = world.getScene();
+                const auto flags = PxActorTypeFlag::eRIGID_STATIC |
+                                   PxActorTypeFlag::eRIGID_DYNAMIC;
+                return py::make_tuple(world.contactRevision(),
+                                      scene->getNbActors(flags),
+                                      scene->getNbArticulations());
+            })
+        .def(
+            "_frame_display_info",
+            [](PhysicsWorld& world) {
+                std::vector<std::shared_ptr<JointBody>> bodies;
+                std::vector<int> jointBodyIds;
+                std::vector<std::array<float, 7>> jointFrames;
+                for (auto* actor : inspectionActors(world)) {
+                    if (!actor->is<PxRigidBody>())
+                        continue;
+
+                    const int bodyIdx = static_cast<int>(bodies.size());
+                    bodies.push_back(std::make_shared<JointBody>(world, actor));
+                    if (auto* link = actor->is<PxArticulationLink>()) {
+                        if (const auto* joint = link->getInboundJoint()) {
+                            const auto pose = joint->getChildPose();
+                            jointBodyIds.push_back(bodyIdx);
+                            jointFrames.push_back({pose.p.x, pose.p.y, pose.p.z,
+                                                   pose.q.x, pose.q.y, pose.q.z,
+                                                   pose.q.w});
+                        }
+                    }
+                }
+                return py::make_tuple(bodies, jointBodyIds, jointFrames);
+            })
+        .def("_com_display_info",
+             [](PhysicsWorld& world) {
+                 std::vector<std::shared_ptr<JointBody>> bodies;
+                 std::vector<std::array<float, 3>> centers;
+                 std::vector<float> masses;
+                 std::vector<int> groups;
+                 std::unordered_map<const PxArticulationReducedCoordinate*, int>
+                     robots;
+                 for (auto* actor : inspectionActors(world)) {
+                     auto* body = actor->is<PxRigidBody>();
+                     if (!body)
+                         continue;
+
+                     const auto center = body->getCMassLocalPose().p;
+                     bodies.push_back(
+                         std::make_shared<JointBody>(world, actor));
+                     centers.push_back({center.x, center.y, center.z});
+                     masses.push_back(body->getMass());
+                     int group = -1;
+                     if (auto* link = actor->is<PxArticulationLink>()) {
+                         const auto* robot = &link->getArticulation();
+                         auto entry = robots.emplace(
+                             robot, static_cast<int>(robots.size()));
+                         group = entry.first->second;
+                     }
+                     groups.push_back(group);
+                 }
+                 return py::make_tuple(bodies, centers, masses, groups);
+             })
+        .def("_contact_display_info",
+             [](PhysicsWorld& world) {
+                 std::vector<std::shared_ptr<JointBody>> bodies;
+                 std::vector<std::array<float, 3>> centers;
+                 std::vector<float> radii;
+                 float mass = 0.0f;
+                 for (auto* actor : inspectionActors(world)) {
+                     if (auto* body = actor->is<PxRigidBody>()) {
+                         bodies.push_back(
+                             std::make_shared<JointBody>(world, actor));
+                         const auto center = body->getCMassLocalPose().p;
+                         centers.push_back({center.x, center.y, center.z});
+                         const auto* rigid = actor->is<PxRigidDynamic>();
+                         if (!rigid || !(rigid->getRigidBodyFlags() &
+                                         PxRigidBodyFlag::eKINEMATIC))
+                             mass += body->getMass();
+                     } else
+                         continue;
+                     std::vector<PxShape*> shapes(actor->getNbShapes());
+                     actor->getShapes(shapes.data(),
+                                      static_cast<PxU32>(shapes.size()));
+                     for (const auto* shape : shapes) {
+                         if (!(shape->getFlags() &
+                               PxShapeFlag::eSIMULATION_SHAPE) ||
+                             shape->getGeometry().getType() ==
+                                 PxGeometryType::ePLANE)
+                             continue;
+                         PxBounds3 bounds;
+                         if (!PxGeometryQuery::computeGeomBounds(
+                                 bounds, shape->getGeometry(),
+                                 shape->getLocalPose()))
+                             continue;
+                         const float radius = bounds.getExtents().magnitude();
+                         if (std::isfinite(radius) && radius > 0.0f)
+                             radii.push_back(radius);
+                     }
+                 }
+                 float length = 0.2f;
+                 if (!radii.empty()) {
+                     auto middle = radii.begin() + radii.size() / 2;
+                     std::nth_element(radii.begin(), middle, radii.end());
+                     length = *middle * 0.5f;
+                 }
+                 const float weight =
+                     mass * world.getScene()->getGravity().magnitude();
+                 return py::make_tuple(length,
+                                       weight > 0.0f ? 5.0f / weight : 0.5f,
+                                       bodies, centers);
+             })
+        .def("_get_contact_display_data",
+             [](PhysicsWorld& world, bool velocities) {
+                 if (world.isGpuEnabled())
+                     throw std::runtime_error(
+                         "GPU contact inspection requires PhysicsGpuSystem");
+                 if (world.getContacts().empty())
+                     return py::array_t<float>(std::vector<py::ssize_t>{0, 13});
+
+                 const auto actors = inspectionActors(world);
+                 const std::unordered_set<const PxActor*> alive(actors.begin(),
+                                                                actors.end());
+                 std::vector<const ContactPoint*> contacts;
+                 for (const auto& contact : world.getContacts())
+                     if (alive.count(contact.actor0) &&
+                         alive.count(contact.actor1))
+                         contacts.push_back(&contact);
+
+                 py::array_t<float> result(
+                     {static_cast<py::ssize_t>(contacts.size()),
+                      py::ssize_t(13)});
+                 auto out = result.mutable_unchecked<2>();
+                 for (size_t i = 0; i < contacts.size(); ++i) {
+                     const auto& c = *contacts[i];
+                     PxVec3 relative(0.0f);
+                     if (velocities) {
+                         const PxVec3 point(c.position.x, c.position.y,
+                                            c.position.z);
+                         if (auto* body = c.actor0->is<PxRigidBody>())
+                             relative +=
+                                 PxRigidBodyExt::getVelocityAtPos(*body, point);
+                         if (auto* body = c.actor1->is<PxRigidBody>())
+                             relative -=
+                                 PxRigidBodyExt::getVelocityAtPos(*body, point);
+                     }
+                     for (int axis = 0; axis < 3; ++axis) {
+                         out(i, axis) = c.position[axis];
+                         out(i, 3 + axis) = c.normal[axis];
+                         out(i, 6 + axis) = c.impulse[axis];
+                         out(i, 10 + axis) = relative[axis];
+                     }
+                     out(i, 9) = c.separation;
+                 }
+                 return result;
+             })
+        .def("_pick_collision_body",
+             [](PhysicsWorld& world, const glm::vec3& origin,
+                const glm::vec3& direction, float distance, bool statics,
+                bool dynamics) -> py::object {
+                 const float length = glm::length(direction);
+                 if (!std::isfinite(length) || length <= 0 ||
+                     !std::isfinite(distance) || distance <= 0 ||
+                     !std::isfinite(origin.x) || !std::isfinite(origin.y) ||
+                     !std::isfinite(origin.z))
+                     throw std::invalid_argument(
+                         "Collider picking requires a finite ray and positive "
+                         "distance");
+                 if (dynamics && world.isGpuEnabled())
+                     throw std::runtime_error(
+                         "Dynamic collider inspection requires CPU physics");
+                 if (!statics && !dynamics)
+                     return py::none();
+
+                 struct Filter : PxQueryFilterCallback {
+                     PxQueryHitType::Enum preFilter(const PxFilterData&,
+                                                    const PxShape* shape,
+                                                    const PxRigidActor*,
+                                                    PxHitFlags&) override {
+                         return shape->getFlags() &
+                                        PxShapeFlag::eSIMULATION_SHAPE
+                                    ? PxQueryHitType::eBLOCK
+                                    : PxQueryHitType::eNONE;
+                     }
+                     PxQueryHitType::Enum
+                     postFilter(const PxFilterData&, const PxQueryHit&,
+                                const PxShape*, const PxRigidActor*) override {
+                         return PxQueryHitType::eBLOCK;
+                     }
+                 } filter;
+                 PxQueryFilterData query;
+                 query.flags = PxQueryFlag::ePREFILTER;
+                 if (statics)
+                     query.flags |= PxQueryFlag::eSTATIC;
+                 if (dynamics)
+                     query.flags |= PxQueryFlag::eDYNAMIC;
+                 const auto unit = direction / length;
+                 PxRaycastBuffer hit;
+                 world.getScene()->raycast(PxVec3(origin.x, origin.y, origin.z),
+                                           PxVec3(unit.x, unit.y, unit.z),
+                                           distance, hit, PxHitFlag::eDEFAULT,
+                                           query, &filter);
+                 if (!hit.hasBlock)
+                     return py::none();
+                 auto* actor = hit.block.actor;
+                 std::vector<PxShape*> shapes(actor->getNbShapes());
+                 actor->getShapes(shapes.data(),
+                                  static_cast<PxU32>(shapes.size()));
+                 const auto found =
+                     std::find(shapes.begin(), shapes.end(), hit.block.shape);
+                 return py::make_tuple(
+                     std::make_shared<JointBody>(world, actor),
+                     int(found - shapes.begin()));
+             })
+        .def("_get_collision_body_geometry",
+             [](PhysicsWorld& world,
+                const std::shared_ptr<JointBody>& body) -> py::object {
+                 if (!body || !body->valid())
+                     return py::none();
+                 const auto* actor = body->actor();
+                 if (actor->getScene() != world.getScene())
+                     throw std::invalid_argument(
+                         "Collision body belongs to another world");
+
+                 const char* kind = "static";
+                 if (actor->is<PxArticulationLink>())
+                     kind = "articulation";
+                 else if (const auto* dynamic = actor->is<PxRigidDynamic>())
+                     kind = dynamic->getRigidBodyFlags() &
+                                    PxRigidBodyFlag::eKINEMATIC
+                                ? "kinematic"
+                                : "dynamic";
+
+                 // GPU shape topology is host-readable; its world pose is not.
+                 const bool readPose =
+                     !world.isGpuEnabled() || actor->is<PxRigidStatic>();
+                 py::dict result;
+                 result["kind"] = kind;
+                 result["available"] = true;
+                 std::vector<Physics::QueryShape> snapshot;
+                 appendCollisionGeometry(*actor, 0, -1, snapshot, readPose);
+                 result["shapes"] = queryShapeInfo(snapshot, true, readPose);
+                 return result;
+             })
+        .def("_get_dynamic_collision_geometry",
+             [](PhysicsWorld& world) {
+                 auto* scene = world.getScene();
+                 std::vector<Physics::QueryShape> snapshot;
+                 std::vector<std::shared_ptr<JointBody>> bodies;
+                 auto append = [&](PxRigidActor& actor) {
+                     const size_t previousSize = snapshot.size();
+                     appendCollisionGeometry(
+                         actor, static_cast<int>(bodies.size()), -1, snapshot,
+                         !world.isGpuEnabled());
+                     if (snapshot.size() != previousSize)
+                         bodies.push_back(
+                             std::make_shared<JointBody>(world, &actor));
+                 };
+
+                 std::vector<PxActor*> actors(
+                     scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC));
+                 scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC,
+                                  actors.data(),
+                                  static_cast<PxU32>(actors.size()));
+                 for (auto* actor : actors)
+                     append(*static_cast<PxRigidDynamic*>(actor));
+
+                 std::vector<PxArticulationReducedCoordinate*> articulations(
+                     scene->getNbArticulations());
+                 scene->getArticulations(
+                     articulations.data(),
+                     static_cast<PxU32>(articulations.size()));
+                 for (auto* articulation : articulations) {
+                     std::vector<PxArticulationLink*> links(
+                         articulation->getNbLinks());
+                     articulation->getLinks(links.data(),
+                                            static_cast<PxU32>(links.size()));
+                     for (auto* link : links)
+                         append(*link);
+                 }
+                 // JointBody supplies deletion/world-lifetime checks, not joint
+                 // state.
+                 return py::make_tuple(
+                     queryShapeInfo(snapshot, true, !world.isGpuEnabled()),
+                     bodies);
+             })
+        .def(
+            "_get_collision_body_poses",
+            [](PhysicsWorld& world,
+               const std::vector<std::shared_ptr<JointBody>>& bodies) {
+                if (world.isGpuEnabled())
+                    throw std::runtime_error(
+                        "Dynamic collider inspection requires CPU physics");
+
+                const auto count = static_cast<py::ssize_t>(bodies.size());
+                py::array_t<float> poses({count, py::ssize_t(7)});
+                py::array_t<bool> valid(count);
+                auto values = poses.mutable_unchecked<2>();
+                auto alive = valid.mutable_unchecked<1>();
+                for (py::ssize_t idx = 0; idx < count; ++idx) {
+                    const auto& body = bodies[idx];
+                    const auto* actor =
+                        body && body->valid() ? body->actor() : nullptr;
+                    alive(idx) = actor && actor->getScene() == world.getScene();
+                    const PxTransform pose = alive(idx)
+                                                 ? actor->getGlobalPose()
+                                                 : PxTransform(PxIdentity);
+                    const float row[] = {pose.p.x, pose.p.y, pose.p.z, pose.q.x,
+                                         pose.q.y, pose.q.z, pose.q.w};
+                    for (int column = 0; column < 7; ++column)
+                        values(idx, column) = row[column];
+                }
+                return py::make_tuple(poses, valid);
+            })
         .def("get_collision_geometry", [](PhysicsWorld& world, const Articulation& robot,
                 const std::vector<PxRigidStatic*>& environment, bool includeMeshData) {
             const auto shapes = Physics::collectQueryShapes(world, robot, environment);

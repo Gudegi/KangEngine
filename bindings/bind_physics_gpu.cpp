@@ -157,6 +157,30 @@ void bind_physics_gpu(py::module& m) {
         .def("set_cuda_stream", &PhysicsGpuSystem::setCudaStream,
              py::arg("stream_handle"))
         .def("cuda_stream", &PhysicsGpuSystem::cudaStream)
+        .def_property_readonly("_collision_pose_revision", &PhysicsGpuSystem::poseRevision)
+        .def("_fetch_collision_poses", &PhysicsGpuSystem::fetchCollisionPoses)
+        .def("_fetch_inspection_contacts", &PhysicsGpuSystem::fetchInspectionContacts)
+        .def("_collision_body_rows", [](const PhysicsGpuSystem& self,
+                const std::vector<std::shared_ptr<JointBody>>& bodies) {
+            self.checkInitialized();
+            std::vector<std::array<int64_t, 3>> rows;
+            rows.reserve(bodies.size());
+            for (const auto& body : bodies) {
+                if (!body || !body->valid()) {
+                    rows.push_back({-1, -1, -1});
+                    continue;
+                }
+                const auto* actor = body->actor();
+                if (const auto* link = actor->is<physx::PxArticulationLink>())
+                    rows.push_back({1, self.articulationRow(link->getArticulation()),
+                                    link->getLinkIndex()});
+                else if (const auto* rigid = actor->is<physx::PxRigidDynamic>())
+                    rows.push_back({0, self.rigidRow(*rigid), 0});
+                else
+                    throw std::invalid_argument("GPU collision poses require dynamic bodies");
+            }
+            return rows;
+        })
         .def("rigid_row", &PhysicsGpuSystem::rigidRow, py::arg("rigid"),
              "Return the logical row used by PhysicsGpuSystem for a rigid.")
         .def(

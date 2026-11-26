@@ -118,6 +118,8 @@ class OvrtxSceneAdapter:
         self._background_color = None
         self._exposure = 1.0
         self._display_changed = True
+        self._view_mode = 0
+        self._view_depth_max = 10.0
         self._ambient = (0.0, 0.0, 0.0)
         self._history_changed = False
         self._ground = None
@@ -236,6 +238,16 @@ def Scope "Render" {{
     def set_exposure(self, exposure):
         if exposure != self._exposure:
             self._exposure = exposure
+            self._display_changed = True
+            self._history_changed = True
+
+    def supports_view_mode(self, mode):
+        return mode in (0, 1, 2, 3)
+
+    def set_view_mode(self, mode, depth_max):
+        if (mode, depth_max) != (self._view_mode, self._view_depth_max):
+            self._view_mode = mode
+            self._view_depth_max = depth_max
             self._display_changed = True
             self._history_changed = True
 
@@ -1333,7 +1345,7 @@ def {schema} "Light"{shaping} {{
         # The pinned SDK needs a rebuild when no previous mesh survives.
         if (
             self._ordinal > 3
-            and (objects or batches)
+            and (objects or batches or changed or batches_changed)
             and not (surviving_count or surviving_batches)
         ):
             self._attached = False

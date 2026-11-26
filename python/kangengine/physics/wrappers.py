@@ -155,6 +155,15 @@ class PhysicsWorld(_NativeWrapper):
         """Advance simulation by one configured timestep."""
         self._native.step()
 
+    def get_static_collision_geometry(self) -> list[dict]:
+        """Copy static simulation shapes after physics has finished fetching.
+
+        Poses use xyz/xyzw in scene units. Mesh vertices are unscaled cooked
+        geometry; heightfield vertices include its grid scales.
+        Environment/shape indices identify this snapshot only.
+        """
+        return self._native.get_static_collision_geometry()
+
     def joint_body(self, body):
         """Get a checked endpoint for a rigid body in this world."""
         return self._native.joint_body(unwrap_native(body))

@@ -95,6 +95,9 @@ class Renderer {
     void setBackgroundColor(const glm::vec4& color);
     void setGroundStyle(const BackgroundSettings& settings);
     void setExposure(float exposure);
+    bool supportsViewMode(RenderViewMode mode) const;
+    void setViewMode(RenderViewMode mode, float depthMax = 10.0f);
+    const RenderViewSettings& viewSettings() const { return _viewSettings; }
     RenderDebugDraw& debugDraw();
     RenderTextDraw& textDraw();
     RenderPickHit
@@ -293,6 +296,7 @@ class Renderer {
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
     RendererSettings _settings;
+    RenderViewSettings _viewSettings;
 
     RenderBackend& renderBackend();
     NativeRenderSystem& nativeRenderSystem();

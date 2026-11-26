@@ -25,6 +25,8 @@ class NativeRenderSystem final : public RenderBackend {
         return {true, true, true, true, true, true, true, false, true, true};
     }
     void initialize(int width, int height) override;
+    bool supportsViewMode(RenderViewMode mode) const override;
+    void setViewSettings(const RenderViewSettings& settings) override;
     void setBackgroundColor(const glm::vec4& color) override;
     void setGroundStyle(const BackgroundSettings& settings) override;
     void setExposure(float exposure) override;
@@ -128,6 +130,8 @@ class NativeRenderSystem final : public RenderBackend {
         _sceneTextures;
     int _width = 0;
     int _height = 0;
+    RenderViewSettings _viewSettings;
+    Backend::Texture* _inspectionImage = nullptr;
     // Main Scene Pipeline: RHI-owned 4x MSAA attachments resolve into the
     // legacy framebuffer's single-sample color texture during migration.
     std::unique_ptr<Backend::Framebuffer> _framebuffer;

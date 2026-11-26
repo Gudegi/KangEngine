@@ -7,6 +7,7 @@
 [[vk::binding(5, 1)]] RWTexture2D<float4> result;
 [[vk::binding(6, 1)]] StructuredBuffer<float4> glyphs;
 [[vk::binding(7, 1)]] StructuredBuffer<uint> font;
+[[vk::binding(8, 1)]] StructuredBuffer<float4> viewSettings;
 
 // Unpack one R8 texel after the atlas width and height words.
 float fontTexel(int2 position) {
@@ -49,6 +50,13 @@ void debugDraw(uint3 tid : SV_DispatchThreadID) {
     float4 pixel = image.Load(int3(tid.xy, 0));
     const int tile = (tid.y / 16) * ((width + 15) / 16) + tid.x / 16;
     float nearest = depth.Load(int3(tid.xy, 0));
+    // Display camera-forward meters; missing surfaces stay black.
+    const uint viewMode = uint(viewSettings[0].x);
+    if (viewMode == 1) {
+        const float value = isfinite(nearest) && nearest > 0
+            ? saturate(nearest / viewSettings[0].y) : 0;
+        pixel = float4(value, value, value, 1);
+    }
     bool changed = false;
     float3 linear = 0;
 

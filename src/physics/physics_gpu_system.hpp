@@ -3,6 +3,7 @@
 
 #include "sim/gpu_array_view.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -128,6 +129,11 @@ class PhysicsGpuSystem {
 
     void stepStart();
     void stepFinish();
+
+    // Setup generation, completed scene step, and explicit pose writes.
+    std::array<uint64_t, 3> poseRevision() const;
+    void fetchCollisionPoses(bool rigids, bool articulations);
+    void fetchInspectionContacts(bool velocities);
 
     const Sim::GpuArrayView& rigidData() const { return _views.rigidData; }
     const Sim::GpuArrayView& articulationLinkData() const {
@@ -297,6 +303,12 @@ class PhysicsGpuSystem {
     GpuPhysicsConfig _config;
     PhysicsGpuStateViews _views;
     bool _initialized = false;
+    uint64_t _poseGeneration = 0;
+    uint64_t _poseWrites = 0;
+    std::array<uint64_t, 3> _rigidPoseRevision{};
+    std::array<uint64_t, 3> _linkPoseRevision{};
+    std::array<uint64_t, 3> _linkVelocityRevision{};
+    std::array<uint64_t, 3> _contactPoseRevision{};
     uint64_t _streamHandle = 0;
     uint32_t _rigidCount = 0;
     void* _rigidIndexBuffer = nullptr;

@@ -100,7 +100,17 @@ void NativeRenderSystem::resize(int width, int height) {
 }
 
 void NativeRenderSystem::prepareFrame(Camera& camera, UpAxis upAxis) {
-    _rasterizer->renderShadowMap(camera, upAxis, _width, _height);
+    if (_viewSettings.mode == RenderViewMode::RGB)
+        _rasterizer->renderShadowMap(camera, upAxis, _width, _height);
+}
+
+bool NativeRenderSystem::supportsViewMode(RenderViewMode mode) const {
+    return mode == RenderViewMode::RGB || mode == RenderViewMode::Depth ||
+           mode == RenderViewMode::Normals || mode == RenderViewMode::ObjectIds;
+}
+
+void NativeRenderSystem::setViewSettings(const RenderViewSettings& settings) {
+    _viewSettings = settings;
 }
 
 void NativeRenderSystem::syncFrame(const glm::mat4& view,
@@ -512,6 +522,11 @@ void NativeRenderSystem::beginFrame() {
 void NativeRenderSystem::renderScene(const glm::mat4& view,
                                      const glm::mat4& projection,
                                      bool wireframe) {
+    if (_viewSettings.mode != RenderViewMode::RGB) {
+        _inspectionImage = _rasterizer->renderInspection(
+            view, projection, _width, _height, _viewSettings);
+        return;
+    }
     _rasterizer->setWireframeEnabled(wireframe);
     _renderer.applyBackgroundSettings();
     _rasterizer->render(view, projection, _sceneDrawTarget.get());
@@ -533,6 +548,14 @@ std::optional<RenderPickResult> NativeRenderSystem::pollPick() {
 
 void NativeRenderSystem::endFrame(const RenderPickHit& selection,
                                   bool presentToScreen) {
+    if (_viewSettings.mode != RenderViewMode::RGB && _inspectionImage) {
+        _postProcessor->process(_inspectionImage, 1.0f, ToneMapMode::None, 1.0f,
+                                {});
+        _output = _postProcessor->getOutputFramebuffer();
+        if (presentToScreen)
+            present();
+        return;
+    }
     {
         auto encoder = _device.createCommandEncoder();
         auto pass = encoder->beginRenderPass(
@@ -560,6 +583,11 @@ void NativeRenderSystem::endFrame(const RenderPickHit& selection,
     _postProcessor->process(finalSource, settings.gamma, settings.toneMapMode,
                             settings.toneMapExposure, settings.bloom,
                             settings.exposure);
+    if (_inspectionImage) {
+        // Release only after post-processing no longer borrows this texture.
+        _rasterizer->releaseInspection();
+        _inspectionImage = nullptr;
+    }
     _output = _postProcessor->getOutputFramebuffer();
     if (presentToScreen)
         present();

@@ -184,6 +184,7 @@ class Rasterizer : public RenderPipeline {
     // =====================================================================
     SelectionMaskPass _selectionMaskPass;
     PickingPass _pickingPass;
+    std::unique_ptr<PickingPass> _inspectionPass;
 
     // Shadow configuration and per-frame cascade state.
     float _shadowRadius = 3.0f;
@@ -399,6 +400,10 @@ class Rasterizer : public RenderPipeline {
     }
     RayPickResult pickScreen(glm::vec2 ndc, const glm::mat4& view,
                               const glm::mat4& projection, int width, int height);
+    Backend::Texture* renderInspection(const glm::mat4& view,
+                                        const glm::mat4& projection, int width,
+                                        int height, const RenderViewSettings& settings);
+    void releaseInspection() { _inspectionPass.reset(); }
     bool getRenderableInstanceTransform(RenderableHandle handle,
                                         int instanceIndex,
                                         glm::mat4& outTransform) const;

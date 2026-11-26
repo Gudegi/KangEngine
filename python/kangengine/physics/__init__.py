@@ -5,8 +5,9 @@ from . import wrappers as _wrappers
 from .wrappers import *
 from .d6_batch import D6Batch
 from .articulation_builder import ArticulationBuilder
+from .inspection import PhysXInspectionSource
 
-__all__ = [*_wrappers.__all__, "D6Batch", "ArticulationBuilder"]
+__all__ = [*_wrappers.__all__, "D6Batch", "ArticulationBuilder", "PhysXInspectionSource"]
 
 for _name in __all__:
     set_public_module(globals()[_name], __name__)

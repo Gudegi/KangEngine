@@ -704,6 +704,7 @@ bool PhysicsWorld::canUseGpuEnvironmentFiltering() const {
 
 void PhysicsWorld::step() {
     clearContacts();
+    _contactDt = _dt;
     _scene->simulate(_dt); // _dt is already deltaTime (1/60)
     PxU32 error = 0;
     if (!_scene->fetchResults(true, &error) || error)

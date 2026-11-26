@@ -30,6 +30,9 @@
 
 **Added**
 
+- Add viewport physics inspection for CPU/GPU colliders, contacts, centers of mass,
+  and coordinate axes, with body/shape selection on Native and OVRTX.
+- Add viewport RGB, depth, world-normal, and instance-color inspection views.
 - Add `App.load_ui_texture()` for ImGui images with either scene renderer.
 - Add `set_exposure()` for Native and ovrtx.
 - Add base-color and normal textures to `ColorMaterial`.

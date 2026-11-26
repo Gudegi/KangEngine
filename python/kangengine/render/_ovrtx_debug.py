@@ -19,11 +19,12 @@ class OvrtxDebugDraw:
         self._camera = None
         self._arrays = {}
         self._active = False
+        self._view_mode = 0
 
     @staticmethod
     def schema():
         source = Path(os.environ["KANGENGINE_ASSETS_ROOT"]) / "shaders/ovrtx/debug_draw.slang"
-        return f'''
+        result = f'''
         def RenderVar "DebugDepth" {{
             string sourceName = "DistanceToImagePlaneSD"
             opaque omni:rtx:aov
@@ -41,14 +42,40 @@ class OvrtxDebugDraw:
             int[] inputs:ids = []
             float4[] inputs:glyphs = []
             uint[] inputs:font = [1, 1, 0]
+            float4[] inputs:viewSettings = [(0, 10, 0, 0)]
             opaque inputs:Image.connect = <../LdrColor.omni:rtx:aov>
             opaque inputs:Depth.connect = <../DebugDepth.omni:rtx:aov>
             opaque outputs:Color
         }}
 '''
+        for name, aov, shader in (("Normals", "NormalSD", "view_normals"),
+                                  ("Ids", "StableIdSegmentation", "view_ids")):
+            shader_path = source.parent / (shader + ".slang")
+            result += f'''
+        def RenderVar "View{name}" {{
+            string sourceName = "{aov}"
+            opaque omni:rtx:aov
+        }}
+        def RenderVar "{name}Color" {{
+            string sourceName = "{name}Color"
+            opaque omni:rtx:aov.connect = <../{name}Display.outputs:Color>
+        }}
+        def Shader "{name}Display" {{
+            uniform token info:implementationSource = "sourceAsset"
+            uniform asset info:spg:sourceAsset = @{shader_path}@
+            uniform token info:spg:sourceAsset:subIdentifier = "display"
+            opaque inputs:Source.connect = <../View{name}.omni:rtx:aov>
+            opaque outputs:Color
+        }}
+'''
+        return result
 
     @property
     def output_path(self):
+        if self._view_mode == 2:
+            return "/Render/Camera/NormalsColor"
+        if self._view_mode == 3:
+            return "/Render/Camera/IdsColor"
         return "/Render/Camera/DebugColor" if self._active else "/Render/Camera/LdrColor"
 
     def lines(self, path, starts, ends, colors, width, hidden, overlay):
@@ -112,10 +139,17 @@ class OvrtxDebugDraw:
         self._arrays[name] = values
 
     def prepare(self, camera, structural_change):
-        active = (self.text.active or
-                  any(len(batch["starts"]) and not batch["hidden"] for batch in self._batches.values()))
-        if active != self._active or (active and structural_change):
+        view_mode = self._adapter._view_mode
+        depth_max = self._adapter._view_depth_max
+        overlay_active = (self.text.active or
+                          any(len(batch["starts"]) and not batch["hidden"] for batch in self._batches.values()))
+        active = view_mode == 1 or (view_mode == 0 and overlay_active)
+        if (active != self._active or view_mode != self._view_mode
+                or ((active or view_mode != 0) and structural_change)):
             names = ["LdrColor", "DebugDepth", "DebugColor"] if active else ["LdrColor"]
+            if view_mode in (2, 3):
+                name = "Normals" if view_mode == 2 else "Ids"
+                names.extend(["View" + name, name + "Color"])
             with ovstage.PathDictionary(self._adapter._stage) as paths:
                 ids = np.array([paths.intern_path("/Render/Camera/" + name).raw_id for name in names], dtype=np.uint64)
                 with self._adapter._query("/Render/Camera") as query:
@@ -125,6 +159,7 @@ class OvrtxDebugDraw:
                         semantic=ovstage.AttributeSemantic.RELATIONSHIP_PATH_ID,
                     ).wait()
             self._active = active
+            self._view_mode = view_mode
         if structural_change:
             self._arrays.clear()
         if not active:
@@ -138,9 +173,11 @@ class OvrtxDebugDraw:
             return
 
         width, height = self._adapter._resolution
-        signature = (camera["world"].tobytes(), camera["vertical_fov"], camera["near"], camera["far"], width, height)
+        signature = (camera["world"].tobytes(), camera["vertical_fov"], camera["near"], camera["far"],
+                     width, height, view_mode, depth_max)
         if not self._dirty and not structural_change and signature == self._camera:
             return
+        self._write_array("viewSettings", np.array([[view_mode, depth_max, 0, 0]], dtype=np.float32), 4)
         view = np.linalg.inv(camera["world"])
         scale = height / (2 * math.tan(math.radians(camera["vertical_fov"]) / 2))
         columns, rows = (width + 15) // 16, (height + 15) // 16
@@ -148,7 +185,7 @@ class OvrtxDebugDraw:
         primitives = []
 
         # Preserve Native's depth-first, lines-before-points ordering.
-        batches = sorted(self._batches.items())
+        batches = sorted(self._batches.items()) if view_mode == 0 else ()
         for overlay in (False, True):
             for _, batch in batches:
                 if batch["hidden"] or batch["overlay"] != overlay or not len(batch["starts"]):
@@ -197,7 +234,7 @@ class OvrtxDebugDraw:
 
         # Glyph offsets are shared with Native; SPG uses top-down pixel rectangles.
         glyphs = []
-        for kind, overlay, batch in self.text.batches(width, height):
+        for kind, overlay, batch in self.text.batches(width, height) if view_mode == 0 else ():
             origins = batch[:, :3]
             if kind == "world":
                 origins = origins @ view[:3, :3].T + view[:3, 3]

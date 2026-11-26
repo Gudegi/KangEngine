@@ -168,6 +168,8 @@ class PhysicsWorld {
     std::vector<CachedTriangleMesh> _triangleMeshCache;
 
     float _dt;
+    float _contactDt = 0.0f;
+    uint64_t _contactRevision = 0;
     UpAxis _upAxis;
     PxVec3 _gravity;
     PxVec3 _friction;
@@ -302,7 +304,13 @@ class PhysicsWorld {
 
     const std::vector<ContactPoint>& getContacts() const { return _contacts; }
     PxU32 numContacts() const { return static_cast<PxU32>(_contacts.size()); }
-    void clearContacts() { _contacts.clear(); }
+    void clearContacts() {
+        _contacts.clear();
+        ++_contactRevision;
+    }
+    uint64_t contactRevision() const { return _contactRevision; }
+    float contactDt() const { return _contactDt; }
+    bool contactReportsEnabled() const { return bool(_contactCallback); }
     std::vector<float> getContactForcesFlat(const Articulation& articulation,
                                             bool groundOnly = false) const;
     std::vector<float>

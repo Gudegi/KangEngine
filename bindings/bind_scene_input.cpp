@@ -233,6 +233,20 @@ class PythonRenderBackend final : public KE::RenderBackend,
         _pickResult.reset();
     }
     void syncScene(const RenderSceneFrame& scene) override { _scene = scene; }
+    bool supportsViewMode(KE::RenderViewMode mode) const override {
+        if (mode == KE::RenderViewMode::RGB)
+            return true;
+        py::gil_scoped_acquire gil;
+        return py::hasattr(_adapter, "supports_view_mode") &&
+               _adapter.attr("supports_view_mode")(int(mode)).cast<bool>();
+    }
+    void setViewSettings(const KE::RenderViewSettings& settings) override {
+        py::gil_scoped_acquire gil;
+        if (py::hasattr(_adapter, "set_view_mode"))
+            _adapter.attr("set_view_mode")(int(settings.mode), settings.depthMax);
+        else
+            RenderBackend::setViewSettings(settings);
+    }
     KE::RenderableHandle registerSceneBatch(
         const RenderMeshData& mesh, const RenderMaterialSource& material,
         const RenderInstanceData& owners, KE::TransformSource source,

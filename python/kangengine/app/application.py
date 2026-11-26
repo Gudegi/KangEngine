@@ -28,6 +28,7 @@ from .playback_controller import PlaybackController
 
 if TYPE_CHECKING:
     from .mcp.scenario import McpScenarioTarget
+    from ..visual.physics_inspector import PhysicsInspector
 
 keys = _ke.keys
 scene = _ke.scene
@@ -992,6 +993,7 @@ class App(_NativeApp):
         super().__init__()
         self._owner_thread = threading.get_ident()
         self._automation = None
+        self._physics_inspector = None
         self._mcp_scenario_targets = {}
         self._mcp_server = None
         self._mcp_connection_file = None
@@ -1028,6 +1030,17 @@ class App(_NativeApp):
         self._scene_hook_resource_handles = {}
         self._render_hook_resource_usage = {}
         self.playback_controller = PlaybackController(self)
+
+    @property
+    def physics_inspector(self) -> PhysicsInspector:
+        """Viewport inspector; connect a source after initialize(). Display defaults to off."""
+        if self.closed:
+            raise RuntimeError("App has been closed")
+        if self._physics_inspector is None:
+            from ..visual.physics_inspector import PhysicsInspector
+
+            PhysicsInspector(self)
+        return self._physics_inspector
 
     def get_native_scene(self):
         """Return the native SceneBackend escape hatch.
@@ -1879,7 +1892,11 @@ class App(_NativeApp):
                 self.cleanup()
             finally:
                 try:
-                    self._video_capture.close(self)
+                    try:
+                        if self._physics_inspector is not None:
+                            self._physics_inspector.release()
+                    finally:
+                        self._video_capture.close(self)
                 finally:
                     self.standard_materials = None
                     self.shaders = None

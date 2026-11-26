@@ -8,6 +8,7 @@ from torch import Tensor
 from .. import Quat, Vec3
 from ..asset import ArticulationDesc, RigidDesc
 from .articulation_builder import ArticulationBuilder as ArticulationBuilder
+from .inspection import PhysXInspectionSource as PhysXInspectionSource
 
 class PhysicsGpuDynamicsConfig:
     temp_buffer_capacity: int
@@ -341,6 +342,9 @@ class D6Batch:
 
 class PhysicsWorld:
     native: NativePhysicsWorld
+    def get_static_collision_geometry(self) -> list[dict[str, Any]]:
+        """Copy static simulation geometry with xyz/xyzw poses and snapshot-local indices."""
+        ...
     def get_collision_geometry(self, articulation: Articulation, *,
                                environment: Sequence[RigidStatic] = (),
                                include_mesh_data: bool = False) -> dict[str, Any]:

@@ -21,6 +21,7 @@ BackendType = set_public_module(_ke.BackendType, __name__)
 TextureRole = set_public_module(_ke.TextureRole, __name__)
 AlphaMode = set_public_module(_ke.AlphaMode, __name__)
 ToneMapMode = set_public_module(_ke.ToneMapMode, __name__)
+RenderViewMode = set_public_module(_ke.RenderViewMode, __name__)
 TransformSource = set_public_module(_ke.TransformSource, __name__)
 TextAlignment = set_public_module(_ke.TextAlignment, __name__)
 TextDepthMode = set_public_module(_ke.TextDepthMode, __name__)
@@ -107,6 +108,7 @@ __all__ = [
     "TextAlignment",
     "TextDepthMode",
     "ToneMapMode",
+    "RenderViewMode",
     "TransformSource",
     "VertexAttributeDesc",
     "VertexBufferLayout",

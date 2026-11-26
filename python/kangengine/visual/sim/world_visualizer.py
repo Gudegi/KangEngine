@@ -729,6 +729,13 @@ class SimWorldVisualizer:
         self._frame_axes = {}
         self._released = False
 
+        from ...physics.inspection import PhysXInspectionSource
+
+        self._inspection_source = PhysXInspectionSource(world.physics, visualizer=self)
+        inspector = app.physics_inspector
+        if inspector.source is None:
+            inspector.set_source(self._inspection_source)
+
     @property
     def is_valid(self) -> bool:
         return not self._released
@@ -740,6 +747,9 @@ class SimWorldVisualizer:
     def release(self):
         if self._released:
             return self
+        inspector = self.app._physics_inspector
+        if inspector is not None and inspector.source is self._inspection_source:
+            inspector.set_source(None)
         for config in self._frame_axes.values():
             for path in config["paths"]:
                 self.app.debug.overlay.clear(path)

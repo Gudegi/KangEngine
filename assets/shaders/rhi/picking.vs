@@ -13,6 +13,10 @@ layout(location = 9) in vec4 aBoneWeights;
 
 layout(std140) uniform ke_g0_b0 {
     mat4 viewProjection;
+#ifdef KE_INSPECTION
+    mat4 view;
+    vec4 depthRange;
+#endif
 };
 layout(std140) uniform ke_g1_b0 {
     uvec4 ids;
@@ -27,6 +31,11 @@ layout(std140) uniform ke_g2_b0 {
 out vec2 vTexCoord;
 flat out uint vId;
 flat out float vOpacity;
+#ifdef KE_INSPECTION
+out vec3 vWorldPosition;
+out float vDepth;
+flat out uint vInstanceId;
+#endif
 
 // Project the posed mesh and pass its instance ID and opacity to the fragment shader.
 void main() {
@@ -46,6 +55,11 @@ void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
                       aInstanceTransform2, aInstanceTransform3);
     gl_Position = viewProjection * model * position;
+#ifdef KE_INSPECTION
+    vWorldPosition = (model * position).xyz;
+    vDepth = -(view * model * position).z / depthRange.x;
+    vInstanceId = uint(gl_InstanceID) + 1u;
+#endif
     vTexCoord = aTexCoord;
     vId = ids.x + uint(gl_InstanceID);
     vOpacity = aOpacity;

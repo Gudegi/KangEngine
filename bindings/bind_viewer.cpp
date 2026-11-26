@@ -537,9 +537,12 @@ void bind_imgui(py::module& m) {
         "Drag integer steps or double-click to enter an integer; returns (changed, value).");
     imgui.def(
         "slider_float",
-        [](const std::string& label, float value, float min, float max) {
+        [](const std::string& label, float value, float min, float max,
+           bool logarithmic) {
             float v = value;
-            bool changed = ImGui::SliderFloat(label.c_str(), &v, min, max);
+            bool changed = ImGui::SliderFloat(
+                label.c_str(), &v, min, max, logarithmic ? "%.4g" : "%.3f",
+                logarithmic ? ImGuiSliderFlags_Logarithmic : ImGuiSliderFlags_None);
             const std::string popupLabel = "Edit value##slider_float_" + label;
             if (ImGui::IsItemHovered() &&
                 ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
@@ -565,6 +568,7 @@ void bind_imgui(py::module& m) {
             return py::make_tuple(changed, v);
         },
         py::arg("label"), py::arg("value"), py::arg("min"), py::arg("max"),
+        py::arg("logarithmic") = false,
         "Drag to adjust, or double-click to enter an exact value.");
     imgui.def(
         "progress_bar",
@@ -910,6 +914,10 @@ void bind_viewer(py::module& m) {
         .def("get_simulation_hotkeys_enabled",
              &App::getSimulationHotkeysEnabled)
         .def("_set_playback_toggle_callback", &App::setPlaybackToggleCallback)
+        .def("_set_physics_inspector_callback", &App::setPhysicsInspectorCallback)
+        .def("_set_physics_inspector_sync_callback",
+             &App::setPhysicsInspectorSyncCallback)
+        .def("_set_physics_inspector_pick_callback", &App::setPhysicsInspectorPickCallback)
         .def("get_dropped_wall_time", &App::getDroppedWallTime)
         .def(
             "get_ui_scale",
@@ -1045,6 +1053,8 @@ void bind_viewer(py::module& m) {
              "Return whether ExternalBuffer force-drag callbacks are enabled.")
         .def("has_selection", &App::hasSelection,
              "Return true when a scene object is selected.")
+        .def("get_selection", &App::getSelection, py::return_value_policy::copy,
+             "Return the current selection; its prim is non-owning.")
         .def("clear_selection", &App::clearSelection,
              "Clear the current scene selection.")
         .def(

@@ -114,6 +114,22 @@ void Renderer::setExposure(float exposure) {
 
 RenderDebugDraw& Renderer::debugDraw() { return renderBackend().debugDraw(); }
 
+bool Renderer::supportsViewMode(RenderViewMode mode) const {
+    return _renderBackend && _renderBackend->supportsViewMode(mode);
+}
+
+void Renderer::setViewMode(RenderViewMode mode, float depthMax) {
+    if (!std::isfinite(depthMax) || depthMax <= 0)
+        throw std::invalid_argument(
+            "Depth display limit must be finite and positive");
+    if (!supportsViewMode(mode))
+        throw std::invalid_argument(
+            "Render backend does not support this viewport output");
+    const RenderViewSettings settings{mode, depthMax};
+    renderBackend().setViewSettings(settings);
+    _viewSettings = settings;
+}
+
 RenderTextDraw& Renderer::textDraw() { return renderBackend().textDraw(); }
 
 RenderPickHit Renderer::raycast(
@@ -340,6 +356,7 @@ void Renderer::release() {
     _sceneBatches.clear();
     _sceneResources = nullptr;
     _backendCapabilities = {};
+    _viewSettings = {};
     _lightCollector = {};
     _snapshotLighting = false;
     _sceneLighting = false;

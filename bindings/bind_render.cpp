@@ -228,6 +228,12 @@ void bind_render(py::module& m) {
         .value("AFTER_OPAQUE", RenderHookPhase::AfterOpaque)
         .value("AFTER_TRANSPARENT", RenderHookPhase::AfterTransparent);
 
+    py::enum_<RenderViewMode>(m, "RenderViewMode")
+        .value("RGB", RenderViewMode::RGB)
+        .value("DEPTH", RenderViewMode::Depth)
+        .value("NORMALS", RenderViewMode::Normals)
+        .value("OBJECT_IDS", RenderViewMode::ObjectIds);
+
     py::enum_<ToneMapMode>(m, "ToneMapMode")
         .value("OFF", ToneMapMode::None)
         .value("REINHARD", ToneMapMode::Reinhard)
@@ -582,6 +588,13 @@ void bind_render(py::module& m) {
         .def("set_exposure", &Renderer::setExposure, py::arg("exposure"),
              "Set a linear brightness multiplier before tone mapping; "
              "1 is unchanged.")
+        .def("supports_view_mode", &Renderer::supportsViewMode, py::arg("mode"))
+        .def("set_view_mode", &Renderer::setViewMode, py::arg("mode"),
+             py::kw_only(), py::arg("depth_max") = 10.0f,
+             "Select an output; depth_max is camera-forward depth in scene units.")
+        .def_property_readonly("view_mode", [](const Renderer& renderer) {
+            return renderer.viewSettings().mode;
+        })
         .def(
             "_sync_scene",
             [](Renderer& renderer, py::dict frame) {

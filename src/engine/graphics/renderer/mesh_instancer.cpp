@@ -341,8 +341,12 @@ void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
     _updateTransparency();
     // Color-only updates must not overwrite device-owned transform data or
     // change the visible instance count after culling.
-    if (!_colors.empty() && _colors.size() <= static_cast<size_t>(_allocatedInstances))
+    if (!_colors.empty() && _colors.size() <= static_cast<size_t>(_allocatedInstances)) {
         _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * _colors.size());
+        if (_hasDirectCudaTransforms ||
+            (_hasExternalBufferDesc && _externalBufferDesc.view.isCuda()))
+            _colorsDirty = false;
+    }
 }
 
 void MeshInstancer::updateFromTransforms(
@@ -493,11 +497,16 @@ void MeshInstancer::_consumeExternalBuffer() {
         _worldBounds.clear();
         _combinedWorldBounds = Geometry::AABB::empty();
         _visibleCount = count;
-        if (_visibleCount > _allocatedInstances)
+        const bool reallocated = _visibleCount > _allocatedInstances;
+        if (reallocated)
             _reallocate(std::max(1, _visibleCount * 2));
-        if (_colors.size() != static_cast<size_t>(count))
+        const bool colorsResized = _colors.size() != static_cast<size_t>(count);
+        if (colorsResized)
             _colors.assign(static_cast<size_t>(count), glm::vec4(1.0f));
-        _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * count);
+        if (reallocated || colorsResized || _colorsDirty) {
+            _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * count);
+            _colorsDirty = false;
+        }
         if (!_transformVBO->setExternalData(view, static_cast<size_t>(count),
                                             sizeof(glm::mat4),
                                             static_cast<size_t>(strideBytes)))
@@ -952,13 +961,14 @@ void MeshInstancer::recordSkinnedMaterialDraw(
     recordMaterialDraw(pass, true, requireTangent, true);
 }
 
-MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
+MeshInstancer::PickInstances
+MeshInstancer::preparePickInstances(bool pickableOnly) const {
     const auto& instanceTransforms = transforms();
     const auto& instanceColors = colors();
     PickInstances result;
     if (!_hasVisibleOwnerPrim())
         return result;
-    if (_transformSource == TransformSource::ExternalBuffer) {
+    if (pickableOnly && _transformSource == TransformSource::ExternalBuffer) {
         const bool pickable =
             _sceneInstances
                 ? std::any_of(_sceneInstances->pickable.begin(),
@@ -995,11 +1005,11 @@ MeshInstancer::PickInstances MeshInstancer::preparePickInstances() const {
     for (uint32_t i = 0; i < result.count; ++i) {
         if (i < instanceColors.size())
             opacity[i] = instanceColors[i].a;
-        if (usesSceneData() && !_sceneInstances->pickable[i])
+        if (pickableOnly && usesSceneData() && !_sceneInstances->pickable[i])
             opacity[i] = -1.0f;
         Scene::Prim* prim = i < _instancePrims.size() ? _instancePrims[i]
                                                     : nullptr;
-        if (prim) {
+        if (pickableOnly && prim) {
             auto selection = prim->getSelectionComponent();
             if (selection && !selection->isPickable())
                 opacity[i] = -1.0f;

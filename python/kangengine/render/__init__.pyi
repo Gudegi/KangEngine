@@ -63,6 +63,13 @@ class TextAlignment(Enum):
     CENTER: TextAlignment
     RIGHT: TextAlignment
 
+class RenderViewMode(Enum):
+    """Viewport color, camera-forward depth, world normals, or instance colors."""
+    RGB: RenderViewMode
+    DEPTH: RenderViewMode
+    NORMALS: RenderViewMode
+    OBJECT_IDS: RenderViewMode
+
 class TextDepthMode(Enum):
     """Text depth-testing policy."""
     DEPTH_TESTED: TextDepthMode
@@ -594,6 +601,16 @@ class Renderer:
         - cpu_instance_transforms_input: submit CPU instance transform arrays.
         - cuda_image_output: return rendered images through CUDA handles.
         """
+        ...
+    def supports_view_mode(self, mode: RenderViewMode) -> bool:
+        """Return whether the active backend supports this viewport output."""
+        ...
+    def set_view_mode(self, mode: RenderViewMode, *, depth_max: float = 10.0) -> None:
+        """Select an output; depth_max is camera-forward depth in scene units."""
+        ...
+    @property
+    def view_mode(self) -> RenderViewMode:
+        """Current viewport output."""
         ...
     def set_profiler_enabled(self, enabled: bool) -> None:
         """Enable or disable CPU/GPU pass capture at the next frame boundary."""

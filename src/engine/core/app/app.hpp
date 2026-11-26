@@ -14,6 +14,7 @@
 #include <map>
 #include <tuple>
 #include <string>
+#include <stdexcept>
 #include <thread>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -133,6 +134,10 @@ class App {
     bool _showExitConfirmation = false;
     GizmoController _gizmo;
     ViewportPanel* _editorViewportPanel = nullptr;
+    // Optional viewport inspector; physics state stays with its provider.
+    std::function<void()> _physicsInspector;
+    std::function<void()> _physicsInspectorSync;
+    std::function<bool(glm::vec3, glm::vec3, float)> _physicsInspectorPick;
     std::string _activeSceneCameraPath;
 
     Scene::Prim* defaultDirectionalLightPrim();
@@ -142,6 +147,7 @@ class App {
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderRecordingIndicator();
+    void renderViewMenu();
     void renderShortcutHelp();
     void renderExitConfirmation();
     void renderSelectionGizmo();
@@ -354,6 +360,16 @@ class App {
     // A registered playback controller owns Space instead of simulation hotkeys.
     void setPlaybackToggleCallback(std::function<void()> callback) {
         _playbackToggle = std::move(callback);
+    }
+    void setPhysicsInspectorCallback(std::function<void()> callback) {
+        if (callback && _physicsInspector)
+            throw std::logic_error("An App can have only one physics inspector");
+        _physicsInspector = std::move(callback);
+    }
+    void setPhysicsInspectorPickCallback(
+        std::function<bool(glm::vec3, glm::vec3, float)> callback);
+    void setPhysicsInspectorSyncCallback(std::function<void()> callback) {
+        _physicsInspectorSync = std::move(callback);
     }
     bool getSimulationHotkeysEnabled() const {
         return _simulationHotkeysEnabled;

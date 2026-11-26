@@ -680,6 +680,7 @@ void PhysicsGpuSystem::init() {
                     _streamHandle, readyEventHandle,
                     "physics_contact_point_pair_indices");
     _initialized = true;
+    ++_poseGeneration;
 #endif
 #else
     throw std::runtime_error(
@@ -783,6 +784,30 @@ uint32_t PhysicsGpuSystem::articulationJacobianRowCount(
 void PhysicsGpuSystem::stepStart() { checkInitialized(); }
 
 void PhysicsGpuSystem::stepFinish() { checkInitialized(); }
+
+std::array<uint64_t, 3> PhysicsGpuSystem::poseRevision() const {
+    checkInitialized();
+    return {_poseGeneration, _world->getScene()->getTimestamp(), _poseWrites};
+}
+
+void PhysicsGpuSystem::fetchCollisionPoses(bool rigids, bool articulations) {
+    const auto revision = poseRevision();
+    if (rigids && _rigidPoseRevision != revision)
+        fetchRigidData();
+    if (articulations && _linkPoseRevision != revision)
+        fetchArticulationLinkPose();
+}
+
+void PhysicsGpuSystem::fetchInspectionContacts(bool velocities) {
+    const auto revision = poseRevision();
+    if (_contactPoseRevision != revision)
+        fetchContactPairs();
+    if (velocities) {
+        fetchCollisionPoses(true, true);
+        if (_linkVelocityRevision != revision)
+            fetchArticulationLinkVel();
+    }
+}
 
 void PhysicsGpuSystem::fetchD6Wrenches(
     const std::vector<std::shared_ptr<D6Joint>>& joints, Sim::GpuArrayView& output) {
@@ -962,6 +987,7 @@ void PhysicsGpuSystem::fetchRigidData() {
     checkCuda(cudaEventRecord(readyEvent, stream),
               "cudaEventRecord(rigid data ready)");
     ++_views.rigidData.version;
+    _rigidPoseRevision = poseRevision();
 #endif
 #else
     notImplemented("fetchRigidData");
@@ -1096,6 +1122,7 @@ void PhysicsGpuSystem::fetchArticulationLinkPose() {
     checkCuda(cudaEventRecord(readyEvent, stream),
               "cudaEventRecord(articulation link pose ready)");
     ++_views.articulationLinkData.version;
+    _linkPoseRevision = poseRevision();
 #endif
 #else
     notImplemented("fetchArticulationLinkPose");
@@ -1163,6 +1190,7 @@ void PhysicsGpuSystem::fetchArticulationLinkVel() {
     checkCuda(cudaEventRecord(readyEvent, stream),
               "cudaEventRecord(articulation link velocity ready)");
     ++_views.articulationLinkData.version;
+    _linkVelocityRevision = poseRevision();
 #endif
 #else
     notImplemented("fetchArticulationLinkVel");
@@ -1680,6 +1708,7 @@ void PhysicsGpuSystem::fetchContactPairs() {
     ++_views.contactPoints.version;
     ++_views.contactPointCount.version;
     ++_views.contactPointPairIndices.version;
+    _contactPoseRevision = poseRevision();
 #endif
 #else
     notImplemented("fetchContactPairs");
@@ -1725,6 +1754,7 @@ void PhysicsGpuSystem::clearContactData() {
     ++_views.contactPairBodyRefs.version;
     ++_views.contactPointCount.version;
     ++_views.contactPointPairIndices.version;
+    _contactPoseRevision = poseRevision();
 #else
     notImplemented("clearContactData");
 #endif
@@ -1847,6 +1877,8 @@ void PhysicsGpuSystem::applyRigidState(const Sim::GpuArrayView* indices,
     checkCuda(cudaStreamWaitEvent(stream, readyEvent, 0),
               "cudaStreamWaitEvent(apply angular velocity)");
     ++_views.rigidData.version;
+    if (writePose)
+        ++_poseWrites;
 #endif
 #else
     notImplemented("applyRigidData");
@@ -1901,6 +1933,7 @@ void PhysicsGpuSystem::applyArticulationRootPose(
     checkCuda(cudaStreamWaitEvent(stream, finishEvent, 0),
               "cudaStreamWaitEvent(apply articulation root pose)");
     ++_views.articulationLinkData.version;
+    ++_poseWrites;
 #endif
 #else
     (void)indices;
@@ -1975,6 +2008,7 @@ void PhysicsGpuSystem::applyArticulationJointPositions(
         "joint position",
         "cudaStreamWaitEvent(apply articulation joint position)",
         "cudaEventRecord(apply articulation joint position)");
+    ++_poseWrites;
 }
 
 void PhysicsGpuSystem::applyArticulationJointVelocities(
@@ -2124,6 +2158,7 @@ void PhysicsGpuSystem::updateArticulationKinematics() {
             "failed");
     checkCuda(cudaStreamWaitEvent(stream, finishEvent, 0),
               "cudaStreamWaitEvent(update articulation kinematics)");
+    ++_poseWrites;
 #endif
 #else
     notImplemented("updateArticulationKinematics");

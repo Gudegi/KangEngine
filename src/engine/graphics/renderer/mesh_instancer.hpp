@@ -222,7 +222,7 @@ class MeshInstancer {
         std::unique_ptr<Backend::Buffer> opacity;
         uint32_t count = 0;
     };
-    PickInstances preparePickInstances() const;
+    PickInstances preparePickInstances(bool pickableOnly = true) const;
     void recordPickDraw(Backend::RenderPassEncoder& pass,
                         const PickInstances& instances, bool textured) const;
     RayPickResult pickInstance(int instanceIndex) const;

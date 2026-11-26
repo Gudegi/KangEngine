@@ -19,6 +19,7 @@
 #include "utils/types.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+#include <IconsFontAwesome7.h>
 #include <chrono>
 #include <cfloat>
 #include <cmath>
@@ -214,6 +215,9 @@ void App::close() {
     _automationRequested.store(false, std::memory_order_relaxed);
     _frameCaptureActive = false;
     _playbackToggle = {};
+    _physicsInspector = {};
+    _physicsInspectorSync = {};
+    _physicsInspectorPick = {};
     if (auto* window = _window.getGlfwWindow())
         glfwMakeContextCurrent(window);
 
@@ -867,6 +871,9 @@ void App::executeFrame(bool update) {
     {
         auto scope = profile.cpuScope("simulation/pre_render");
         this->preRender();
+        // Inspect only after the application has fetched simulation results.
+        if (_physicsInspectorSync)
+            _physicsInspectorSync();
     }
     if (getRasterizer()) {
         renderSelectedLightOverlay();
@@ -888,6 +895,22 @@ void App::executeFrame(bool update) {
         RayPickResult current;
         if (_renderer.buildPrimSelection(*selection.prim, current))
             _interaction.select(current);
+    }
+    if (_mousePickRequested && _physicsInspectorPick &&
+        _interaction.mode() == InteractionMode::Inspect) {
+        const glm::mat4 inverse = glm::inverse(_projectionMatrix * _viewMatrix);
+        glm::vec4 near = inverse * glm::vec4(_io->pickNDC, -1, 1);
+        glm::vec4 far = inverse * glm::vec4(_io->pickNDC, 1, 1);
+        near /= near.w;
+        far /= far.w;
+        const glm::vec3 delta = glm::vec3(far - near);
+        const float length = glm::length(delta);
+        const bool hit =
+            _physicsInspectorPick(glm::vec3(near), delta / length, length);
+        selectPrim(hit ? _scene->getPrimAtPath("/.Resources/PhysicsInspection")
+                       : nullptr);
+        _mousePickRequested = false;
+        _io->forcePickRequested = false;
     }
     if (_renderer.capabilities().screenPicking &&
         (_mousePickRequested ||
@@ -984,6 +1007,7 @@ void App::executeFrame(bool update) {
         auto uiScope = profile.cpuScope("render/ui");
         if (!_hideUI) {
             _panelManager.render();
+            renderViewMenu();
             renderShortcutHelp();
             renderRecordingIndicator();
             if (!_showExitConfirmation &&
@@ -1184,6 +1208,87 @@ bool App::writeScreenshotFrame() {
     else
         fmt::print("Failed to save screenshot: {}\n", outPath.string());
     return ok;
+}
+
+void App::renderViewMenu() {
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const ImGuiStyle& style = ImGui::GetStyle();
+    ImVec2 origin = viewport->WorkPos;
+    ImVec2 size = viewport->WorkSize;
+    const float margin = style.ItemSpacing.x;
+    const float buttonSize = ImGui::GetFrameHeight();
+    const ImVec2 padding = style.FramePadding;
+    float offsetY = 0.0f;
+    if (_panelManager.getLayoutMode() == UILayoutMode::Editor) {
+        if (!_editorViewportPanel || !_editorViewportPanel->isOpen() ||
+            _editorViewportPanel->contentSize().x <= 0.0f ||
+            _editorViewportPanel->contentSize().y <= 0.0f)
+            return;
+        origin = _editorViewportPanel->imageMin();
+        size = _editorViewportPanel->imageSize();
+        const float toolButtonSize = buttonSize + style.FramePadding.x * 2.0f;
+        offsetY = 3 * toolButtonSize + 2 * style.ItemSpacing.y +
+                  2 * style.WindowPadding.y + margin;
+    }
+    if (size.x < buttonSize + 2 * (padding.x + margin) ||
+        size.y < offsetY + buttonSize + 2 * (padding.y + margin))
+        return;
+
+    ImGui::SetNextWindowPos(ImVec2(origin.x + margin,
+                                  origin.y + margin + offsetY));
+    constexpr ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoFocusOnAppearing;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, padding);
+    const bool visible = ImGui::Begin("##ViewportViewMenu", nullptr, flags);
+    ImGui::PopStyleVar();
+    if (visible) {
+        if (ImGui::Button(ICON_FA_EYE "##View", ImVec2(buttonSize, buttonSize)))
+            ImGui::OpenPopup("ViewOptions");
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+            ImGui::SetTooltip("View");
+        if (ImGui::BeginPopup("ViewOptions")) {
+            if (ImGui::BeginMenu("Physics Inspector", bool(_physicsInspector))) {
+                _physicsInspector();
+                ImGui::EndMenu();
+            }
+            if (!_physicsInspector &&
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("No physics inspection source connected");
+            if (ImGui::BeginMenu("Render Output")) {
+                const auto settings = _renderer.viewSettings();
+                constexpr const char* labels[] = {"RGB", "Depth", "Normals",
+                                                  "Object IDs"};
+                for (int i = 0; i < 4; ++i) {
+                    const auto mode = static_cast<RenderViewMode>(i);
+                    const bool supported = _renderer.supportsViewMode(mode);
+                    ImGui::BeginDisabled(!supported);
+                    if (ImGui::Selectable(labels[i], settings.mode == mode))
+                        _renderer.setViewMode(mode, settings.depthMax);
+                    ImGui::EndDisabled();
+                    if (!supported &&
+                        ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                        ImGui::SetTooltip("Not supported by this render backend");
+                }
+                if (settings.mode == RenderViewMode::Depth) {
+                    float limit = settings.depthMax;
+                    if (ImGui::InputFloat("Depth limit", &limit) &&
+                        std::isfinite(limit) && limit > 0)
+                        _renderer.setViewMode(settings.mode, limit);
+                    ImGui::TextDisabled("Camera-forward depth in scene units.");
+                    ImGui::TextDisabled("Black: background. White: limit or farther.");
+                } else if (settings.mode == RenderViewMode::Normals) {
+                    ImGui::TextDisabled("World-space normals: XYZ -> RGB.");
+                } else if (settings.mode == RenderViewMode::ObjectIds) {
+                    ImGui::TextDisabled("Instance colors, not semantic labels.");
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndPopup();
+        }
+    }
+    ImGui::End();
 }
 
 void App::renderRecordingIndicator() {
@@ -1422,6 +1527,18 @@ bool App::removePrim(const std::string& path) {
             subtree.push_back(child);
     });
 
+    const auto& selection = _interaction.selection();
+    const bool removesSelection = selection.hit && std::any_of(
+        subtree.begin(), subtree.end(), [&](Scene::Prim* child) {
+            if (selection.prim)
+                return child == selection.prim;
+            const auto component = child->getRenderComponent();
+            return component && selection.handle != InvalidHandle &&
+                   _sceneRenderSystem.handle(*component, false) == selection.handle;
+        });
+    if (removesSelection)
+        clearSelection();
+
     _sceneRenderSystem.detachSubtree(*prim);
     for (Scene::Prim* child : subtree)
         getRenderer().removePrim(child);
@@ -1433,7 +1550,6 @@ bool App::removePrim(const std::string& path) {
         }
     }
 
-    clearSelection();
     const bool removed = _scene->removePrim(path);
     if (removed)
         _sceneResourceManager.invalidateUsageCache();
@@ -2377,6 +2493,28 @@ void App::selectPrim(Scene::Prim* prim) {
     _interaction.setLastPick(selection);
     _interaction.select(selection);
     onRayPicked(selection);
+}
+
+void App::setPhysicsInspectorPickCallback(
+    std::function<bool(glm::vec3, glm::vec3, float)> callback) {
+    constexpr const char* path = "/.Resources/PhysicsInspection";
+    if (callback) {
+        // One read-only selection target, never a Prim per simulated body.
+        auto* prim = _scene->definePrim(path, Scene::PrimType::Xform);
+        auto component = prim->getSelectionComponent();
+        if (!component)
+            component = prim->addSelectionComponent();
+        component->setInteractionKind(Scene::InteractionKind::Helper);
+        component->setManipulatable(false);
+        component->setForceDraggable(false);
+    } else if (_scene) {
+        auto* prim = _scene->getPrimAtPath(path);
+        if (prim && _interaction.selection().prim == prim)
+            clearSelection();
+        if (prim)
+            _scene->removePrim(path);
+    }
+    _physicsInspectorPick = std::move(callback);
 }
 
 bool App::getPickTransform(const RayPickResult& result,

@@ -7,6 +7,7 @@
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/render_backend/render_debug_draw.hpp"
 #include "engine/graphics/renderer/render_backend/render_text_draw.hpp"
+#include "engine/graphics/renderer/render_backend/render_view.hpp"
 #include "utils/types.hpp"
 
 #include <glm/mat4x4.hpp>
@@ -66,6 +67,14 @@ class RenderBackend {
     virtual RenderBackendCapabilities capabilities() const = 0;
     virtual void initialize(int width, int height) = 0;
     virtual void resize(int width, int height) = 0;
+    virtual bool supportsViewMode(RenderViewMode mode) const {
+        return mode == RenderViewMode::RGB;
+    }
+    virtual void setViewSettings(const RenderViewSettings& settings) {
+        if (settings.mode != RenderViewMode::RGB)
+            throw std::runtime_error(
+                "Render backend does not support this viewport output");
+    }
     virtual void setBackgroundColor(const glm::vec4&) {
         throw std::runtime_error(
             "Render backend does not support background color");

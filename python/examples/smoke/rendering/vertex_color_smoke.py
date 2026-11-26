@@ -152,6 +152,9 @@ def main():
                     app.select_prim(prim=surface.prim)
                     assert np.count_nonzero(np.max(np.abs(capture() - occluded), axis=2) > 10) > 20
                     app.scene.remove_prim("/occluder")
+                    assert app.get_selection().prim == surface.prim
+                    np.testing.assert_allclose(capture(), selected_hidden, atol=1)
+                    app.clear_selection()
                     surface.set_base_color(ke.Vec4(1, 1, 1, 0.25))
                     np.testing.assert_allclose(capture(), hidden, atol=1)
                     app.select_prim(prim=surface.prim)

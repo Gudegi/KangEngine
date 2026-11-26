@@ -91,6 +91,117 @@ Use one representation deliberately:
 - `add()` / `VisualBatch` for throughput and batched environments.
 - `add_scene_graph()` for inspectable prims, selection, and collision display.
 
+## Physics inspection
+
+Open the viewport's eye icon → **Physics Inspector** to inspect colliders,
+contacts, centers of mass, and coordinate axes. These displays work with Native
+and OVRTX and are off by default.
+
+`SimWorldVisualizer` connects the simulation automatically unless another source
+is already connected. For a standalone `PhysicsWorld`, connect it after App
+initialization; the menu is disabled until connected:
+
+```python
+self.physics_inspector.set_source(
+    source=ke.physics.PhysXInspectionSource(world=self.physics_world),
+)
+```
+
+Finish fetching physics results in `pre_render()` before the displays update.
+
+```bash
+python python/examples/rendering/physics_inspector.py --renderer native
+python python/examples/rendering/physics_inspector.py --renderer ovrtx
+```
+
+### Colliders and selection
+
+Enable **Static Colliders** (pink) or **Dynamic Colliders** (green) to see the
+actual collision shapes. Select an object to highlight its colliders in yellow
+and inspect its body type, shape dimensions, and local pose.
+
+`SimWorldVisualizer` connects selection automatically. For a visual created with
+`scene.add_mesh()`, connect its physics body yourself:
+
+```python
+self.physics_inspector.bind_visual(visual, body)
+```
+
+For an ExternalBuffer visual, also pass `instance_index` to identify the instance.
+
+Enable **Pick Colliders** in Inspect mode to select visible collider categories
+directly, even without visual meshes. In GPU worlds, this works only for static
+colliders; select the visual mesh to inspect a dynamic body.
+
+Boxes, spheres, capsules, convex meshes, triangle meshes, and heightfields are
+supported. Infinite planes use a finite preview (`plane_size=10.0` scene units).
+CPU collider lines remain visible through meshes; GPU dynamic colliders can be
+hidden behind them.
+
+Use **Refresh** after adding bodies, editing collision shapes, or moving/removing
+static bodies. CPU dynamic poses and removals update automatically.
+For GPU physics, initialize the GPU system before connecting; without a visualizer,
+pass `gpu_system` to `PhysXInspectionSource`. Adding or removing GPU bodies requires
+GPU system reinitialization, then **Refresh**.
+
+Use `self.physics_inspector.set_source(None)` to disconnect. Changing the source
+clears display toggles and body bindings; App shutdown cleans up automatically.
+
+### Contacts
+
+Under **Contacts**, enable **Normal**, **Force**, or **Contact Mode**.
+The scale and thickness controls change the display, not the simulation.
+
+- **Normal:** the reported contact normal direction.
+- **Force:** average normal force over the last physics step, excluding friction.
+- **Contact Mode:** estimated unloaded (gray), sticking (cyan), or sliding (orange)
+  state based on force and relative motion, not the solver's friction state.
+
+Contact markers can be hidden behind meshes. Separated points with negligible
+force are hidden, but remain in the reported count. Sleeping CPU bodies may stop
+reporting contacts.
+
+CPU display requires `enable_contact_reports=True` (the default); GPU display
+requires contact buffers in `PhysicsGpuSystem`. GPU inspection can add synchronization
+cost while enabled. The menu warns if contacts exceed the buffer capacity.
+
+### Centers of mass
+
+Enable **Body / link COM** for yellow center-of-mass markers, or **Whole robot COM**
+for each articulation's mass-weighted center in purple. The robot center includes
+fixed-base links; static colliders are excluded. Markers stay the same size on
+screen and remain visible through meshes.
+
+Use **Refresh** after adding bodies or changing masses or local COM offsets.
+GPU COM and coordinate-axis displays read positions back to CPU while enabled.
+
+### Coordinate axes
+
+**Body / link axes** and **Joint axes** show X/Y/Z in red/green/blue through
+meshes. Body axes use the link origin, not its center of mass. Joint axes use the
+joint frame attached to the child link. For a single-axis PhysX articulation joint,
+red X marks the rotation or translation axis, so it may differ from the body's X axis.
+
+## Render output inspection
+
+Open the eye icon's **Render Output** menu to choose RGB, Depth,
+Normals, or Object IDs. Unsupported modes are disabled.
+
+| Output | Meaning |
+| --- | --- |
+| RGB | Normal rendering; the default |
+| Depth | Depth along the camera's forward axis, in scene units. Black is background; white is the depth limit or farther. |
+| Normals | World-space directions: XYZ from `[-1, 1]` becomes RGB `[0, 1]`. Native shows face normals; OVRTX shows surface normals. |
+| Object IDs | Colors distinguish instances, not object categories or persistent IDs. OVRTX may color material subsets separately. |
+
+Depth is not distance along the viewing ray. These views hide debug overlays and
+selection outlines; picking still works. To select a view from Python:
+
+```python
+renderer: ke.render.Renderer = self.get_renderer()
+renderer.set_view_mode(mode=ke.render.RenderViewMode.DEPTH, depth_max=10.0)
+```
+
 ## Visual types
 
 | Type | Role |
