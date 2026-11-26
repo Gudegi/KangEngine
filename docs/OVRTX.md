@@ -94,7 +94,7 @@ finally:
 Omit `renderer` or use `renderer="native"` for Native. Do not pass
 `graphics_backend_type` when selecting OVRTX.
 
-For [Newton](NEWTON.md), use `ViewerKE(renderer="ovrtx")`.
+For [Newton](NEWTON.md), use `NewtonViewer(renderer="ovrtx")`.
 For [MimicKit](MIMICKIT.md), set `renderer: ovrtx` in the engine configuration.
 
 For an App without a window, set `headless=True, hide_ui=True` during

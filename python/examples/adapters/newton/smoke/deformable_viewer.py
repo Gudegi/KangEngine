@@ -1,6 +1,6 @@
 """Verify Newton CPU particle and cloth-surface visualization."""
 
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 import kangengine as ke
 import numpy as np
 
@@ -42,7 +42,7 @@ def main():
     model = builder.finalize(device="cpu")
     state = model.state()
 
-    viewer = ViewerKE(width=320, height=240, headless=True)
+    viewer = NewtonViewer(width=320, height=240, headless=True)
     try:
         viewer.show_particles = True
         viewer.show_triangles = True

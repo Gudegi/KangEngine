@@ -5,7 +5,7 @@ import newton
 import warp as wp
 
 import kangengine as ke
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
     builder.add_shape_sphere(body, radius=0.75)
     model = builder.finalize(device="cpu")
     state = model.state()
-    viewer = ViewerKE(width=320, height=240, headless=True)
+    viewer = NewtonViewer(width=320, height=240, headless=True)
     try:
         viewer.app.set_vsync(enabled=False)
         viewer.set_model(model)

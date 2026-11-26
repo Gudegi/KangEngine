@@ -2,7 +2,7 @@
 
 from kangengine.adapters.newton import (
     NewtonUnavailableError,
-    ViewerKE,
+    NewtonViewer,
     is_newton_available,
 )
 
@@ -13,11 +13,11 @@ def main():
         return
 
     try:
-        ViewerKE(headless=True)
+        NewtonViewer(headless=True)
     except NewtonUnavailableError:
         print("PASS: Newton adapter reports its missing optional dependency")
         return
-    raise RuntimeError("ViewerKE unexpectedly initialized without Newton")
+    raise RuntimeError("NewtonViewer unexpectedly initialized without Newton")
 
 
 if __name__ == "__main__":

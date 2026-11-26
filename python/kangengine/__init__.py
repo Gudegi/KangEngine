@@ -45,6 +45,7 @@ if _TYPE_CHECKING:
     from . import exports as exports
     from . import motion_module as motion_module
     from . import sim as sim
+    from .app import App as App
     from .sim.run_mode import SimulationPacer, SimulationRunConfig, SimulationRunMode
     from .sim.timing import SimulationTimingConfig
     from .adapters.mimickit import (

@@ -9,34 +9,46 @@ if TYPE_CHECKING:
 
 
 class PhysicsInspectionSource(Protocol):
-    """Supply collider snapshots and checked body references after simulation fetch.
+    """Supply physics debug data to the viewport inspector after simulation fetch.
 
-    Body references expose a cheap ``valid`` property, false after removal.
-    Poses use xyz/xyzw in scene units. Shape dictionaries contain ``type``,
-    ``shape_idx``, ``local_pose``, ``actor_pose`` and geometry dimensions/data.
-    Dynamic shapes use ``body_idx`` to index the returned body references.
-    Capsules and plane normals use local X. Meshes supply vertices, triangles,
-    mesh_scale and mesh_scale_rotation_xyzw; heightfield vertices are already scaled.
-    Queries must not step physics or silently download GPU poses. GPU snapshots
-    use actor-local geometry and actor_pose=None.
-    Providers without GPU collider raycasts expose supports_dynamic_picking=False.
-    Optional pose_revision skips unchanged snapshots; None keeps CPU pose polling.
-    A GPU body list stays fixed until Refresh or GPU system reinitialization.
-    Optional contact inspection exposes supports_contacts, contacts_unavailable_reason,
-    contact_revision, contact_display_settings(), contact_data(velocities=...), and
-    clear_contact_cache(). Settings return glyph length and force gain. Data returns
-    an (N,13) NumPy/CUDA array plus the last physics dt: world position, normal,
-    normal impulse on endpoint 0, separation, and relative point velocity (0 minus 1).
-    contact_revision changes on step/reset/clear; it must not fetch device data.
-    Optional COM inspection exposes supports_com,
-    com_positions(bodies=True, articulations=True), clear_com_cache().
-    com_positions returns two world-space NumPy (N,3) arrays: body/link centers and
-    mass-weighted centers per articulation. Static actors have no COM marker.
-    Optional frame inspection exposes supports_frames,
-    frame_poses(bodies=True, joints=True), clear_frame_cache().
-    frame_poses returns world body/link and child-side joint frames as NumPy (N,7)
-    XYZ/XYZW arrays, excluding static actors. Both queries take keyword-only display
-    flags; disabled outputs are empty arrays and skip calculation and readback.
+    Queries never step physics. Poses use xyz/xyzw in scene units.
+    The methods below cover colliders and selection; other features are optional.
+
+    Contacts (optional):
+        - supports_contacts and contacts_unavailable_reason control availability.
+        - contact_revision changes on step/reset/clear without device queries.
+        - contact_display_settings() returns glyph length and force gain.
+        - clear_contact_cache() releases cached contact data.
+
+        contact_data(velocities=...) returns an (N, 13) NumPy/CUDA array and
+        the last physics dt in seconds. Columns are:
+        - 0:3: world position
+        - 3:6: world normal
+        - 6:9: normal impulse (N s), or force (N) as specified below
+        - 9: separation
+        - 10:13: relative point velocity, receiving endpoint minus the other
+
+        The provider chooses the receiving endpoint. Normal, force, and relative
+        velocity must all use that endpoint.
+
+        supports_contact_forces=False disables force and estimated contact modes.
+        contact_forces_are_impulses=False supplies force directly; dt is unused.
+        Both flags default to True.
+
+    Centers of mass (optional):
+        - supports_com enables COM display.
+        - com_positions(*, bodies=True, articulations=True) returns two world-space
+          NumPy (N, 3) arrays: body/link centers and mass-weighted articulation centers.
+        - clear_com_cache() releases cached COM data.
+
+    Body and joint frames (optional):
+        - supports_frames enables frame display.
+        - frame_poses(*, bodies=True, joints=True) returns two world-space NumPy
+          (N, 7) arrays: body/link poses and child-side joint poses.
+        - clear_frame_cache() releases cached frame data.
+
+    COM and frame queries exclude static actors. Disabled outputs are empty
+    arrays and skip calculation and readback.
     """
 
     @property
@@ -46,18 +58,37 @@ class PhysicsInspectionSource(Protocol):
     def dynamic_unavailable_reason(self) -> str: ...
 
     def body_reference(self, body: Any) -> Any:
-        """Return a checked reference suitable for selection and pose queries."""
+        """Return a checked reference for selection and pose queries.
+
+        Its cheap ``valid`` property becomes False after removal.
+        """
         ...
 
-    def static_shapes(self) -> list[dict]: ...
+    def static_shapes(self) -> list[dict]:
+        """Return static collider snapshots in the shared shape format.
 
-    def dynamic_shapes(self) -> tuple[list[dict], list[Any]]: ...
+        Shape fields: type, shape_idx, local_pose, actor_pose, and geometry data.
+        Capsules and plane normals use local X. Meshes supply vertices, triangles,
+        mesh_scale, and mesh_scale_rotation_xyzw. Heightfield vertices are scaled.
+        """
+        ...
+
+    def dynamic_shapes(self) -> tuple[list[dict], list[Any]]:
+        """Return shape snapshots and body references.
+
+        Uses the static_shapes() format; body_idx indexes the returned references.
+        GPU snapshots keep actor-local geometry and actor_pose=None, without pose
+        readback. The GPU body list stays fixed until Refresh or reinitialization.
+        """
+        ...
 
     def body_poses(self, bodies: list[Any]) -> tuple["np.ndarray | Tensor", np.ndarray]:
         """Return world poses (N, 7), NumPy or CUDA, and a CPU validity mask (N,).
 
         CUDA results must be ready on the current torch stream and retained
-        until the next call. Optional clear_pose_cache() releases cached poses.
+        until the next call; never silently download GPU poses.
+        Optional pose_revision skips unchanged poses; None keeps CPU pose polling.
+        Optional clear_pose_cache() releases cached poses.
         """
         ...
 
@@ -69,7 +100,10 @@ class PhysicsInspectionSource(Protocol):
         ...
 
     def pick(self, origin, direction, distance, statics, dynamics) -> tuple[Any, int] | None:
-        """Return the nearest body/shape index, or None for a miss."""
+        """Return the nearest body/shape index, or None for a miss.
+
+        Set supports_dynamic_picking=False when GPU collider raycasts are unavailable.
+        """
         ...
 
     def resolve_selection(self, selection) -> tuple[Any, dict]:

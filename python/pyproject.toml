@@ -22,6 +22,13 @@ dependencies = [
 mcp = ["mcp>=2.3,<3"]
 motion-matching = ["scipy>=1.13"]
 terrain = ["warp-lang>=1.16,<2.0"]
+newton = [
+    "newton[sim]>=1.6.1,<1.7",
+    "newton-usd-schemas>=0.5.0",
+    # USD 26.8 wheels conflict with our local USD 26.8 build when loaded together.
+    "usd-core==26.5; python_full_version < '3.14' and platform_machine != 'aarch64'",
+    "usd-exchange>=2.3,<4; python_full_version < '3.14' and platform_machine == 'aarch64'",
+]
 docs = [
     "sphinx>=8",
     "myst-parser>=4",

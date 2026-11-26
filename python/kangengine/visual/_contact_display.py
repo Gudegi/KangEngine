@@ -116,10 +116,13 @@ class ContactDisplay:
         return batch
 
     def sync(self, source):
+        has_force = getattr(source, "supports_contact_forces", True)
+        show_force = self.force and has_force
+        show_mode = self.mode and has_force
         options = (
             self.normal,
-            self.mode,
-            self.force,
+            show_mode,
+            show_force,
             self.scale,
             self.force_scale,
             self.thickness,
@@ -127,12 +130,12 @@ class ContactDisplay:
         key = (source.contact_revision, options)
         if key == self.revision:
             return
-        if not (self.normal or self.mode or self.force):
+        if not (self.normal or show_mode or show_force):
             self.hide()
             self.revision = key
             return
 
-        values, dt = source.contact_data(velocities=self.mode)
+        values, dt = source.contact_data(velocities=show_mode)
         data = torch.as_tensor(values, dtype=torch.float32)
         self.count = len(data)
         if not self.count:
@@ -150,7 +153,10 @@ class ContactDisplay:
                 self.ready = torch.cuda.Event()
 
         points, normals = data[:, :3], data[:, 3:6]
-        forces = data[:, 6:9] / dt if dt > 0 else torch.zeros_like(points)
+        if getattr(source, "contact_forces_are_impulses", True):
+            forces = data[:, 6:9] / dt if dt > 0 else torch.zeros_like(points)
+        else:
+            forces = data[:, 6:9]
         force_sizes = torch.linalg.vector_norm(forces, dim=1)
         # Hide separated, unloaded candidates without compacting CUDA buffers.
         visible = (data[:, 9] <= 0) | (force_sizes >= 1e-4)
@@ -167,10 +173,10 @@ class ContactDisplay:
 
         if self.normal:
             draw("normal", normals, data.new_full((len(data),), base), radius)
-        if self.force:
+        if show_force:
             lengths = force_sizes * base * self.force_gain * self.force_scale
             draw("force", forces, lengths, radius * 1.25)
-        if self.mode:
+        if show_mode:
             modes = contact_modes(normals, forces, data[:, 10:13])
             for mode, name in enumerate(("open", "stick", "slip")):
                 draw(

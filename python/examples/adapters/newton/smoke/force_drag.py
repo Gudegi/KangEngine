@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import numpy as np
 
 import kangengine as ke
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     model = builder.finalize(device="cpu")
     state = model.state()
 
-    viewer = ViewerKE(width=320, height=240, headless=True)
+    viewer = NewtonViewer(width=320, height=240, headless=True)
     try:
         viewer.set_model(model)
         if not viewer.app.get_external_force_drag_enabled():

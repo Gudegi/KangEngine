@@ -12,7 +12,7 @@ particles and particle constraints.
 from __future__ import annotations
 
 from kangengine.utils._example_args import render_example_parser
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 
 
 def main():
@@ -88,7 +88,7 @@ def main():
         particle_enable_tile_solve=False,
     )
 
-    viewer = ViewerKE(
+    viewer = NewtonViewer(
         width=args.width,
         height=args.height,
         headless=args.headless,

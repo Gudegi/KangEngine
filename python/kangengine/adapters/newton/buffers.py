@@ -16,11 +16,11 @@ def _transform_to_glm_kernel(
     scale_count: int,
     matrices: wp.array2d(dtype=float),
 ):
-    index = wp.tid()
-    transform = xforms[index]
+    idx = wp.tid()
+    transform = xforms[idx]
     position = wp.transform_get_translation(transform)
     rotation = wp.normalize(wp.transform_get_rotation(transform))
-    scale = scales[0] if scale_count == 1 else scales[index]
+    scale = scales[0] if scale_count == 1 else scales[idx]
     x = rotation[0]
     y = rotation[1]
     z = rotation[2]
@@ -29,30 +29,28 @@ def _transform_to_glm_kernel(
     sy = scale[1]
     sz = scale[2]
 
-    matrices[index, 0] = (1.0 - 2.0 * (y * y + z * z)) * sx
-    matrices[index, 1] = (2.0 * (x * y + z * w)) * sx
-    matrices[index, 2] = (2.0 * (x * z - y * w)) * sx
-    matrices[index, 3] = 0.0
-    matrices[index, 4] = (2.0 * (x * y - z * w)) * sy
-    matrices[index, 5] = (1.0 - 2.0 * (x * x + z * z)) * sy
-    matrices[index, 6] = (2.0 * (y * z + x * w)) * sy
-    matrices[index, 7] = 0.0
-    matrices[index, 8] = (2.0 * (x * z + y * w)) * sz
-    matrices[index, 9] = (2.0 * (y * z - x * w)) * sz
-    matrices[index, 10] = (1.0 - 2.0 * (x * x + y * y)) * sz
-    matrices[index, 11] = 0.0
-    matrices[index, 12] = position[0]
-    matrices[index, 13] = position[1]
-    matrices[index, 14] = position[2]
-    matrices[index, 15] = 1.0
+    matrices[idx, 0] = (1.0 - 2.0 * (y * y + z * z)) * sx
+    matrices[idx, 1] = (2.0 * (x * y + z * w)) * sx
+    matrices[idx, 2] = (2.0 * (x * z - y * w)) * sx
+    matrices[idx, 3] = 0.0
+    matrices[idx, 4] = (2.0 * (x * y - z * w)) * sy
+    matrices[idx, 5] = (1.0 - 2.0 * (x * x + z * z)) * sy
+    matrices[idx, 6] = (2.0 * (y * z + x * w)) * sy
+    matrices[idx, 7] = 0.0
+    matrices[idx, 8] = (2.0 * (x * z + y * w)) * sz
+    matrices[idx, 9] = (2.0 * (y * z - x * w)) * sz
+    matrices[idx, 10] = (1.0 - 2.0 * (x * x + y * y)) * sz
+    matrices[idx, 11] = 0.0
+    matrices[idx, 12] = position[0]
+    matrices[idx, 13] = position[1]
+    matrices[idx, 14] = position[2]
+    matrices[idx, 15] = 1.0
 
 
 def to_numpy(value, *, name: str, allow_cuda_readback: bool = False) -> np.ndarray:
     """Convert a NumPy or Warp-like array to a host NumPy array.
 
-    CUDA readback must be explicitly enabled. This prevents the initial CPU
-    viewer implementation from silently turning a CUDA simulation into a
-    device-to-host copy every frame.
+    CUDA readback is opt-in to prevent implicit device-to-host copies per frame.
     """
 
     if value is None:
@@ -66,7 +64,7 @@ def to_numpy(value, *, name: str, allow_cuda_readback: bool = False) -> np.ndarr
     )
     if is_cuda and not allow_cuda_readback:
         raise RuntimeError(
-            f"{name} is stored on CUDA. This ViewerKE feature refuses "
+            f"{name} is stored on CUDA. Newton visualization refuses "
             "implicit readback; pass allow_cuda_readback=True for debugging "
             "or use a device-resident adapter path."
         )

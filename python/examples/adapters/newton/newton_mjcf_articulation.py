@@ -11,11 +11,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from kangengine.utils._example_args import render_example_parser
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 
 
 def main():
     parser = render_example_parser()
+    parser.add_argument(
+        "--device", help="Newton device: cpu or cuda:0 (default: Warp auto-selection)."
+    )
     parser.add_argument(
         "--mjcf",
         type=Path,
@@ -40,6 +43,9 @@ def main():
     import newton
     import newton.examples
     import warp as wp
+
+    if args.device is not None:
+        wp.set_device(args.device)
 
     newton.use_coord_layout_targets = True
     mjcf_path = (
@@ -82,7 +88,7 @@ def main():
         use_mujoco_cpu=use_mujoco_cpu,
     )
 
-    viewer = ViewerKE(
+    viewer = NewtonViewer(
         width=args.width,
         height=args.height,
         headless=args.headless,
@@ -96,8 +102,11 @@ def main():
     )
     viewer.set_world_offsets((3.0, 3.0, 0.0))
     viewer.show_collision = bool(args.show_collision)
-    viewer.show_joints = bool(args.show_joints)
-    viewer.show_contacts = bool(args.show_contacts)
+    viewer.app.physics_inspector.set_frames_visible(
+        bodies=False, joints=args.show_joints
+    )
+    viewer.log_mujoco_contacts(solver, state_0)
+    viewer.app.physics_inspector.set_contacts_visible(args.show_contacts)
     viewer.set_camera(wp.vec3(5.0, -7.0, 3.0), pitch=-8.0, yaw=125.0)
 
     frame_dt = 1.0 / 60.0

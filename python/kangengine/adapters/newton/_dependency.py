@@ -22,8 +22,7 @@ def load_newton():
     except ImportError as exc:
         raise NewtonUnavailableError(
             "The KangEngine Newton adapter requires Newton and Warp. "
-            "Install the tested viewer environment with 'newton==1.6.1', or "
-            "'newton[sim]==1.6.1' for the MuJoCo MJCF examples. Importing "
+            "Install 'kangengine[newton]' for Newton, MuJoCo, and USD import support. Importing "
             "kangengine itself does not require them."
         ) from exc
     return newton, warp
@@ -43,8 +42,7 @@ def load_viewer_base():
     except (ImportError, AttributeError) as exc:
         raise NewtonUnavailableError(
             "This Newton version does not provide the ViewerBase contract "
-            "expected by KangEngine. Check TODO_NewtonIntegration.md and use "
-            "the supported Newton revision."
+            "expected by KangEngine."
         ) from exc
 
 
@@ -58,7 +56,7 @@ def load_picking():
     except (ImportError, AttributeError) as exc:
         raise NewtonUnavailableError(
             "This Newton version does not provide the Picking contract "
-            "expected by KangEngine. Use the supported Newton revision."
+            "expected by KangEngine."
         ) from exc
 
 
@@ -68,3 +66,8 @@ def is_newton_available() -> bool:
     except NewtonUnavailableError:
         return False
     return True
+
+
+def load_raycast_kernel():
+    """Reuse Newton's shape raycasts without starting its force-drag interaction."""
+    return import_module("newton._src.geometry.raycast").raycast_kernel

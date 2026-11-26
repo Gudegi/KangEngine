@@ -10,11 +10,14 @@ from __future__ import annotations
 import numpy as np
 
 from kangengine.utils._example_args import render_example_parser
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 
 
 def main():
     parser = render_example_parser()
+    parser.add_argument(
+        "--device", help="Newton device: cpu or cuda:0 (default: Warp auto-selection)."
+    )
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--headless", action="store_true")
@@ -28,6 +31,9 @@ def main():
 
     import newton
     import warp as wp
+
+    if args.device is not None:
+        wp.set_device(args.device)
 
     newton.use_coord_layout_targets = True
     builder = newton.ModelBuilder()
@@ -89,7 +95,7 @@ def main():
     contacts = collision_pipeline.contacts()
     solver = newton.solvers.SolverXPBD(model, iterations=10)
 
-    viewer = ViewerKE(
+    viewer = NewtonViewer(
         width=args.width,
         height=args.height,
         headless=args.headless,

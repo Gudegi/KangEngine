@@ -17,7 +17,7 @@ import numpy as np
 
 import kangengine as ke
 from kangengine.utils._example_args import render_example_parser
-from kangengine.adapters.newton import ViewerKE
+from kangengine.adapters.newton import NewtonViewer
 
 
 def quaternion_matrix_xyzw(rotation: np.ndarray) -> np.ndarray:
@@ -35,7 +35,7 @@ def quaternion_matrix_xyzw(rotation: np.ndarray) -> np.ndarray:
 
 
 def create_target_prim(
-    viewer: ViewerKE,
+    viewer: NewtonViewer,
     position: np.ndarray,
     rotation: np.ndarray,
 ):
@@ -64,7 +64,7 @@ def target_prim_pose(target_prim) -> tuple[np.ndarray, np.ndarray]:
 
 
 def log_target_axes(
-    viewer: ViewerKE,
+    viewer: NewtonViewer,
     position: np.ndarray,
     rotation: np.ndarray,
 ):
@@ -92,6 +92,9 @@ def log_target_axes(
 def main():
     parser = render_example_parser()
     parser.add_argument(
+        "--device", help="Newton device: cpu or cuda:0 (default: Warp auto-selection)."
+    )
+    parser.add_argument(
         "--urdf",
         type=Path,
         help="Use a local Franka-compatible URDF instead of Newton's cached asset.",
@@ -112,6 +115,9 @@ def main():
     import newton.ik as ik
     import newton.utils
     import warp as wp
+
+    if args.device is not None:
+        wp.set_device(args.device)
 
     urdf_path = (
         args.urdf.expanduser()
@@ -164,7 +170,7 @@ def main():
         jacobian_mode=ik.IKJacobianType.ANALYTIC,
     )
 
-    viewer = ViewerKE(
+    viewer = NewtonViewer(
         width=args.width,
         height=args.height,
         headless=args.headless,

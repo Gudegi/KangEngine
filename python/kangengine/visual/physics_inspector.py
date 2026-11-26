@@ -786,14 +786,24 @@ class PhysicsInspector:
             from ._contact_display import CONTACT_COLORS
 
             display = self._contact_display
+            has_force = getattr(self._source, "supports_contact_forces", True)
             for field, label in (("normal", "Normal"), ("force", "Force")):
                 if field == "force":
                     ui.same_line()
+                    ui.begin_disabled(not has_force)
                 color_swatch(CONTACT_COLORS[field])
                 _, value = ui.checkbox(label, getattr(display, field))
                 setattr(display, field, value)
+                if field == "force":
+                    ui.end_disabled()
+            ui.begin_disabled(not has_force)
             _, display.mode = ui.checkbox("Contact Mode (estimated)", display.mode)
-            if display.mode:
+            ui.end_disabled()
+            if not has_force:
+                ui.text_disabled(
+                    "Force data not supplied; showing contact normals only."
+                )
+            if display.mode and has_force:
                 for name, label in (
                     ("open", "Unloaded"),
                     ("stick", "Sticking"),
@@ -806,16 +816,20 @@ class PhysicsInspector:
             _, display.scale = ui.slider_float(
                 "Contact scale", display.scale, 0.01, 100.0, True
             )
-            if display.force:
+            if display.force and has_force:
                 _, display.force_scale = ui.slider_float(
                     "Force scale", display.force_scale, 0.01, 100.0, True
                 )
-            if display.normal or display.force:
+            if display.normal or (display.force and has_force):
                 _, display.thickness = ui.slider_float(
                     "Arrow thickness", display.thickness, 0.25, 5.0
                 )
             ui.text_disabled(f"Reported contact points: {display.count}")
-            ui.text_disabled("Force: normal impulse / physics step time.")
+            ui.text_disabled(
+                "Force: normal impulse / physics step time."
+                if getattr(self._source, "contact_forces_are_impulses", True)
+                else "Force: normal component reported by the solver."
+            )
             if getattr(self._source, "contacts_truncated", False):
                 ui.text_wrapped(
                     "Contact buffer is full; some contact points are not displayed."

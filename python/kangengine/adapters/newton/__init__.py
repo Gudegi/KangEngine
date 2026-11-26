@@ -2,13 +2,15 @@
 
 from ._dependency import NewtonUnavailableError, is_newton_available
 from .motion import NewtonMotionAdapter, NewtonMotionBuffers, NewtonMotionState
-from .viewer import ViewerKE
+from .viewer import NewtonViewer
+from .visualizer import NewtonVisualizer
 
 __all__ = [
     "NewtonUnavailableError",
     "NewtonMotionAdapter",
     "NewtonMotionBuffers",
     "NewtonMotionState",
-    "ViewerKE",
+    "NewtonVisualizer",
+    "NewtonViewer",
     "is_newton_available",
 ]
