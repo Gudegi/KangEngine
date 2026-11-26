@@ -12,6 +12,9 @@ class MeshBVH {
     explicit MeshBVH(std::shared_ptr<const Scene::MeshData> mesh);
     // Tests both triangle sides; distance is measured along a normalized ray.
     bool intersect(const Ray& ray, float& distance) const;
+    glm::dvec3 closestPoint(const glm::dvec3& point) const;
+    // Closed surfaces only. Ambiguous edge/vertex crossings are retried.
+    bool contains(const glm::dvec3& point) const;
     // Preserve world distance under rotated, mirrored, nonuniform transforms.
     bool intersectWorld(const Ray& ray, const glm::mat4& transform,
                         float& distance) const {
@@ -49,6 +52,10 @@ class MeshBVH {
     void build() const;
     size_t buildNode(size_t first, size_t count) const;
     bool intersectNode(size_t node, const Ray& ray, float& distance) const;
+    void closestNode(size_t node, const glm::dvec3& point,
+                     double& squaredDistance, glm::dvec3& closest) const;
+    bool countCrossings(size_t node, const glm::dvec3& origin,
+                        const glm::dvec3& direction, size_t& count) const;
 };
 
 } // namespace KE::Geometry

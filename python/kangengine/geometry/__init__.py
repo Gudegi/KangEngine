@@ -16,8 +16,10 @@ from .primitive import (
     create_plane_data,
     create_sphere_data,
 )
+from .signed_distance import SignedDistanceMesh
 
 __all__ = [
+    "SignedDistanceMesh",
     "create_arrow_data",
     "create_box_data",
     "create_capsule_data",

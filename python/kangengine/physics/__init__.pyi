@@ -341,6 +341,19 @@ class D6Batch:
 
 class PhysicsWorld:
     native: NativePhysicsWorld
+    def get_collision_geometry(self, articulation: Articulation, *,
+                               environment: Sequence[RigidStatic] = (),
+                               include_mesh_data: bool = False) -> dict[str, Any]:
+        """Copy actual collider metadata, with optional unscaled cooked mesh data."""
+        ...
+    def query_collisions(self, articulation: Articulation, link_poses: ArrayLike | Tensor, *,
+                         environment: Sequence[RigidStatic] = (), self_collision: bool = True,
+                         exclude_adjacent: bool = True,
+                         body_pairs: Sequence[Sequence[int]] | None = None,
+                         excluded_body_pairs: Sequence[Sequence[int]] = (),
+                         excluded_environment_pairs: Sequence[Sequence[int]] = ()) -> list[dict[str, Any]]:
+        """Query single/batched world xyz/xyzw link poses without stepping or mutation."""
+        ...
     def __init__(self, config: PhysicsConfig | None = None) -> None: ...
     def step(self) -> None: ...
     def joint_body(self, body: RigidDynamic | RigidStatic) -> JointBody: ...
@@ -379,7 +392,7 @@ class PhysicsWorld:
         pos: Sequence[float],
         quat_xyzw: Sequence[float] = ...,
         register_as_ground: bool = True,
-    ) -> None: ...
+    ) -> RigidStatic: ...
     def add_heightfield(
         self,
         heights: Any,

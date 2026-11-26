@@ -206,13 +206,57 @@ class PhysicsWorld(_NativeWrapper):
     def clear_contacts(self) -> None:
         self._native.clear_contacts()
 
+    def get_collision_geometry(self, articulation, *, environment=(), include_mesh_data=False):
+        """Copy actual robot/static collider metadata without advancing physics.
+
+        Poses use meters and xyzw quaternions. Capsules use local X as their axis.
+        Mesh vertices are unscaled; apply the returned mesh scale and local pose.
+        Environment IDs index the supplied sequence, not the scene actor order.
+        """
+        return self._native.get_collision_geometry(
+            unwrap_native(articulation), environment=environment,
+            include_mesh_data=include_mesh_data)
+
+    def query_collisions(self, articulation, link_poses, *, environment=(),
+                         self_collision=True, exclude_adjacent=True, body_pairs=None,
+                         excluded_body_pairs=(), excluded_environment_pairs=()):
+        """Check prescribed world link poses without moving actors or stepping.
+
+        Args:
+            articulation: Robot whose actual collider geometry is queried.
+            link_poses: CPU array (B, 7) or (F, B, 7), logical link order,
+                position xyz in meters followed by a unit quaternion xyzw.
+            environment: Explicit static actors; empty means no environment checks.
+            self_collision: Enable robot/robot checks, independent of simulation filters.
+            exclude_adjacent: Exclude parent/child links unless body_pairs is explicit.
+            body_pairs: Optional self-collision allowlist of body-index pairs.
+                None selects all eligible pairs; an empty list selects none.
+            excluded_body_pairs: Body-index pairs excluded even from the allowlist.
+            excluded_environment_pairs: Excluded (body index, environment index) pairs.
+
+        Returns:
+            Sparse dictionaries for overlapping or unsupported pairs. frame_idx is
+            relative to the input batch. direction * depth moves shape A out of B.
+            Unavailable depths/directions are NaN; triangle mesh/heightfield MTDs
+            are labeled approximate. These are surface overlap queries, not closed
+            mesh inside/outside tests or separated-shape distance queries.
+
+        Calls are synchronous CPU queries. Do not step or mutate this world
+        concurrently. No CUDA tensors are downloaded implicitly.
+        """
+        return self._native.query_collisions(
+            unwrap_native(articulation), link_poses, environment=environment,
+            self_collision=self_collision, exclude_adjacent=exclude_adjacent,
+            body_pairs=body_pairs, excluded_body_pairs=excluded_body_pairs,
+            excluded_environment_pairs=excluded_environment_pairs)
+
     def add_static_box(
         self,
         half_extents: Sequence[float],
         pos: Sequence[float],
         quat_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
         register_as_ground: bool = True,
-    ) -> None:
+    ) -> RigidStatic:
         return self._native.add_static_box(
             half_extents, pos, quat_xyzw, register_as_ground
         )

@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "geometry/primitive_mesh.hpp"
+#include "geometry/signed_distance.hpp"
 #include "py_array_view.hpp"
 
 namespace py = pybind11;
@@ -73,6 +74,28 @@ void bind_geometry(py::module& m) {
                        "Optional linear RGB per vertex; empty means white.")
         .def_readwrite("indices", &KE::Scene::MeshData::indices,
                        "Triangle index buffer.");
+
+    py::class_<KE::Geometry::SignedDistanceMesh>(geometry, "SignedDistanceMesh")
+        .def(py::init<const KE::Scene::MeshData&>(), py::arg("mesh"))
+        .def("query", [](const KE::Geometry::SignedDistanceMesh& mesh,
+                         const py::array_t<double, py::array::c_style | py::array::forcecast>& points) {
+            if (points.ndim() != 2 || points.shape(1) != 3)
+                throw py::value_error("points must have shape (N, 3)");
+            const auto count = points.shape(0);
+            py::array_t<double> distances(count);
+            py::array_t<double> closest({count, py::ssize_t(3)});
+            py::array_t<double> gradients({count, py::ssize_t(3)});
+            for (py::ssize_t i = 0; i < count; ++i) {
+                const double* point = points.data() + 3 * i;
+                const auto result = mesh.query(glm::dvec3(point[0], point[1], point[2]));
+                distances.mutable_data()[i] = result.distance;
+                for (size_t axis = 0; axis < 3; ++axis) {
+                    closest.mutable_data()[3 * i + axis] = result.closest[axis];
+                    gradients.mutable_data()[3 * i + axis] = result.gradient[axis];
+                }
+            }
+            return py::make_tuple(distances, closest, gradients);
+        }, py::arg("points"));
 
     auto meshResult = [](KE::Scene::MeshData data) {
         return std::make_shared<KE::Scene::MeshData>(std::move(data));

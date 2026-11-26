@@ -16,6 +16,7 @@
 #include "asset/articulation_desc.hpp"
 #include "asset/rigid_desc.hpp"
 #include "physics/articulation.hpp"
+#include "physics/articulation_collision_query.hpp"
 #include "physics/d6_joint.hpp"
 #include "physics/physics_material.hpp"
 #include "physics/mass_properties_utils.hpp"
@@ -28,6 +29,91 @@ namespace py = pybind11;
 
 #ifdef KANGENGINE_USE_PHYSX
 namespace {
+
+py::list queryShapeInfo(const std::vector<KE::Physics::QueryShape>& shapes,
+                       bool includeMeshData) {
+    py::list result;
+    for (const auto& shape : shapes) {
+        py::dict row;
+        row["body_idx"] = shape.bodyIdx;
+        row["shape_idx"] = shape.shapeIdx;
+        row["environment_idx"] = shape.environmentIdx;
+        row["name"] = shape.name;
+        auto poseValues = [](const physx::PxTransform& p) {
+            return std::array<float, 7>{p.p.x, p.p.y, p.p.z, p.q.x, p.q.y, p.q.z, p.q.w};
+        };
+        row["local_pose"] = poseValues(shape.localPose);
+        row["actor_pose"] = poseValues(shape.actorPose);
+        const auto& g = shape.geometry;
+        using namespace physx;
+        const auto type = g.getType();
+        if (type == PxGeometryType::eSPHERE) {
+            row["type"] = "sphere";
+            row["radius"] = g.sphere().radius;
+        } else if (type == PxGeometryType::eCAPSULE) {
+            row["type"] = "capsule";
+            row["radius"] = g.capsule().radius;
+            row["half_height"] = g.capsule().halfHeight;
+            row["axis"] = "x";
+        } else if (type == PxGeometryType::eBOX) {
+            row["type"] = "box";
+            const auto h = g.box().halfExtents;
+            row["half_extents"] = std::array<float, 3>{h.x, h.y, h.z};
+        } else if (type == PxGeometryType::ePLANE) {
+            row["type"] = "plane";
+            row["normal_axis"] = "x";
+        } else if (type == PxGeometryType::eCONVEXMESH || type == PxGeometryType::eTRIANGLEMESH) {
+            const bool convex = type == PxGeometryType::eCONVEXMESH;
+            row["type"] = convex ? "convex_mesh" : "triangle_mesh";
+            const auto scale = convex ? g.convexMesh().scale : g.triangleMesh().scale;
+            row["mesh_scale"] = std::array<float, 3>{scale.scale.x, scale.scale.y, scale.scale.z};
+            row["mesh_scale_rotation_xyzw"] = std::array<float, 4>{scale.rotation.x, scale.rotation.y, scale.rotation.z, scale.rotation.w};
+            if (includeMeshData) {
+                const auto count = convex ? g.convexMesh().convexMesh->getNbVertices() : g.triangleMesh().triangleMesh->getNbVertices();
+                const auto* vertices = convex ? g.convexMesh().convexMesh->getVertices() : g.triangleMesh().triangleMesh->getVertices();
+                std::vector<std::array<float, 3>> points;
+                for (PxU32 idx = 0; idx < count; ++idx)
+                    points.push_back({vertices[idx].x, vertices[idx].y, vertices[idx].z});
+                row["vertices"] = points;
+                std::vector<std::array<PxU32, 3>> triangles;
+                if (convex) {
+                    const auto* mesh = g.convexMesh().convexMesh;
+                    const auto* indices = mesh->getIndexBuffer();
+                    for (PxU32 idx = 0; idx < mesh->getNbPolygons(); ++idx) {
+                        PxHullPolygon polygon;
+                        mesh->getPolygonData(idx, polygon);
+                        for (PxU32 k = 1; k + 1 < polygon.mNbVerts; ++k)
+                            triangles.push_back({indices[polygon.mIndexBase], indices[polygon.mIndexBase + k], indices[polygon.mIndexBase + k + 1]});
+                    }
+                } else {
+                    const auto* mesh = g.triangleMesh().triangleMesh;
+                    const bool small = mesh->getTriangleMeshFlags() & PxTriangleMeshFlag::e16_BIT_INDICES;
+                    const void* indices = mesh->getTriangles();
+                    for (PxU32 idx = 0; idx < mesh->getNbTriangles(); ++idx) {
+                        std::array<PxU32, 3> triangle;
+                        for (int k = 0; k < 3; ++k)
+                            triangle[k] = small ? static_cast<const PxU16*>(indices)[3 * idx + k] : static_cast<const PxU32*>(indices)[3 * idx + k];
+                        triangles.push_back(triangle);
+                    }
+                }
+                row["triangles"] = triangles;
+            }
+        } else if (type == PxGeometryType::eHEIGHTFIELD) {
+            row["type"] = "heightfield";
+            const auto& h = g.heightField();
+            row["height_scale"] = h.heightScale;
+            row["row_scale"] = h.rowScale;
+            row["column_scale"] = h.columnScale;
+            row["rows"] = h.heightField->getNbRows();
+            row["columns"] = h.heightField->getNbColumns();
+            row["mesh_data_available"] = false;
+        } else {
+            row["type"] = "unsupported";
+        }
+        result.append(row);
+    }
+    return result;
+}
 
 py::tuple collisionShapeLayoutToPy(
     const std::vector<KE::Physics::CollisionShapeInfo>& shapes) {
@@ -995,6 +1081,62 @@ void bind_physics(py::module& m) {
         "PhysX simulation world for rigid bodies and articulations.")
         .def(py::init<PhysicsConfig>(), py::arg("config") = PhysicsConfig{},
              "Create a physics world from configuration.")
+        .def("get_collision_geometry", [](PhysicsWorld& world, const Articulation& robot,
+                const std::vector<PxRigidStatic*>& environment, bool includeMeshData) {
+            const auto shapes = Physics::collectQueryShapes(world, robot, environment);
+            py::dict result;
+            result["robot"] = queryShapeInfo(shapes.robot, includeMeshData);
+            result["environment"] = queryShapeInfo(shapes.environment, includeMeshData);
+            result["body_names"] = robot.bodyNames();
+            result["adjacent_body_pairs"] = std::vector<std::array<int, 2>>(shapes.adjacent.begin(), shapes.adjacent.end());
+            return result;
+        }, py::arg("articulation"), py::kw_only(),
+           py::arg("environment") = std::vector<PxRigidStatic*>{}, py::arg("include_mesh_data") = false,
+           "Copy actual collider metadata; mesh vertices are unscaled and optional.")
+        .def("query_collisions", [](PhysicsWorld& world, const Articulation& robot,
+                FloatArray linkPoses, const std::vector<PxRigidStatic*>& environment,
+                bool selfCollision, bool excludeAdjacent, py::object bodyPairs,
+                const std::vector<std::array<int, 2>>& excludedBodyPairs,
+                const std::vector<std::array<int, 2>>& excludedEnvironmentPairs) {
+            const auto info = linkPoses.request();
+            const auto shapes = Physics::collectQueryShapes(world, robot, environment);
+            if ((info.ndim != 2 && info.ndim != 3) || info.shape.back() != 7 ||
+                info.shape[info.ndim - 2] != shapes.numBodies)
+                throw py::value_error("link_poses must have shape (B, 7) or (F, B, 7), in logical body order");
+            const size_t frames = info.ndim == 2 ? 1 : static_cast<size_t>(info.shape[0]);
+            const auto* data = static_cast<const float*>(info.ptr);
+            std::vector<PxTransform> poses;
+            poses.reserve(frames * shapes.numBodies);
+            for (size_t idx = 0; idx < frames * shapes.numBodies; ++idx) {
+                const auto* p = data + 7 * idx;
+                poses.emplace_back(PxVec3(p[0], p[1], p[2]), PxQuat(p[3], p[4], p[5], p[6]));
+            }
+            std::optional<std::vector<std::array<int, 2>>> included;
+            if (!bodyPairs.is_none())
+                included = bodyPairs.cast<std::vector<std::array<int, 2>>>();
+            const auto rows = Physics::queryCollisionPoses(shapes, poses, frames, selfCollision,
+                excludeAdjacent, included ? &*included : nullptr, excludedBodyPairs, excludedEnvironmentPairs);
+            py::list result;
+            for (const auto& row : rows) {
+                py::dict item;
+                item["frame_idx"] = row.frameIdx;
+                item["body_a"] = row.bodyA;
+                item["shape_a"] = row.shapeA;
+                item["body_b"] = row.bodyB;
+                item["shape_b"] = row.shapeB;
+                item["environment_idx"] = row.environmentIdx;
+                item["status"] = row.status;
+                item["depth"] = row.depth;
+                item["direction"] = std::array<float, 3>{row.direction.x, row.direction.y, row.direction.z};
+                result.append(item);
+            }
+            return result;
+        }, py::arg("articulation"), py::arg("link_poses"), py::kw_only(),
+           py::arg("environment") = std::vector<PxRigidStatic*>{}, py::arg("self_collision") = true,
+           py::arg("exclude_adjacent") = true, py::arg("body_pairs") = py::none(),
+           py::arg("excluded_body_pairs") = std::vector<std::array<int, 2>>{},
+           py::arg("excluded_environment_pairs") = std::vector<std::array<int, 2>>{},
+           "Read-only CPU geometry query on world xyz/xyzw link poses, single or batched; no simulation step.")
         .def("joint_body", [](PhysicsWorld& world, PxRigidDynamic& body) {
             return std::make_shared<JointBody>(world, &body);
         }, py::arg("body"), py::keep_alive<0, 1>())
@@ -1086,7 +1228,7 @@ void bind_physics(py::module& m) {
                         "add_static_box expects half_extents[3], pos[3], "
                         "and quat_xyzw[4]");
                 }
-                self.createStaticBox(
+                return self.createStaticBox(
                     glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
                     glm::vec3(pos[0], pos[1], pos[2]),
                     glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1], rotXyzw[2]),
@@ -1095,6 +1237,7 @@ void bind_physics(py::module& m) {
             py::arg("half_extents"), py::arg("pos"),
             py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("register_as_ground") = true,
+            py::return_value_policy::reference_internal,
             "Add a static box collider, useful for ramps and simple terrain.")
         .def(
             "add_heightfield",

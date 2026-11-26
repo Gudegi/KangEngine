@@ -57,6 +57,7 @@ CASES = (
     Case(PY + "rendering/debug_overlay_depth_smoke.py", ("render",), ("opengl",)),
     Case(PY + "rendering/debug_backend_smoke.py", ("render",), ("opengl",)),
     Case(PY + "rendering/raycast_backend_smoke.py", ("render",), ("opengl",)),
+    Case(PY + "rendering/signed_distance_smoke.py", ("render",), ("opengl",)),
     Case(PY + "rendering/raycast_backend_smoke.py", ("ovrtx",), ("ovrtx",),
          ("--renderer", "ovrtx"), variant="ovrtx", timeout=600),
     Case(PY + "rendering/text_backend_smoke.py", ("render",), ("opengl",),
